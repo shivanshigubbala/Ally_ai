@@ -1,0 +1,10 @@
+version: '3.9'
+services:
+  postgres:
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_DB: allyai
+      POSTGRES_USER: allyai
+      POSTGRES_PASSWORD: allyai
+    ports:
+      - "5432:5432"
