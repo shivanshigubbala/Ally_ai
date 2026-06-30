@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from fpdf import FPDF
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
@@ -15,7 +16,6 @@ logger = logging.getLogger(__name__)
 try:
     from backend.db.pgvector_tracker import (
         get_user_health_context,
-        get_user_messages,
         save_message,
     )
     from backend.llm.nvidia_client import (
@@ -34,7 +34,6 @@ try:
 except ImportError:
     from db.pgvector_tracker import (
         get_user_health_context,
-        get_user_messages,
         save_message,
     )
     from llm.nvidia_client import (
@@ -57,7 +56,7 @@ Emitter = Callable[[WSEvent], None]
 DOCTOR_ID = "d5"
 DOCTOR_NAME = DOCTOR_NAME
 DOCTOR_DEPT = "general"
-MAX_QUESTIONS = 5
+MAX_QUESTIONS = 10
 
 
 def _normalize_text(text: str) -> str:
@@ -112,9 +111,7 @@ def _should_recommend_tests(parsed: dict | None, conversation: list[dict], chief
     parsed = parsed or {}
     if parsed.get("recommend_tests") is False:
         return False
-
-    tests = _sanitize_tests(parsed.get("tests") or [])
-    if not tests:
+    if not parsed.get("tests"):
         return False
 
     conversation_text = " ".join(
@@ -216,7 +213,8 @@ def _extract_json(text: str) -> dict | None:
     except json.JSONDecodeError:
         return None
 
-REPORTS_DIR = Path(__file__).resolve().parents[1] / "reports"
+
+REPORTS_DIR = Path(__file__).resolve().parents[4] / "reports"
 LAB_TESTS = [
     {
         "name": "Complete Blood Count (CBC)",
@@ -227,14 +225,6 @@ LAB_TESTS = [
         "reason": "Checks electrolytes, kidney function, and metabolic status.",
     },
 ]
-_ALLOWED_TEST_NAMES = {
-    "cbc": "Complete Blood Count (CBC)",
-    "complete blood count": "Complete Blood Count (CBC)",
-    "complete blood count (cbc)": "Complete Blood Count (CBC)",
-    "bmp": "Basic Metabolic Panel (BMP)",
-    "basic metabolic panel": "Basic Metabolic Panel (BMP)",
-    "basic metabolic panel (bmp)": "Basic Metabolic Panel (BMP)",
-}
 DEFAULT_REPORT_RESULTS = {
     "Complete Blood Count (CBC)": (
         "All values are within normal range. White blood cells, hemoglobin, and "
@@ -244,31 +234,6 @@ DEFAULT_REPORT_RESULTS = {
         "Electrolytes and kidney function are within normal limits. No abnormalities detected."
     ),
 }
-
-
-def _canonical_test_name(name: str) -> str | None:
-    normalized = re.sub(r"\s+", " ", name or "").strip().lower()
-    return _ALLOWED_TEST_NAMES.get(normalized)
-
-
-def _sanitize_tests(raw_tests: list[dict[str, str]] | None) -> list[dict[str, str]]:
-    tests: list[dict[str, str]] = []
-    if not raw_tests:
-        return tests
-    for item in raw_tests:
-        if not isinstance(item, dict):
-            continue
-        canonical_name = _canonical_test_name(str(item.get("name", "")).strip())
-        if not canonical_name:
-            continue
-        reason = str(item.get("reason", "")).strip()
-        if not reason:
-            reason = next(
-                (t["reason"] for t in LAB_TESTS if t["name"] == canonical_name),
-                "",
-            )
-        tests.append({"name": canonical_name, "reason": reason})
-    return tests
 
 
 def _ensure_reports_dir() -> None:
@@ -283,8 +248,6 @@ def _generate_lab_report_pdf(
 ) -> str:
     _ensure_reports_dir()
     path = REPORTS_DIR / f"{report_id}.pdf"
-    from fpdf import FPDF
-
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -452,15 +415,6 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
 
 
 def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
-    if state.questions_asked >= MAX_QUESTIONS:
-        emit(WSEvent(type="text", payload={
-            "content": "Thanks for sharing all that - I have a good picture now. "
-                       "Let me review everything and see if any tests are needed.",
-            "from": DOCTOR_ID,
-        }))
-        state.current_node = "EVALUATION"
-        return state
-
     state.questions_asked = (state.questions_asked or 0) + 1
 
     last_user_msg = ""
@@ -479,6 +433,15 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
         )
         state.conversation_history.append({"role": "assistant", "content": msg})
         emit(WSEvent(type="text", payload={"content": msg, "from": DOCTOR_ID}))
+        state.current_node = "EVALUATION"
+        return state
+
+    if state.questions_asked >= MAX_QUESTIONS:
+        emit(WSEvent(type="text", payload={
+            "content": "Thanks for sharing all that - I have a good picture now. "
+                       "Let me review everything and see if any tests are needed.",
+            "from": DOCTOR_ID,
+        }))
         state.current_node = "EVALUATION"
         return state
 
@@ -555,12 +518,12 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
     raw = _call_llm([{"role": "user", "content": prompt}], model=ROUTING_MODEL)
     parsed = _extract_json(raw) or {}
 
-    state.tests_list = _sanitize_tests(parsed.get("tests") or [])
     state.lab_tests_recommended = _should_recommend_tests(
         parsed,
         state.conversation_history,
         state.chief_complaint,
     )
+    state.tests_list = LAB_TESTS.copy() if state.lab_tests_recommended else []
 
     if state.lab_tests_recommended and state.tests_list:
         test_names = ", ".join(t.get("name", "?") for t in state.tests_list)
@@ -623,14 +586,15 @@ def lab_notification(state: DoctorState, emit: Emitter) -> DoctorState:
 
 def user_decision(state: DoctorState, emit: Emitter) -> DoctorState:
     if state.user_lab_decision == "accept":
-        # Don't claim the doctor 'ordered' the tests — present this as a lab/system action.
         emit(WSEvent(type="text", payload={
-            "content": "Thanks — the lab has been requested. You'll get the report shortly!",
+            "content": "Great, I'm ordering those tests now. You'll get the report shortly!",
+            "from": DOCTOR_ID,
         }))
         state.current_node = "REPORT_PENDING"
     else:
         emit(WSEvent(type="text", payload={
             "content": "No problem. Watch for any new symptoms, stay hydrated, and feel free to come back anytime.",
+            "from": DOCTOR_ID,
         }))
         state.current_node = "SESSION_COMPLETE"
     return state
@@ -639,22 +603,17 @@ def user_decision(state: DoctorState, emit: Emitter) -> DoctorState:
 def report_pending(state: DoctorState, emit: Emitter) -> DoctorState:
     report_id = f"report-{state.appointment_id}"
     patient_name = state.user_id.replace("_", " ").title()
-    try:
-        logger.info("Generating lab report PDF report_id=%s for user=%s tests=%s", report_id, state.user_id, [t.get('name') for t in (state.tests_list or [])])
-        _generate_lab_report_pdf(report_id, DOCTOR_NAME, patient_name, state.tests_list)
-    except Exception:
-        logger.exception("Failed to generate lab report PDF for report_id=%s", report_id)
-
+    _generate_lab_report_pdf(report_id, DOCTOR_NAME, patient_name, state.tests_list)
     emit(WSEvent(type="report_ready", payload={
         "inbox_id": report_id,
+        "doctor": DOCTOR_NAME,
         "report_id": report_id,
         "report_url": f"/reports/{report_id}",
-        "doctor": DOCTOR_NAME,
         "tests": state.tests_list,
     }))
-    # Announce report availability (system message — not attributed to the doctor).
     emit(WSEvent(type="text", payload={
         "content": "Your lab report is ready. Take care, and follow up if anything changes!",
+        "from": DOCTOR_ID,
     }))
     state.current_node = "SESSION_COMPLETE"
     return state

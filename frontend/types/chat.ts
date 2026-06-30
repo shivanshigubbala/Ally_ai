@@ -9,18 +9,27 @@ export type WSEventType =
   | "doctor_select"
   | "slot_select"
   | "lab_notification"
-  | "report_ready";
+  | "report_ready"
+  | "doctor_ready";
 
 export interface WSEvent {
   type: WSEventType;
   payload: Record<string, unknown>;
 }
 
-export type ClientEventType = "text" | "select";
+export type ClientEventType = "text" | "select" | "start_consultation";
 
 export interface ClientEvent {
   type: ClientEventType;
   payload: Record<string, unknown>;
+}
+
+export type MessageContext = "receptionist" | "doctor";
+
+export interface DoctorReadyInfo {
+  appointmentId: string;
+  doctorName: string;
+  doctorId: string;
 }
 
 export interface Slot {
@@ -45,12 +54,13 @@ export interface ChatMessage {
   from?: string;
 }
 
-export type CardKind = "slot_select" | "lab_notification";
+export type CardKind = "slot_select" | "doctor_select" | "lab_notification";
 
 export interface ChatCard {
   id: string;
   kind: CardKind;
   slots?: Slot[];
+  doctors?: Array<{ id: string; name: string; department_id: string; available?: boolean }>;
   doctorName?: string;
   tests?: LabTest[];
   sessionId?: string;
@@ -75,4 +85,5 @@ export interface LabReport {
   doctorName: string;
   tests: LabTest[];
   createdAt: number;
+  url?: string;
 }
