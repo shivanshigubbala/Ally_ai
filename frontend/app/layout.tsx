@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Ally AI",
-  description: "Hospital Service Agent Proof of Concept",
+  description: "Receptionist-led healthcare intake and chat flow",
 };
 
 export default function RootLayout({

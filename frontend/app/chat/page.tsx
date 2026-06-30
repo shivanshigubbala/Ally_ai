@@ -92,7 +92,7 @@ export default function ChatPage() {
   if (!ready || !profile) return null;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.12),_transparent_26%),linear-gradient(180deg,_#f8fbff_0%,_#eef5fb_100%)] px-4 py-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#c9edf2] px-4 py-4 sm:px-6 lg:px-8">
       <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1600px] gap-4 lg:grid-cols-[16rem_1fr]">
         <Sidebar
           active={activeTab}
@@ -101,7 +101,7 @@ export default function ChatPage() {
           unreadCount={unreadCount}
         />
 
-        <main className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[0_30px_100px_rgba(15,23,42,0.12)] backdrop-blur">
+        <main className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white/88 shadow-[0_30px_100px_rgba(15,23,42,0.12)] backdrop-blur">
           {activeTab === "chat" && (
             <div className="flex min-h-0 flex-1 flex-col">
               <ChatHeader connected={connected} doctorName={doctorName} />

@@ -6,7 +6,7 @@ interface ChatHeaderProps {
 }
 
 export default function ChatHeader({ connected, doctorName }: ChatHeaderProps) {
-  const name = doctorName || "Dr. Shankar";
+  const name = doctorName || "Ally Receptionist";
   const initials =
     name
       .split(" ")
@@ -16,8 +16,8 @@ export default function ChatHeader({ connected, doctorName }: ChatHeaderProps) {
       .join("") || "MD";
 
   return (
-    <div className="px-4 sm:px-6 pt-4 sm:pt-6">
-      <div className="rounded-3xl border border-white/80 bg-white/95 px-4 sm:px-5 py-4 sm:py-5 shadow-[0_20px_70px_rgba(15,23,42,0.08)] backdrop-blur">
+    <div className="px-4 pt-4 sm:px-6 sm:pt-6">
+      <div className="rounded-[2rem] border border-white/80 bg-white/95 px-4 py-4 shadow-[0_20px_70px_rgba(15,23,42,0.08)] backdrop-blur sm:px-5 sm:py-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 text-lg font-semibold text-white shadow-lg shadow-blue-200">
@@ -31,11 +31,11 @@ export default function ChatHeader({ connected, doctorName }: ChatHeaderProps) {
                   {name}
                 </h1>
                 <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700">
-                  Cardiologist
+                  Receptionist
                 </span>
               </div>
               <p className="mt-1 text-sm text-slate-600">
-                Secure consultation, appointment guidance, and follow-up care.
+                Friendly intake, appointment guidance, and handoff support.
               </p>
             </div>
           </div>
@@ -53,9 +53,7 @@ export default function ChatHeader({ connected, doctorName }: ChatHeaderProps) {
                 {connected ? "Online now" : "Connecting"}
               </p>
               <p className="text-xs text-slate-500">
-                {connected
-                  ? "Ready for live guidance"
-                  : "Waiting for secure socket connection"}
+                {connected ? "Ready to greet patients" : "Waiting for secure socket connection"}
               </p>
             </div>
           </div>
