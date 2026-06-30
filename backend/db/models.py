@@ -21,7 +21,7 @@ class Session(Base):
     status = Column(String(50), nullable=False, server_default=text("'active'"))
     started_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
     ended_at = Column(TIMESTAMP(timezone=True), nullable=True)
-    metadata = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    meta_data = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
 
 class Message(Base):
     __tablename__ = 'messages'
@@ -38,5 +38,5 @@ class DoctorKnowledge(Base):
     id = Column(Integer, primary_key=True)
     topic = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
-    metadata = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    meta_data = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
