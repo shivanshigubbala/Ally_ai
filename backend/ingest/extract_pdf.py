@@ -19,15 +19,24 @@ This module does NOT:
 
 from pathlib import Path
 
-from pypdf import PdfReader
+try:
+    import fitz  # type: ignore
+    _HAS_FITZ = True
+except ImportError:
+    _HAS_FITZ = False
+
+try:
+    from pypdf import PdfReader  # type: ignore
+except ImportError:
+    PdfReader = None  # type: ignore
 
 
-def extract_text(pdf_path: str) -> str:
+def extract_text(pdf_path: str | Path) -> str:
     """
     Extract text from every page of a PDF.
 
     Args:
-        pdf_path (str): Path to the PDF file.
+        pdf_path (str | Path): Path to the PDF file.
 
     Returns:
         str: Complete extracted text.
@@ -38,13 +47,28 @@ def extract_text(pdf_path: str) -> str:
     if not pdf_file.exists():
         raise FileNotFoundError(f"PDF not found: {pdf_path}")
 
-    reader = PdfReader(str(pdf_file))
+    if _HAS_FITZ:
+        doc = fitz.open(str(pdf_file))
+        try:
+            pages = []
+            for page in doc:
+                text = page.get_text("text") or ""
+                if text:
+                    pages.append(text.strip())
+            return "\n\n".join(pages)
+        finally:
+            doc.close()
 
+    if PdfReader is None:
+        raise ImportError(
+            "No PDF reader available. Install pymupdf or pypdf: pip install pymupdf pypdf"
+        )
+
+    reader = PdfReader(str(pdf_file))
     pages = []
 
     for page in reader.pages:
-        text = page.extract_text()
-
+        text = page.extract_text() or ""
         if text:
             pages.append(text.strip())
 
