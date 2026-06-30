@@ -1,5 +1,12 @@
 fastapi
-uvicorn
-sqlalchemy
-alembic
+uvicorn[standard]
+ollama
+python-dotenv
+pydantic
+langgraph
+websockets
+requests
 psycopg2-binary
+openai
+pymupdf
+numpy
