@@ -25,7 +25,7 @@ const NAV_ITEMS: { id: SidebarTab; label: string; icon: string }[] = [
 ];
 
 function Icon({ name }: { name: string }) {
-  const common = "w-4 h-4";
+  const common = "h-4 w-4";
   switch (name) {
     case "i-chat":
       return (
@@ -72,34 +72,38 @@ export default function Sidebar({
   unreadCount,
 }: SidebarProps) {
   return (
-    <aside className="w-56 shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col">
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-200">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-          A
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-900">Ally AI</p>
-          <p className="text-xs text-gray-500">Hospital assistant</p>
+    <aside className="flex w-full flex-col overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[8px_0_40px_rgba(15,23,42,0.05)] backdrop-blur lg:w-64">
+      <div className="border-b border-slate-100 px-4 py-5">
+        <div className="flex items-center gap-3 rounded-3xl bg-slate-50 p-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-blue-200">
+            A
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold tracking-tight text-slate-900">Ally AI</p>
+            <p className="text-xs text-slate-500">Hospital assistant</p>
+          </div>
         </div>
       </div>
 
-      <nav className="flex-1 px-2 py-3 space-y-1">
+      <nav className="flex-1 space-y-1 px-3 py-4">
         {NAV_ITEMS.map((item) => {
           const isActive = item.id === active;
           return (
             <button
               key={item.id}
               onClick={() => onChange(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm transition ${
                 isActive
-                  ? "bg-blue-100 text-blue-700 font-medium"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-lg shadow-blue-200"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               }`}
             >
               <Icon name={item.icon} />
-              <span className="flex-1 text-left">{item.label}</span>
+              <span className="flex-1 text-left font-medium">{item.label}</span>
               {item.id === "inbox" && unreadCount > 0 && (
-                <span className="text-[11px] bg-blue-600 text-white rounded-full px-1.5 py-0.5 leading-none">
+                <span className={`rounded-full px-2 py-1 text-[11px] font-semibold leading-none ${
+                  isActive ? "bg-white/20 text-white" : "bg-sky-100 text-sky-700"
+                }`}>
                   {unreadCount}
                 </span>
               )}
@@ -108,11 +112,16 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div className="px-3 py-3 border-t border-gray-200 flex items-center gap-2">
-        <div className="w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-semibold flex items-center justify-center">
-          {getInitials(patientName)}
+      <div className="border-t border-slate-100 p-4">
+        <div className="flex items-center gap-3 rounded-3xl bg-slate-50 p-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 text-xs font-semibold">
+            {getInitials(patientName)}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-slate-900">{patientName}</p>
+            <p className="text-xs text-slate-500">Secure patient session</p>
+          </div>
         </div>
-        <p className="text-xs text-gray-600 truncate">{patientName}</p>
       </div>
     </aside>
   );
