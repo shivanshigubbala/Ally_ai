@@ -7,6 +7,7 @@ import { saveProfile, type PatientProfile } from "@/lib/patient";
 const EMPTY: PatientProfile = {
   name: "",
   email: "",
+  gender: "",
   age: "",
   phone: "",
   conditions: "",
@@ -38,7 +39,7 @@ function Field({
         required={required}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+        className="w-full text-sm text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
       />
     </div>
   );
@@ -47,13 +48,18 @@ function Field({
 export default function SignupPage() {
   const router = useRouter();
   const [form, setForm] = useState<PatientProfile>(EMPTY);
+  const [error, setError] = useState("");
 
   const set = (key: keyof PatientProfile) => (v: string) =>
     setForm((prev) => ({ ...prev, [key]: v }));
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim()) return;
+    if (!form.name.trim() || !form.email.trim() || !form.gender.trim()) {
+      setError("Please fill in your full name, email, and gender to continue.");
+      return;
+    }
+    setError("");
     saveProfile(form);
     router.push("/chat");
   };
@@ -89,6 +95,20 @@ export default function SignupPage() {
           required
           type="email"
         />
+        <div className="mb-3.5">
+          <label className="block text-xs text-gray-500 mb-1.5">Gender</label>
+          <select
+            value={form.gender}
+            required
+            onChange={(e) => set("gender")(e.target.value)}
+            className="w-full text-sm text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          >
+            <option value="">Select gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
         <Field
           label="Age"
           placeholder="34"
@@ -104,9 +124,7 @@ export default function SignupPage() {
 
         <div className="h-px bg-gray-100 my-5" />
 
-        <p className="text-sm font-medium text-gray-900 mb-3">
-          Health details
-        </p>
+        <p className="text-sm font-medium text-gray-900 mb-3">Health details</p>
         <Field
           label="Known conditions"
           placeholder="e.g. hypertension, diabetes"
@@ -126,6 +144,8 @@ export default function SignupPage() {
           onChange={set("allergies")}
         />
 
+        {error ? <p className="text-xs text-red-600 mt-2">{error}</p> : null}
+
         <button
           type="submit"
           className="w-full mt-2 bg-blue-600 text-white text-sm font-medium rounded-lg py-2.5 hover:bg-blue-700 transition"
@@ -134,8 +154,7 @@ export default function SignupPage() {
         </button>
 
         <p className="text-xs text-gray-400 text-center mt-4">
-          Your health information is used only to personalize your
-          consultation.
+          Your health information is used only to personalize your consultation.
         </p>
 
         <p className="text-sm text-gray-500 text-center mt-5">
