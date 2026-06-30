@@ -7,6 +7,7 @@ interface ChatThreadProps {
   messages: ChatMessage[];
   cards: ChatCard[];
   thinking: string | null;
+  onSelectDoctor: (cardId: string, doctorId: string) => void;
   onSelectSlot: (cardId: string, slotId: string, doctorId: string) => void;
   onLabDecision: (
     cardId: string,
@@ -26,6 +27,40 @@ function formatSlotTime(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+function DoctorCard({
+  card,
+  onSelectDoctor,
+}: {
+  card: ChatCard;
+  onSelectDoctor: (cardId: string, doctorId: string) => void;
+}) {
+  return (
+    <div className="ml-10 max-w-md border border-gray-200 rounded-xl p-4 bg-white">
+      <p className="text-sm text-gray-700 mb-3">Choose a doctor:</p>
+      <div className="flex flex-wrap gap-2">
+        {(card.doctors || []).map((doctor) => {
+          const available = doctor.available !== false;
+          return (
+            <button
+              key={doctor.id}
+              disabled={!available}
+              onClick={() => onSelectDoctor(card.id, doctor.id)}
+              className={`text-xs px-3 py-1.5 rounded-lg border font-medium ${
+                available
+                  ? "border-blue-300 text-blue-700 hover:bg-blue-50"
+                  : "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              {doctor.name}
+              {!available ? " (unavailable)" : ""}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function SlotCard({
@@ -91,26 +126,28 @@ function LabCard({
           onClick={() =>
             onLabDecision(card.id, card.sessionId || "", "reject")
           }
+          aria-label="Reject tests"
           className={`flex-1 text-sm px-3 py-1.5 rounded-lg border ${
             card.resolved
               ? "border-gray-200 text-gray-400 cursor-not-allowed"
-              : "border-gray-300 text-gray-700 hover:bg-gray-50"
+              : "border-red-300 text-red-700 hover:bg-red-50"
           }`}
         >
-          Not now
+          ✕ No
         </button>
         <button
           disabled={card.resolved}
           onClick={() =>
             onLabDecision(card.id, card.sessionId || "", "accept")
           }
+          aria-label="Accept tests"
           className={`flex-1 text-sm px-3 py-1.5 rounded-lg ${
             card.resolved
               ? "bg-gray-200 text-gray-400 cursor-not-allowed"
               : "bg-blue-600 text-white hover:bg-blue-700"
           }`}
         >
-          Accept tests
+          ✓ Yes
         </button>
       </div>
     </div>
@@ -121,6 +158,7 @@ export default function ChatThread({
   messages,
   cards,
   thinking,
+  onSelectDoctor,
   onSelectSlot,
   onLabDecision,
 }: ChatThreadProps) {
@@ -154,13 +192,23 @@ export default function ChatThread({
         );
       })}
 
-      {cards.map((card) =>
-        card.kind === "slot_select" ? (
+      {cards
+        .filter((card) => card.kind === "doctor_select")
+        .map((card) => (
+          <DoctorCard key={card.id} card={card} onSelectDoctor={onSelectDoctor} />
+        ))}
+
+      {cards
+        .filter((card) => card.kind === "slot_select")
+        .map((card) => (
           <SlotCard key={card.id} card={card} onSelectSlot={onSelectSlot} />
-        ) : (
+        ))}
+
+      {cards
+        .filter((card) => card.kind === "lab_notification")
+        .map((card) => (
           <LabCard key={card.id} card={card} onLabDecision={onLabDecision} />
-        )
-      )}
+        ))}
 
       {thinking && (
         <div className="flex items-center gap-3">

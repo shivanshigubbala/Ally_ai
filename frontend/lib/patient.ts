@@ -10,6 +10,7 @@
 export interface PatientProfile {
   name: string;
   email: string;
+  gender: string;
   age: string;
   phone: string;
   conditions: string;
