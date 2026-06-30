@@ -1,10 +1,16 @@
 version: '3.9'
 services:
   postgres:
-    image: ankane/pgvector:latest
+    image: ankane/pgvector:pg16
+    restart: unless-stopped
     environment:
       POSTGRES_DB: allyai
       POSTGRES_USER: allyai
       POSTGRES_PASSWORD: allyai
     ports:
       - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
