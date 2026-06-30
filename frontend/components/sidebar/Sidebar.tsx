@@ -72,15 +72,15 @@ export default function Sidebar({
   unreadCount,
 }: SidebarProps) {
   return (
-    <aside className="flex w-full flex-col overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[8px_0_40px_rgba(15,23,42,0.05)] backdrop-blur lg:w-64">
+    <aside className="flex w-full flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-[8px_0_40px_rgba(15,23,42,0.05)] backdrop-blur lg:w-64">
       <div className="border-b border-slate-100 px-4 py-5">
-        <div className="flex items-center gap-3 rounded-3xl bg-slate-50 p-3">
+        <div className="flex items-center gap-3 rounded-[1.5rem] bg-slate-50 p-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-blue-200">
             A
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold tracking-tight text-slate-900">Ally AI</p>
-            <p className="text-xs text-slate-500">Hospital assistant</p>
+            <p className="text-xs text-slate-500">Reception desk</p>
           </div>
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function Sidebar({
       </nav>
 
       <div className="border-t border-slate-100 p-4">
-        <div className="flex items-center gap-3 rounded-3xl bg-slate-50 p-3">
+        <div className="flex items-center gap-3 rounded-[1.5rem] bg-slate-50 p-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 text-xs font-semibold">
             {getInitials(patientName)}
           </div>

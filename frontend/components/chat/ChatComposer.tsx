@@ -24,12 +24,12 @@ export default function ChatComposer({ onSend, disabled }: ChatComposerProps) {
   };
 
   return (
-    <div className="border-t border-white/70 bg-white/90 px-4 sm:px-6 py-4 backdrop-blur">
-      <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+    <div className="border-t border-white/70 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
+      <div className="rounded-[2rem] border border-slate-200 bg-white p-3 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
             <label className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-              Message the care team
+              Message Ally
             </label>
             <input
               type="text"
@@ -38,14 +38,14 @@ export default function ChatComposer({ onSend, disabled }: ChatComposerProps) {
               onKeyDown={handleKeyDown}
               disabled={disabled}
               placeholder="Type a message or ask a follow-up question"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100"
             />
           </div>
 
           <button
             onClick={submit}
             disabled={disabled}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-200 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#1ea7c6] px-5 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(30,167,198,0.28)] transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50"
             aria-label="Send message"
           >
             <span>Send</span>
@@ -55,7 +55,7 @@ export default function ChatComposer({ onSend, disabled }: ChatComposerProps) {
           </button>
         </div>
         <p className="mt-3 text-xs text-slate-400">
-          Press Enter to send. Your message stays in this secure care flow.
+          Press Enter to send. Your message stays in this secure Ally AI flow.
         </p>
       </div>
     </div>

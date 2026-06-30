@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { ChatCard, ChatMessage } from "@/types/chat";
+import MedicalTeamIllustration from "@/components/illustration/MedicalTeamIllustration";
 
 interface ChatThreadProps {
   messages: ChatMessage[];
@@ -257,10 +258,47 @@ export default function ChatThread({
   const doctorCards = cards.filter((card) => card.kind === "doctor_select");
   const slotCards = cards.filter((card) => card.kind === "slot_select");
   const labCards = cards.filter((card) => card.kind === "lab_notification");
+  const emptyState = messages.length === 0 && cards.length === 0 && !thinking;
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5">
+    <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
       <div className="space-y-5">
+        {emptyState ? (
+          <div className="grid gap-6 overflow-hidden rounded-[2rem] border border-cyan-100 bg-[linear-gradient(180deg,#f8fdff_0%,#eefafd_100%)] p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)] lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="flex flex-col justify-center">
+              <div className="inline-flex w-fit rounded-full bg-cyan-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-800">
+                Ally Receptionist
+              </div>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+                Hi, I&apos;m Ally. I&apos;ll help you get started.
+              </h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
+                Tell me what you need, and I&apos;ll guide you through the next step, whether that is booking, continuing an appointment, or connecting you to the right care path.
+              </p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {[
+                  "Book an appointment",
+                  "Continue a consultation",
+                  "Check inbox updates",
+                  "View reports and follow-up",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl border border-white/80 bg-white/80 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-white/80 bg-white/85 p-4 shadow-[0_18px_40px_rgba(8,47,73,0.08)]">
+              <MedicalTeamIllustration />
+            </div>
+          </div>
+        ) : null}
+
         {messages.map((m) => (
           <Bubble key={m.id} message={m} isUser={m.role === "user"} />
         ))}
