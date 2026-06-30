@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: ankane/pgvector:latest
+    image: ankane/pgvector:pg16
     restart: unless-stopped
 
     environment:
@@ -74,6 +74,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+volumes:
+  pgdata:
 
   frontend:
     build:
@@ -91,6 +93,7 @@ services:
 
     environment:
       NODE_ENV: development
+      - NODE_ENV=development
 
     command: npm run dev
 
@@ -100,3 +103,4 @@ services:
 
 volumes:
   pgdata:
+      
