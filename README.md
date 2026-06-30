@@ -1,10 +1,15 @@
-# Ally AI - Hospital Agent
+# Ally AI
 
-Conversational hospital agent with an AI receptionist and a General Physician
-doctor agent, both powered by Llama 3.1 (8B Instruct by default) through NVIDIA
-NIM. The doctor agent is grounded in the WHO IMAI District Clinician Manual
-(Vol. 2) via pgvector retrieval, so every question it asks is supported by the
-retrieved clinical reference rather than invented.
+Ally AI is a prototype hospital assistant demonstrating a receptionist and
+doctor consultation flow driven by a routing graph and LLMs. It shows how a
+lightweight virtual receptionist can collect symptoms, book appointments,
+handoff to a focused doctor agent, and optionally recommend lab tests that
+produce downloadable reports.
+
+This repository includes a Next.js frontend, a FastAPI backend that runs the
+routing/doctor graphs, and a small Go appointment service. The backend can
+generate simple PDF lab reports to `backend/reports/` and serves them at
+`/reports/{report_id}` so the frontend can offer downloads.
 
 ## What's wired up
 
