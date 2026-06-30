@@ -1,31 +1,43 @@
 services:
   postgres:
-    image: postgres:16
+    image: ankane/pgvector:pg16
     restart: unless-stopped
+ 
     environment:
       POSTGRES_DB: allyai
       POSTGRES_USER: allyai
       POSTGRES_PASSWORD: allyai
+ 
     ports:
       - "5432:5432"
+ 
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+
     container_name: allyai-frontend
+
     ports:
       - "3000:3000"
+
     volumes:
       - ./frontend:/app
       - /app/node_modules
+
     environment:
       - NODE_ENV=development
-    command: npm run dev
-    depends_on:
-      - postgres
 
-volumes:
-  pgdata:
+    command: npm run dev
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      
