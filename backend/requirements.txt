@@ -12,3 +12,4 @@ pymupdf
 numpy
 SQLAlchemy>=2.0
 alembic
+fpdf

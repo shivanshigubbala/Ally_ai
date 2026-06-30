@@ -20,9 +20,10 @@ WSEventType = Literal[
     "slot_select",
     "lab_notification",
     "report_ready",
+    "doctor_ready",
 ]
 
-ClientEventType = Literal["text", "select"]
+ClientEventType = Literal["text", "select", "start_consultation"]
 
 
 class WSEvent(BaseModel):
@@ -66,7 +67,6 @@ class ChatResponse(BaseModel):
 RoutingNode = Literal[
     "GREETING",
     "INTENT_CLASSIFICATION",
-    "DEPT_SELECTION",
     "DOCTOR_SELECTION",
     "SLOT_SELECTION",
     "BOOKING_CONFIRMATION",
@@ -86,6 +86,7 @@ class RoutingState(BaseModel):
     health_data: dict[str, Any] = Field(default_factory=dict)
     message_history: list[dict[str, str]] = Field(default_factory=list)
     pending_event: dict[str, Any] | None = None
+    symptom_round: int = 0
 
 
 # ---- DoctorGraph state --------------------------------------------------------
@@ -117,3 +118,5 @@ class DoctorState(BaseModel):
     tests_list: list[dict[str, str]] = Field(default_factory=list)
     user_lab_decision: Literal["accept", "reject", "pending"] = "pending"
     pending_event: dict[str, Any] | None = None
+    symptom_summary: str = ""
+    consecutive_negatives: int = 0

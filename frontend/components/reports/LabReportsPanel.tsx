@@ -4,6 +4,7 @@ import type { LabReport } from "@/types/chat";
 
 interface LabReportsPanelProps {
   reports: LabReport[];
+  onAddSampleReport?: () => void;
 }
 
 function formatDate(ts: number): string {
@@ -14,12 +15,23 @@ function formatDate(ts: number): string {
   });
 }
 
-export default function LabReportsPanel({ reports }: LabReportsPanelProps) {
+export default function LabReportsPanel({ reports, onAddSampleReport }: LabReportsPanelProps) {
   return (
     <div className="flex-1 overflow-y-auto p-6">
       <h1 className="text-base font-semibold text-gray-900 mb-4">
         Lab reports
       </h1>
+
+      {typeof (onAddSampleReport) !== "undefined" && (
+        <div className="mb-4">
+          <button
+            onClick={onAddSampleReport}
+            className="text-xs font-medium px-3 py-1 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            Add sample report
+          </button>
+        </div>
+      )}
 
       {reports.length === 0 ? (
         <p className="text-sm text-gray-500">
@@ -46,13 +58,13 @@ export default function LabReportsPanel({ reports }: LabReportsPanelProps) {
                   </p>
                 </div>
               </div>
-              <button
-                disabled
-                title="Backend doesn't expose a report download endpoint yet"
-                className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed"
+              <a
+                href={r.url || `/reports/${r.id}`}
+                download
+                className="text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
               >
                 Download
-              </button>
+              </a>
             </div>
           ))}
         </div>
