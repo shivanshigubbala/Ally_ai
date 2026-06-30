@@ -1,1 +1,5 @@
-fastapi\nuvicorn\n
+fastapi
+uvicorn
+sqlalchemy
+alembic
+psycopg2-binary

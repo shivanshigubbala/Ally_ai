@@ -1,27 +1,12 @@
 services:
   postgres:
-    image: ankane/pgvector:latest
+    image: ankane/pgvector:pg16
+    restart: unless-stopped
+
     environment:
       POSTGRES_DB: allyai
       POSTGRES_USER: allyai
       POSTGRES_PASSWORD: allyai
+
     ports:
       - "5432:5432"
-
-  appointment:
-    build: ./services/appointment
-    ports:
-      - "8081:8081"
-    environment:
-      DATABASE_URL: postgres://allyai:allyai@postgres:5432/allyai
-    depends_on:
-      - postgres
-
-  lab:
-    build: ./services/lab
-    ports:
-      - "8082:8082"
-    environment:
-      DATABASE_URL: postgres://allyai:allyai@postgres:5432/allyai
-    depends_on:
-      - postgres
