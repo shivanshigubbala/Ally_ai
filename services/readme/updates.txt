@@ -1,0 +1,221 @@
+# PO-AJ1 - Appointment & Lab Service Scaffolding
+
+## Overview
+
+This task sets up the initial Go microservices for the Ally AI backend.
+
+Two independent services were scaffolded:
+
+- Appointment Service
+- Lab Service
+
+Each service has its own Go module, PostgreSQL connection pool using `pgx/v5`, and a health-check endpoint for verifying service availability.
+
+---
+
+## Project Structure
+
+```
+services/
+├── appointment/
+│   ├── go.mod
+│   ├── go.sum
+│   ├── main.go
+│   └── handlers/
+│
+└── lab/
+    ├── go.mod
+    ├── go.sum
+    ├── main.go
+    └── handlers/
+```
+
+---
+
+## Technologies Used
+
+- Go 1.21+
+- PostgreSQL
+- pgx/v5 Connection Pool
+- Docker
+- Docker Compose
+
+---
+
+## Database
+
+The project uses PostgreSQL through Docker Compose.
+
+### Start PostgreSQL
+
+```bash
+docker compose up -d
+```
+
+Database configuration:
+
+| Variable | Value |
+|----------|-------|
+| Database | allyai |
+| Username | allyai |
+| Password | allyai |
+
+---
+
+## Environment Variable
+
+Set the database connection string before running the services.
+
+### Windows PowerShell
+
+```powershell
+$env:DATABASE_URL="postgres://allyai:allyai@localhost:5432/allyai"
+```
+
+### Linux/macOS
+
+```bash
+export DATABASE_URL=postgres://allyai:allyai@localhost:5432/allyai
+```
+
+---
+
+## Running the Services
+
+### Appointment Service
+
+```bash
+cd services/appointment
+go run .
+```
+
+Runs on:
+
+```
+http://localhost:8081
+```
+
+Health Check:
+
+```
+GET /health
+```
+
+Example:
+
+```
+http://localhost:8081/health
+```
+
+Response:
+
+```json
+{
+    "service": "appointment",
+    "status": "healthy"
+}
+```
+
+---
+
+### Lab Service
+
+```bash
+cd services/lab
+go run .
+```
+
+Runs on:
+
+```
+http://localhost:8082
+```
+
+Health Check:
+
+```
+GET /health
+```
+
+Example:
+
+```
+http://localhost:8082/health
+```
+
+Response:
+
+```json
+{
+    "service": "lab",
+    "status": "healthy"
+}
+```
+
+---
+
+## Docker
+
+To start all services:
+
+```bash
+docker compose up --build -d
+```
+
+To stop all services:
+
+```bash
+docker compose down
+```
+
+View running containers:
+
+```bash
+docker ps
+```
+
+View logs:
+
+```bash
+docker compose logs -f
+```
+
+---
+
+## Features Implemented
+
+- Appointment service scaffold
+- Lab service scaffold
+- Independent Go modules
+- PostgreSQL connection using pgx/v5
+- Connection pool initialization
+- Database connectivity validation using `Ping()`
+- Health-check endpoint (`GET /health`)
+- Graceful server shutdown
+- Docker Compose integration
+
+---
+
+## Health Check Endpoints
+
+| Service | Endpoint |
+|----------|----------|
+| Appointment | http://localhost:8081/health |
+| Lab | http://localhost:8082/health |
+
+---
+
+## Task Status
+
+- Appointment Service Scaffold ✔
+- Lab Service Scaffold ✔
+- go.mod Configuration ✔
+- PostgreSQL Connection Pool ✔
+- Health Check Endpoint ✔
+- Docker Support ✔
+
+
+=================================================================================================================================================================
+
+
+
