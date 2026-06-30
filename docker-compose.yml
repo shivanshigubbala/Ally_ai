@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: ankane/pgvector:pg16
+    image: ankane/pgvector:latest
     restart: unless-stopped
 
     environment:
@@ -11,27 +11,69 @@ services:
     ports:
       - "5432:5432"
 
-<<<<<<< HEAD
-  appointment:
-    build: ./services/appointment
-    ports:
-      - "8081:8081"
-    environment:
-      DATABASE_URL: postgres://allyai:allyai@postgres:5432/allyai
-    depends_on:
-      - postgres
-
-  lab:
-    build: ./services/lab
-    ports:
-      - "8082:8082"
-    environment:
-      DATABASE_URL: postgres://allyai:allyai@postgres:5432/allyai
-    depends_on:
-      - postgres
-=======
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U allyai -d allyai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+
+    env_file:
+      - .env
+
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: allyai
+      POSTGRES_USER: allyai
+      POSTGRES_PASSWORD: allyai
+      APPOINTMENT_SERVICE_URL: http://appointment:8081
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      appointment:
+        condition: service_started
+
+  appointment:
+    build:
+      context: .
+      dockerfile: services/appointment/Dockerfile
+
+    ports:
+      - "8081:8081"
+
+    environment:
+      DATABASE_URL: postgres://allyai:allyai@postgres:5432/allyai
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  lab:
+    build:
+      context: .
+      dockerfile: services/lab/Dockerfile
+
+    ports:
+      - "8082:8082"
+
+    environment:
+      DATABASE_URL: postgres://allyai:allyai@postgres:5432/allyai
+
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   frontend:
     build:
@@ -53,8 +95,8 @@ services:
     command: npm run dev
 
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
 volumes:
   pgdata:
->>>>>>> fc3c9024aeb42da981ea8026306213a87d8f5170
