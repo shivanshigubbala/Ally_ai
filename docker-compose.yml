@@ -1,4 +1,5 @@
-version: '3.9'
+version: "3.9"
+
 services:
   postgres:
     image: ankane/pgvector:latest
@@ -8,3 +9,25 @@ services:
       POSTGRES_PASSWORD: allyai
     ports:
       - "5432:5432"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: allyai-frontend
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+    environment:
+      - NODE_ENV=development
+
+    command: npm run dev
+
+    depends_on:
+      - postgres
