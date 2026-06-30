@@ -1,4 +1,4 @@
+// services/appointment/handlers/doctors.go
 package handlers
 
-// Doctors handler placeholder
-
+// placeholder kept for repo structure compatibility; real handler is in handlers.go

@@ -2,4 +2,25 @@ node_modules/
 .next/
 __pycache__/
 *.pyc
+*.pyo
 .env
+.env.local
+.DS_Store
+
+# Python build / cache
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Knowledge-base ingest working files (regenerate from PDF)
+knowledge/_pages.jsonl
+knowledge/_chunks.jsonl
+knowledge/_tmp/
