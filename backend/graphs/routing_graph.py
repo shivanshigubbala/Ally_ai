@@ -35,10 +35,27 @@ def _remember(user_id: str, role: str, content: str, session_id: str | None = No
 
 
 def _llm_reply(system: str, user: str) -> str:
-    return nv_chat([
-        {"role": "system", "content": system},
-        {"role": "user", "content": user},
-    ], model=ROUTING_MODEL).strip()
+    try:
+        return nv_chat([
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ], model=ROUTING_MODEL).strip()
+    except Exception as exc:
+        logger.warning("Routing LLM fallback: %s", exc)
+        if user.startswith("Patient said:"):
+            return (
+                "Thank you for telling me that. I can help you book an appointment "
+                "with Dr. Shankar right away."
+            )
+        if user.startswith("Confirming slot"):
+            return "So I've got you down for that slot. Does that sound good to you?"
+        if user == "Patient cancelled.":
+            return "I understand. If you'd like to book another time, just let me know."
+        if user.startswith("Appointment") and "confirmed" in user:
+            return "Your appointment is confirmed. Dr. Shankar is coming online now to speak with you!"
+        if user == "Transitioning to doctor.":
+            return "Dr. Shankar is joining the chat now."
+        return "Okay, let me take care of that for you."
 
 
 RECEPTIONIST_PERSONA = (

@@ -114,6 +114,25 @@ def _format_messages(history: list[dict]) -> str:
     return "\n".join(lines) or "(no prior conversation)"
 
 
+def _should_end_questioning(reply: str) -> bool:
+    lower = reply.lower()
+    return any(
+        phrase in lower
+        for phrase in [
+            "enough information",
+            "enough detail",
+            "move on to review",
+            "ready to review",
+            "ready to evaluate",
+            "can proceed to evaluation",
+            "i can evaluate now",
+            "i have enough to",
+            "sufficient information",
+            "review everything",
+        ]
+    )
+
+
 # ---- Nodes --------------------------------------------------------------------
 
 
@@ -230,7 +249,7 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
 
     messages = [
         {"role": "system", "content": system},
-        {"role": "user", "content": "Ask your next single clinical question."},
+        {"role": "user", "content": "Ask your next single clinical question, or if you have enough information, say you can proceed to evaluation."},
     ]
     try:
         reply = _stream_into_emit(messages, emit, sender=DOCTOR_ID)
@@ -254,7 +273,10 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
             emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
 
     state.conversation_history.append({"role": "assistant", "content": reply})
-    state.current_node = "QUESTIONING"
+    if _should_end_questioning(reply):
+        state.current_node = "EVALUATION"
+    else:
+        state.current_node = "QUESTIONING"
     return state
 
 

@@ -48,7 +48,13 @@ async def _drive_routing(ws: WebSocket, user_id: str, message: str | None,
     if state.current_node == "DONE":
         if state.appointment_id:
             _user_state[user_id] = "DOCTOR"
-            return state.appointment_id
+            appointment_id = state.appointment_id
+            first_user_msg = next(
+                (m["content"] for m in state.message_history if m.get("role") == "user"),
+                None,
+            )
+            await _drive_doctor(ws, user_id, appointment_id, first_user_msg, None)
+            return appointment_id
         _user_state[user_id] = "DONE"
     else:
         _user_state[user_id] = "ROUTING"
