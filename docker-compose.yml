@@ -1,14 +1,19 @@
-version: "3.9"
-
 services:
   postgres:
-    image: ankane/pgvector:latest
+    image: ankane/pgvector:pg16
+    container_name: allyai-postgres
+    restart: unless-stopped
+
     environment:
       POSTGRES_DB: allyai
       POSTGRES_USER: allyai
       POSTGRES_PASSWORD: allyai
+
     ports:
       - "5432:5432"
+
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
   frontend:
     build:
@@ -25,9 +30,12 @@ services:
       - /app/node_modules
 
     environment:
-      - NODE_ENV=development
+      NODE_ENV: development
 
     command: npm run dev
 
     depends_on:
       - postgres
+
+volumes:
+  pgdata:
