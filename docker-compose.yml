@@ -2,24 +2,26 @@ services:
   postgres:
     image: ankane/pgvector:latest
     restart: unless-stopped
-
+ 
     environment:
       POSTGRES_DB: allyai
       POSTGRES_USER: allyai
       POSTGRES_PASSWORD: allyai
-
+ 
     ports:
       - "5432:5432"
-
+ 
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+ 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U allyai -d allyai"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+ 
   backend:
     build:
       context: .
@@ -28,6 +30,8 @@ services:
     env_file:
       - .env
 
+    env_file:
+      - .env
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
@@ -39,12 +43,15 @@ services:
     ports:
       - "8000:8000"
 
+    ports:
+      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
       appointment:
         condition: service_started
 
+ 
   appointment:
     build:
       context: .
@@ -75,28 +82,33 @@ services:
       postgres:
         condition: service_healthy
 
+    ports:
+      - "8081:8081"
+ 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-
+ 
     container_name: allyai-frontend
-
+ 
     ports:
       - "3000:3000"
-
+ 
     volumes:
       - ./frontend:/app
       - /app/node_modules
-
+ 
     environment:
       NODE_ENV: development
-
+ 
     command: npm run dev
-
+ 
     depends_on:
       postgres:
         condition: service_healthy
 
+      - postgres
+ 
 volumes:
   pgdata:

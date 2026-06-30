@@ -1,4 +1,4 @@
+// services/appointment/handlers/slots.go
 package handlers
 
-// Slots handler placeholder
-
+// placeholder kept for repo structure compatibility; real handler is in handlers.go
