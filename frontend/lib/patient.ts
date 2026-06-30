@@ -13,9 +13,22 @@ export interface PatientProfile {
   gender: string;
   age: string;
   phone: string;
+  bloodGroup?: string;
   conditions: string;
   medications: string;
   allergies: string;
+  healthAssessment?: HealthAssessment;
+  pastMedicalConditions?: string;
+}
+
+export interface HealthAssessment {
+  diabetes: boolean;
+  hypertension: boolean;
+  tobaccoUse: boolean;
+  alcoholUse: boolean;
+  currentMedications: boolean;
+  heartDisease: boolean;
+  heartProcedureHistory: boolean;
 }
 
 const STORAGE_KEY = "ally_patient_profile";

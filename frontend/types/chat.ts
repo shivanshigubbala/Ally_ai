@@ -52,6 +52,7 @@ export interface ChatMessage {
   role: ChatRole;
   content: string;
   from?: string;
+  timestamp?: number;
 }
 
 export type CardKind = "slot_select" | "doctor_select" | "lab_notification";
