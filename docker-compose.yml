@@ -10,3 +10,51 @@ services:
 
     ports:
       - "5432:5432"
+
+<<<<<<< HEAD
+  appointment:
+    build: ./services/appointment
+    ports:
+      - "8081:8081"
+    environment:
+      DATABASE_URL: postgres://allyai:allyai@postgres:5432/allyai
+    depends_on:
+      - postgres
+
+  lab:
+    build: ./services/lab
+    ports:
+      - "8082:8082"
+    environment:
+      DATABASE_URL: postgres://allyai:allyai@postgres:5432/allyai
+    depends_on:
+      - postgres
+=======
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: allyai-frontend
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+    environment:
+      NODE_ENV: development
+
+    command: npm run dev
+
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
+>>>>>>> fc3c9024aeb42da981ea8026306213a87d8f5170
