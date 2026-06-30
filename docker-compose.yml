@@ -1,7 +1,6 @@
 services:
   postgres:
     image: ankane/pgvector:pg16
-    container_name: allyai-postgres
     restart: unless-stopped
 
     environment:
