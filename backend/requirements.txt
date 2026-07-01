@@ -12,3 +12,6 @@ pymupdf
 numpy
 SQLAlchemy>=2.0
 alembic
+langchain-text-splitters
+tiktoken
+sentence-transformers

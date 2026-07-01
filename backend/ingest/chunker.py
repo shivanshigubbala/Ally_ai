@@ -26,6 +26,9 @@ def chunk_text(
         List of text chunks.
     """
 
+    if not text.strip():
+        return []
+
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -34,9 +37,8 @@ def chunk_text(
             "\n",
             ". ",
             " ",
-            ""
+            "",
         ],
     )
 
     return splitter.split_text(text)
-from extract_pdf import extract_text
