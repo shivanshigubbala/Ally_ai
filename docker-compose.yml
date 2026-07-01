@@ -43,8 +43,8 @@ services:
  
   appointment:
     build:
-      context: .
-      dockerfile: services/appointment/Dockerfile
+      context: ./services/appointment
+      dockerfile: Dockerfile
     ports:
       - "8081:8081"
  

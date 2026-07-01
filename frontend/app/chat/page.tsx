@@ -55,7 +55,7 @@ export default function ChatPage() {
     unreadCount,
     addSampleReport,
   } = useChatSocket(userId);
-  const activeTab: SidebarTab = doctorReady ? "appointments" : tab;
+  const activeTab: SidebarTab = tab;
 
   useEffect(() => {
     const validateSession = () => {
@@ -92,8 +92,8 @@ export default function ChatPage() {
   if (!ready || !profile) return null;
 
   return (
-    <div className="min-h-screen bg-[#c9edf2] px-4 py-4 sm:px-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1600px] gap-4 lg:grid-cols-[16rem_1fr]">
+    <div className="h-screen overflow-hidden bg-[#c9edf2] px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto grid h-[calc(100vh-2rem)] max-w-[1600px] gap-4 lg:grid-cols-[16rem_1fr]">
         <Sidebar
           active={activeTab}
           onChange={setTab}
@@ -104,11 +104,14 @@ export default function ChatPage() {
         <main className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white/88 shadow-[0_30px_100px_rgba(15,23,42,0.12)] backdrop-blur">
           {activeTab === "chat" && (
             <div className="flex min-h-0 flex-1 flex-col">
-              <ChatHeader connected={connected} doctorName={doctorName} />
+              <ChatHeader connected={connected} />
               <ChatThread
                 messages={messages}
+                doctorMessages={doctorMessages}
                 cards={cards}
                 thinking={thinking}
+                doctorThinking={doctorThinking}
+                connected={connected}
                 onSelectDoctor={selectDoctor}
                 onSelectSlot={resolveSlot}
                 onLabDecision={resolveLabDecision}
@@ -120,8 +123,11 @@ export default function ChatPage() {
           {activeTab === "inbox" && (
             <InboxPanel
               notifications={inbox}
+              connected={connected}
               onMarkRead={markInboxRead}
               onViewReports={() => setTab("reports")}
+              onViewAppointments={() => setTab("appointments")}
+              onLabDecision={resolveLabDecision}
             />
           )}
 
@@ -134,9 +140,7 @@ export default function ChatPage() {
               doctorName={doctorName}
               booked={appointmentBooked}
               slotCards={cards.filter((card) => card.kind === "slot_select")}
-              labCards={cards.filter((card) => card.kind === "lab_notification")}
               onSelectSlot={resolveSlot}
-              onLabDecision={resolveLabDecision}
               doctorReady={doctorReady}
               doctorMessages={doctorMessages}
               doctorThinking={doctorThinking}

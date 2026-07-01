@@ -21,9 +21,9 @@ export default function AuthShell({
   footer,
 }: AuthShellProps) {
   return (
-    <main className="h-[100dvh] overflow-hidden bg-[#c9edf2] px-4 py-4 sm:px-6 lg:px-8">
-      <div className="mx-auto flex h-full max-w-6xl items-center justify-center">
-        <div className="grid h-full w-full gap-5 overflow-hidden rounded-[2rem] bg-white/78 p-4 shadow-[0_28px_90px_rgba(14,116,144,0.16)] backdrop-blur md:p-5 lg:grid-cols-[1.1fr_0.9fr] lg:p-6">
+    <main className="min-h-[100dvh] overflow-y-auto bg-[#c9edf2] px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-full max-w-6xl items-center justify-center py-2 sm:py-4">
+        <div className="grid w-full gap-5 overflow-hidden rounded-[2rem] bg-white/78 p-4 shadow-[0_28px_90px_rgba(14,116,144,0.16)] backdrop-blur md:p-5 lg:grid-cols-[1.1fr_0.9fr] lg:p-6">
           <section className="relative overflow-hidden rounded-[1.75rem] bg-[linear-gradient(180deg,#eefbfe_0%,#d9f2f7_100%)] px-5 py-5 sm:px-7 sm:py-7 lg:px-8 lg:py-8">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.9),transparent_20%),radial-gradient(circle_at_bottom_left,rgba(34,211,238,0.16),transparent_22%)]" />
             <div className="relative z-10 flex h-full flex-col justify-between gap-4">
@@ -48,7 +48,7 @@ export default function AuthShell({
           </section>
 
           <section className="flex items-center px-1 py-1 sm:px-3 lg:px-1">
-            <div className="mx-auto w-full max-w-md">
+            <div className="mx-auto w-full max-w-md py-2 sm:py-4">
               <div className="mb-4">
                 <div className="mb-3 inline-flex rounded-full bg-cyan-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-800">
                   Ally AI
