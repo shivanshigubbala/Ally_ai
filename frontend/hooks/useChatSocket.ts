@@ -74,20 +74,6 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
   const appointmentBookedRef = useRef(false);
   const doctorNameRef = useRef<string | null>(null);
 
-  const pushMessage = useCallback(
-    (role: ChatMessage["role"], content: string, from?: string) => {
-      if (from) {
-        setDoctorMessages((prev) => [
-          ...prev,
-          { id: newId(), role, content, from },
-        ]);
-      } else {
-        setMessages((prev) => [...prev, { id: newId(), role, content, from }]);
-      }
-    },
-    []
-  );
-
   const pushInbox = useCallback(
     (notif: Omit<InboxNotification, "id" | "createdAt" | "read">) => {
       setInbox((prev) => [
@@ -123,12 +109,12 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
           if (from) {
             setDoctorMessages((prev) => [
               ...prev,
-              { id: newId(), role: "assistant", content, from },
+              { id: newId(), role: "assistant", content, from, timestamp: Date.now() },
             ]);
           } else {
             setMessages((prev) => [
               ...prev,
-              { id: newId(), role: "assistant", content, from },
+              { id: newId(), role: "assistant", content, from, timestamp: Date.now() },
             ]);
           }
 
@@ -175,7 +161,10 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
               }
               const id = newId();
               doctorStreamingIdRef.current = id;
-              return [...prev, { id, role: "assistant", content: delta, from }];
+              return [
+                ...prev,
+                { id, role: "assistant", content: delta, from, timestamp: Date.now() },
+              ];
             });
           } else {
             setMessages((prev) => {
@@ -193,7 +182,10 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
               }
               const id = newId();
               streamingIdRef.current = id;
-              return [...prev, { id, role: "assistant", content: delta }];
+              return [
+                ...prev,
+                { id, role: "assistant", content: delta, timestamp: Date.now() },
+              ];
             });
           }
           break;
@@ -311,7 +303,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
           break;
       }
     },
-    [pushMessage, pushInbox]
+    [pushInbox]
   );
 
   useEffect(() => {
@@ -346,13 +338,16 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
   const sendText = useCallback(
     (content: string, context: "receptionist" = "receptionist") => {
       if (!content.trim()) return;
-      pushMessage("user", content);
+      setMessages((prev) => [
+        ...prev,
+        { id: newId(), role: "user", content, timestamp: Date.now() },
+      ]);
       sendRaw({
         type: "text",
         payload: context === "receptionist" ? { content } : { content, context },
       });
     },
-    [pushMessage, sendRaw]
+    [sendRaw]
   );
 
   const sendDoctorMessage = useCallback(
@@ -360,7 +355,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
       if (!content.trim()) return;
       setDoctorMessages((prev) => [
         ...prev,
-        { id: newId(), role: "user", content },
+        { id: newId(), role: "user", content, timestamp: Date.now() },
       ]);
       sendRaw({
         type: "text",
@@ -375,13 +370,16 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
       setCards((prev) =>
         prev.map((c) => (c.id === cardId ? { ...c, resolved: true } : c))
       );
-      pushMessage("user", "Selected a time slot");
+      setMessages((prev) => [
+        ...prev,
+        { id: newId(), role: "user", content: "Selected a time slot", timestamp: Date.now() },
+      ]);
       sendRaw({
         type: "select",
         payload: { target: "slot", id: slotId, doctor_id: doctorId },
       });
     },
-    [pushMessage, sendRaw]
+    [sendRaw]
   );
 
   const selectDoctor = useCallback(
@@ -389,13 +387,16 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
       setCards((prev) =>
         prev.map((c) => (c.id === cardId ? { ...c, resolved: true } : c))
       );
-      pushMessage("user", "Selected a doctor");
+      setMessages((prev) => [
+        ...prev,
+        { id: newId(), role: "user", content: "Selected a doctor", timestamp: Date.now() },
+      ]);
       sendRaw({
         type: "select",
         payload: { id: doctorId, doctor_id: doctorId },
       });
     },
-    [pushMessage, sendRaw]
+    [sendRaw]
   );
 
   const startConsultation = useCallback(() => {
@@ -419,6 +420,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
           id: newId(),
           role: "user",
           content: decision === "accept" ? "Accept tests" : "Not now",
+          timestamp: Date.now(),
         },
       ]);
       sendRaw({
@@ -480,5 +482,6 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
     startConsultation,
     sendDoctorMessage,
     unreadCount,
+    addSampleReport,
   };
 }
