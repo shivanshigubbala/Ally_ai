@@ -24,13 +24,13 @@ services:
    build:
     context: .
     dockerfile: backend/Dockerfile
-
+ 
    volumes:
     - ./backend:/app
-
+ 
    env_file:
     - .env
-
+ 
    environment:
     POSTGRES_HOST: postgres
     POSTGRES_PORT: 5432
@@ -38,34 +38,15 @@ services:
     POSTGRES_USER: allyai
     POSTGRES_PASSWORD: allyai
     APPOINTMENT_SERVICE_URL: http://appointment:8081
-
+ 
    ports:
     - "8000:8000"
-
+ 
    depends_on:
     postgres:
       condition: service_healthy
     appointment:
       condition: service_started
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    env_file:
-      - .env
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: allyai
-      POSTGRES_USER: allyai
-      POSTGRES_PASSWORD: allyai
-      APPOINTMENT_SERVICE_URL: http://appointment:8081
-    ports:
-      - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      appointment:
-        condition: service_started
  
   appointment:
     build:
