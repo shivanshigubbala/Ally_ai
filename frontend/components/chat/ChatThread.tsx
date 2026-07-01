@@ -6,8 +6,11 @@ import MedicalTeamIllustration from "@/components/illustration/MedicalTeamIllust
 
 interface ChatThreadProps {
   messages: ChatMessage[];
+  doctorMessages: ChatMessage[];
   cards: ChatCard[];
   thinking: string | null;
+  doctorThinking: string | null;
+  connected: boolean;
   onSelectDoctor: (cardId: string, doctorId: string) => void;
   onSelectSlot: (cardId: string, slotId: string, doctorId: string) => void;
   onLabDecision: (
@@ -141,9 +144,11 @@ function SlotCard({
 
 function LabCard({
   card,
+  connected,
   onLabDecision,
 }: {
   card: ChatCard;
+  connected: boolean;
   onLabDecision: ChatThreadProps["onLabDecision"];
 }) {
   return (
@@ -173,10 +178,10 @@ function LabCard({
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <button
-          disabled={card.resolved}
+          disabled={card.resolved || !connected}
           onClick={() => onLabDecision(card.id, card.sessionId || "", "reject")}
           className={`rounded-2xl border px-4 py-2.5 text-sm font-medium transition ${
-            card.resolved
+            card.resolved || !connected
               ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
               : "border-rose-200 bg-rose-50 text-rose-700 hover:-translate-y-0.5 hover:bg-white"
           }`}
@@ -184,10 +189,10 @@ function LabCard({
           No, not now
         </button>
         <button
-          disabled={card.resolved}
+          disabled={card.resolved || !connected}
           onClick={() => onLabDecision(card.id, card.sessionId || "", "accept")}
           className={`rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
-            card.resolved
+            card.resolved || !connected
               ? "cursor-not-allowed bg-slate-200 text-slate-400"
               : "bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-lg shadow-blue-200 hover:-translate-y-0.5"
           }`}
@@ -195,6 +200,11 @@ function LabCard({
           Yes, proceed
         </button>
       </div>
+      {!connected && (
+        <p className="mt-3 text-sm text-rose-600">
+          Reconnecting to Ally... please wait before responding.
+        </p>
+      )}
     </div>
   );
 }
@@ -243,25 +253,34 @@ function Bubble({
 
 export default function ChatThread({
   messages,
+  doctorMessages,
   cards,
   thinking,
+  doctorThinking,
+  connected,
   onSelectDoctor,
   onSelectSlot,
   onLabDecision,
 }: ChatThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const allMessages = [...messages, ...doctorMessages].sort(
+    (a, b) => (a.timestamp || 0) - (b.timestamp || 0)
+  );
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, cards, thinking]);
+  }, [allMessages, cards, thinking, doctorThinking]);
 
   const doctorCards = cards.filter((card) => card.kind === "doctor_select");
   const slotCards = cards.filter((card) => card.kind === "slot_select");
   const labCards = cards.filter((card) => card.kind === "lab_notification");
-  const emptyState = messages.length === 0 && cards.length === 0 && !thinking;
+  const emptyState =
+    messages.length === 0 && doctorMessages.length === 0 && cards.length === 0 &&
+    !thinking && !doctorThinking;
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6">
       <div className="space-y-5">
         {emptyState ? (
           <div className="grid gap-6 overflow-hidden rounded-[2rem] border border-cyan-100 bg-[linear-gradient(180deg,#f8fdff_0%,#eefafd_100%)] p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)] lg:grid-cols-[1.1fr_0.9fr]">
@@ -299,7 +318,7 @@ export default function ChatThread({
           </div>
         ) : null}
 
-        {messages.map((m) => (
+        {allMessages.map((m) => (
           <Bubble key={m.id} message={m} isUser={m.role === "user"} />
         ))}
 
@@ -311,11 +330,9 @@ export default function ChatThread({
           <SlotCard key={card.id} card={card} onSelectSlot={onSelectSlot} />
         ))}
 
-        {labCards.map((card) => (
-          <LabCard key={card.id} card={card} onLabDecision={onLabDecision} />
-        ))}
+        {/* Lab suggestion cards are handled in the Appointments panel; do not render here. */}
 
-        {thinking && (
+        {(thinking || doctorThinking) && (
           <div className="flex items-start gap-3">
             <MessageAvatar label="AI" accent="blue" />
             <div className="rounded-3xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
