@@ -2,11 +2,10 @@
 
 interface ChatHeaderProps {
   connected: boolean;
-  doctorName: string | null;
 }
 
-export default function ChatHeader({ connected, doctorName }: ChatHeaderProps) {
-  const name = doctorName || "Ally Receptionist";
+export default function ChatHeader({ connected }: ChatHeaderProps) {
+  const name = "Ally Receptionist";
   const initials =
     name
       .split(" ")
