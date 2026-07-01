@@ -1,6 +1,6 @@
 import unittest
 
-from backend.graphs.general_physician_agent import (
+from backend.graphs.doctors.general_physician.agent import (
     _build_initial_doctor_message,
     _sanitize_tests,
     _should_recommend_tests,
