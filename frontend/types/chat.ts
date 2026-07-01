@@ -68,7 +68,7 @@ export interface ChatCard {
   resolved?: boolean;
 }
 
-export type InboxKind = "appointment_booked" | "report_ready";
+export type InboxKind = "appointment_booked" | "report_ready" | "lab_suggested";
 
 export interface InboxNotification {
   id: string;
@@ -79,6 +79,8 @@ export interface InboxNotification {
   read: boolean;
   decision?: "pending" | "accepted" | "rejected";
   reportId?: string;
+  cardId?: string;
+  tests?: LabTest[];
 }
 
 export interface LabReport {

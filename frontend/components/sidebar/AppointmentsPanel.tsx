@@ -7,9 +7,7 @@ interface AppointmentsPanelProps {
   doctorName: string | null;
   booked: boolean;
   slotCards: ChatCard[];
-  labCards: ChatCard[];
   onSelectSlot: (cardId: string, slotId: string, doctorId: string) => void;
-  onLabDecision: (cardId: string, sessionId: string, decision: "accept" | "reject") => void;
   doctorReady: DoctorReadyInfo | null;
   doctorMessages: ChatMessage[];
   doctorThinking: string | null;
@@ -71,62 +69,6 @@ function SlotCard({
   );
 }
 
-function LabCard({
-  card,
-  onLabDecision,
-}: {
-  card: ChatCard;
-  onLabDecision: AppointmentsPanelProps["onLabDecision"];
-}) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 text-sm font-semibold">
-          L
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-slate-900">Recommended lab tests</p>
-          <p className="text-xs text-slate-500">Review the suggested tests before continuing.</p>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        {(card.tests || []).map((test, i) => (
-          <div key={i} className="rounded-2xl bg-slate-50 px-4 py-3">
-            <p className="text-sm font-medium text-slate-900">{test.name}</p>
-            <p className="mt-0.5 text-xs leading-5 text-slate-500">{test.reason}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button
-          disabled={card.resolved}
-          onClick={() => onLabDecision(card.id, card.sessionId || "", "reject")}
-          className={`rounded-2xl border px-4 py-2.5 text-sm font-medium transition ${
-            card.resolved
-              ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-              : "border-rose-200 bg-rose-50 text-rose-700 hover:-translate-y-0.5 hover:bg-white"
-          }`}
-        >
-          No, not now
-        </button>
-        <button
-          disabled={card.resolved}
-          onClick={() => onLabDecision(card.id, card.sessionId || "", "accept")}
-          className={`rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
-            card.resolved
-              ? "cursor-not-allowed bg-slate-200 text-slate-400"
-              : "bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-lg shadow-blue-200 hover:-translate-y-0.5"
-          }`}
-        >
-          Yes, proceed
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function DoctorChat({
   messages,
   thinking,
@@ -151,13 +93,13 @@ function DoctorChat({
   };
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <div className="flex min-h-0 flex-col rounded-3xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
         <h3 className="text-sm font-semibold text-slate-900">Live consultation</h3>
         <p className="mt-1 text-xs text-slate-500">Chat with the doctor once the appointment is active.</p>
       </div>
 
-      <div className="max-h-[28rem] overflow-y-auto px-4 py-4 sm:px-5">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-5">
         <div className="space-y-4">
           {messages.map((m) => {
             const isUser = m.role === "user";
@@ -224,9 +166,7 @@ export default function AppointmentsPanel({
   doctorName,
   booked,
   slotCards,
-  labCards,
   onSelectSlot,
-  onLabDecision,
   doctorReady,
   doctorMessages,
   doctorThinking,
@@ -235,11 +175,10 @@ export default function AppointmentsPanel({
   onSendDoctorMessage,
 }: AppointmentsPanelProps) {
   const activeSlotCard = slotCards.find((card) => !card.resolved) || slotCards[0];
-  const activeLabCards = labCards.filter((card) => !card.resolved);
 
   if (consultationActive) {
     return (
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
         <div className="mb-5">
           <h1 className="text-xl font-semibold tracking-tight text-slate-900">
             Consultation with {doctorName || "Dr. Shankar"}
@@ -250,9 +189,6 @@ export default function AppointmentsPanel({
         </div>
 
         <div className="space-y-4">
-          {activeLabCards.map((card) => (
-            <LabCard key={card.id} card={card} onLabDecision={onLabDecision} />
-          ))}
           <DoctorChat
             messages={doctorMessages}
             thinking={doctorThinking}
@@ -265,7 +201,7 @@ export default function AppointmentsPanel({
 
   if (doctorReady) {
     return (
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
         <div className="mb-5">
           <h1 className="text-xl font-semibold tracking-tight text-slate-900">Appointments</h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -298,24 +234,17 @@ export default function AppointmentsPanel({
           </div>
         </div>
 
-        {activeLabCards.length > 0 && (
-          <div className="mt-5 space-y-4">
-            {activeLabCards.map((card) => (
-              <LabCard key={card.id} card={card} onLabDecision={onLabDecision} />
-            ))}
-          </div>
-        )}
       </div>
     );
   }
 
   if (booked) {
     return (
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
         <div className="mb-5">
           <h1 className="text-xl font-semibold tracking-tight text-slate-900">Appointments</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Your doctor is being prepared for the consultation.
+            Your appointment is confirmed. The doctor is not online yet, so please wait here for the call.
           </p>
         </div>
 
@@ -332,7 +261,7 @@ export default function AppointmentsPanel({
                 {doctorName || "Doctor"}
               </p>
               <p className="mt-1 text-sm text-slate-600">
-                Appointment confirmed. Your doctor will appear here when ready.
+                The reception has booked your appointment. We will notify you as soon as the doctor is ready.
               </p>
             </div>
           </div>
@@ -348,7 +277,7 @@ export default function AppointmentsPanel({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 min-h-0">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
       <div className="mb-5">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">Appointments</h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -367,10 +296,6 @@ export default function AppointmentsPanel({
         {activeSlotCard && !activeSlotCard.resolved && (
           <SlotCard card={activeSlotCard} onSelectSlot={onSelectSlot} />
         )}
-
-        {activeLabCards.map((card) => (
-          <LabCard key={card.id} card={card} onLabDecision={onLabDecision} />
-        ))}
       </div>
     </div>
   );
