@@ -20,7 +20,7 @@ export default function LabReportsPanel({
   onAddSampleReport,
 }: LabReportsPanelProps) {
   return (
-    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-900">Lab reports</h1>

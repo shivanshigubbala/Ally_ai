@@ -40,8 +40,7 @@ class Session(Base):
     )
     ended_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
-    # Renamed Python attribute to avoid SQLAlchemy reserved name
-    session_metadata = Column(
+    metadata_json = Column(
         "metadata",
         JSONB,
         nullable=False,
@@ -74,8 +73,7 @@ class DoctorKnowledge(Base):
     topic = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
 
-    # Renamed Python attribute to avoid SQLAlchemy reserved name
-    knowledge_metadata = Column(
+    metadata_json = Column(
         "metadata",
         JSONB,
         nullable=False,

@@ -4,8 +4,11 @@ import type { InboxNotification } from "@/types/chat";
 
 interface InboxPanelProps {
   notifications: InboxNotification[];
+  connected: boolean;
   onMarkRead: (id: string) => void;
   onViewReports: () => void;
+  onViewAppointments: () => void;
+  onLabDecision: (cardId: string, sessionId: string, decision: "accept" | "reject") => void;
 }
 
 function timeAgo(ts: number): string {
@@ -22,6 +25,8 @@ function KindIcon({ kind }: { kind: InboxNotification["kind"] }) {
   const className =
     kind === "appointment_booked"
       ? "bg-emerald-100 text-emerald-700"
+      : kind === "lab_suggested"
+      ? "bg-amber-100 text-amber-700"
       : "bg-sky-100 text-sky-700";
 
   return (
@@ -30,6 +35,13 @@ function KindIcon({ kind }: { kind: InboxNotification["kind"] }) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
           <path d="M8 12.5 11 15.5 16 9.5" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+        </svg>
+      ) : kind === "lab_suggested" ? (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+          <path d="M6 6h12v12H6z" />
+          <path d="M9 9h6" />
+          <path d="M9 13h6" />
+          <path d="M9 17h6" />
         </svg>
       ) : (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
@@ -43,11 +55,14 @@ function KindIcon({ kind }: { kind: InboxNotification["kind"] }) {
 
 export default function InboxPanel({
   notifications,
+  connected,
   onMarkRead,
   onViewReports,
+  onViewAppointments,
+  onLabDecision,
 }: InboxPanelProps) {
   return (
-    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-900">Inbox</h1>
@@ -97,6 +112,59 @@ export default function InboxPanel({
                       >
                         Go to lab reports
                       </button>
+                    </div>
+                  )}
+                  {n.kind === "lab_suggested" && (
+                    <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="mb-4">
+                        <p className="text-sm font-semibold text-slate-900">Recommended lab tests</p>
+                        <p className="mt-1 text-xs text-slate-500">Review the suggested tests before continuing.</p>
+                      </div>
+                      <div className="space-y-3">
+                        {(n.tests || []).map((test, index) => (
+                          <div key={index} className="rounded-2xl bg-white p-3 shadow-sm">
+                            <p className="text-sm font-medium text-slate-900">{test.name}</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-500">{test.reason}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          disabled={!connected}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onLabDecision(n.cardId || "", n.reportId || "", "reject");
+                          }}
+                          className={`inline-flex w-full justify-center rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
+                            connected
+                              ? "border-rose-200 bg-rose-50 text-rose-700 hover:-translate-y-0.5"
+                              : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                          }`}
+                        >
+                          No, not now
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!connected}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onLabDecision(n.cardId || "", n.reportId || "", "accept");
+                          }}
+                          className={`inline-flex w-full justify-center rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition ${
+                            connected
+                              ? "bg-gradient-to-r from-sky-600 to-blue-600 text-white hover:-translate-y-0.5"
+                              : "cursor-not-allowed bg-slate-200 text-slate-400"
+                          }`}
+                        >
+                          Yes, proceed
+                        </button>
+                      </div>
+                      {!connected && (
+                        <p className="mt-3 text-xs text-rose-600">
+                          Reconnecting to Ally... please wait before responding.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
