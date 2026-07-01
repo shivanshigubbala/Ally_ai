@@ -69,6 +69,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
   const [consultationActive, setConsultationActive] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const pendingEventsRef = useRef<ClientEvent[]>([]);
   const streamingIdRef = useRef<string | null>(null);
   const doctorStreamingIdRef = useRef<string | null>(null);
   const appointmentBookedRef = useRef(false);
@@ -250,23 +251,61 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
           const docName = (evt.payload.doctor_name as string) || doctorNameRef.current || "Dr. Shankar";
           const doctorId = (evt.payload.doctor_id as string) || "";
           setDoctorReady({ appointmentId, doctorName: docName, doctorId });
+          setDoctorName(docName);
+          setAppointmentBooked(true);
+          setAppointmentPending(false);
+
+          setDoctorMessages((prev) => [
+            ...prev,
+            {
+              id: newId(),
+              role: "assistant",
+              from: docName,
+              content: `Your appointment with ${docName} is confirmed. I’m ready to see you in the Appointments tab.`,
+              timestamp: Date.now(),
+            },
+          ]);
+
+          if (!appointmentBookedRef.current) {
+            appointmentBookedRef.current = true;
+            pushInbox({
+              kind: "appointment_booked",
+              title: "Appointment confirmed",
+              body: `Your appointment with ${docName} is confirmed and ready in Notifications.`,
+              decision: "pending",
+            });
+          }
           break;
         }
 
         case "lab_notification": {
           const waiting = evt.payload.waiting as boolean | undefined;
           if (waiting) break;
-          setCards((prev) => [
+          const tests = (evt.payload.tests as { name: string; reason: string }[]) || [];
+          const docName = (evt.payload.doctor_name as string) || doctorNameRef.current || "your doctor";
+          const formattedTests = tests.map((test) => `• ${test.name}: ${test.reason}`).join("\n");
+          const cardId = newId();
+
+          setDoctorMessages((prev) => [
             ...prev,
             {
               id: newId(),
-              kind: "lab_notification",
-              tests:
-                (evt.payload.tests as { name: string; reason: string }[]) ||
-                [],
-              sessionId: evt.payload.session_id as string,
+              role: "assistant",
+              from: docName,
+              content: `I have recommended the following lab tests:\n${formattedTests}\n\nPlease review and accept or decline them in the Notifications tab.`,
+              timestamp: Date.now(),
             },
           ]);
+
+          pushInbox({
+            kind: "lab_suggested",
+            title: "Lab tests recommended",
+            body: "Review the suggested tests before continuing.",
+            decision: "pending",
+            reportId: evt.payload.session_id as string,
+            cardId,
+            tests,
+          });
           break;
         }
 
@@ -306,15 +345,42 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
     [pushInbox]
   );
 
-  useEffect(() => {
+  const connectWebSocket = useCallback(() => {
     if (!userId) return;
+    const existing = wsRef.current;
+    if (
+      existing &&
+      (existing.readyState === WebSocket.CONNECTING || existing.readyState === WebSocket.OPEN)
+    ) {
+      return;
+    }
 
     const ws = new WebSocket(`${WS_BASE}/ws/${encodeURIComponent(userId)}`);
     wsRef.current = ws;
 
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => setConnected(false);
-    ws.onerror = () => setConnected(false);
+    ws.onopen = () => {
+      setConnected(true);
+      if (pendingEventsRef.current.length > 0) {
+        pendingEventsRef.current.forEach((pendingEvt) => {
+          try {
+            ws.send(JSON.stringify(pendingEvt));
+          } catch {
+            // ignore send failures here
+          }
+        });
+        pendingEventsRef.current = [];
+      }
+    };
+
+    ws.onclose = () => {
+      setConnected(false);
+      wsRef.current = null;
+    };
+
+    ws.onerror = () => {
+      setConnected(false);
+    };
+
     ws.onmessage = (event) => {
       try {
         const evt = JSON.parse(event.data) as WSEvent;
@@ -323,17 +389,41 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
         // Ignore malformed frames.
       }
     };
+  }, [handleEvent, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    connectWebSocket();
 
     return () => {
-      ws.close();
+      wsRef.current?.close();
       wsRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [connectWebSocket, userId]);
 
-  const sendRaw = useCallback((evt: ClientEvent) => {
-    wsRef.current?.send(JSON.stringify(evt));
-  }, []);
+  const sendRaw = useCallback(
+    (evt: ClientEvent) => {
+      const ws = wsRef.current;
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(evt));
+        return;
+      }
+
+      if (ws?.readyState === WebSocket.CONNECTING) {
+        pendingEventsRef.current.push(evt);
+        return;
+      }
+
+      if (userId) {
+        pendingEventsRef.current.push(evt);
+        connectWebSocket();
+      } else {
+        console.warn("WebSocket unavailable, event queued but userId is missing", evt);
+      }
+    },
+    [connectWebSocket, userId]
+  );
 
   const sendText = useCallback(
     (content: string, context: "receptionist" = "receptionist") => {
@@ -400,7 +490,10 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
   );
 
   const startConsultation = useCallback(() => {
-    if (!doctorReady) return;
+    if (!doctorReady) {
+      return;
+    }
+
     setConsultationActive(true);
     setDoctorReady(null);
     sendRaw({
