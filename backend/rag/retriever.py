@@ -30,6 +30,7 @@ def retrieve(
     messages: Iterable[dict],
     top_k: int = DEFAULT_TOP_K,
     max_chars: int = DEFAULT_MAX_CHARS,
+    chief_complaint: str | None = None,
 ) -> str:
     """Return a formatted context block for the LLM, or '' on failure."""
     msgs = list(messages)
@@ -37,6 +38,8 @@ def retrieve(
         return ""
 
     query_parts = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
+    if chief_complaint:
+        query_parts.insert(0, chief_complaint)
     if not query_parts:
         return ""
     query = " ".join(query_parts).strip()

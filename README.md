@@ -36,6 +36,8 @@ retrieved clinical reference rather than invented.
 - **Lab tests** (stubbed)
   On test recommendation the doctor emits `lab_notification`; the user accepts
   or rejects; a `report_ready` event closes the loop.
+  Common general physician lab services in this project are Complete Blood Count
+  (CBC) and Basic Metabolic Panel (BMP).
 
 ## Project structure
 

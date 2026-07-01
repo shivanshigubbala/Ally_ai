@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -13,6 +15,7 @@ logger = logging.getLogger(__name__)
 try:
     from backend.db.pgvector_tracker import (
         get_user_health_context,
+        get_user_messages,
         save_message,
     )
     from backend.llm.nvidia_client import (
@@ -31,6 +34,7 @@ try:
 except ImportError:
     from db.pgvector_tracker import (
         get_user_health_context,
+        get_user_messages,
         save_message,
     )
     from llm.nvidia_client import (
@@ -53,7 +57,138 @@ Emitter = Callable[[WSEvent], None]
 DOCTOR_ID = "d5"
 DOCTOR_NAME = DOCTOR_NAME
 DOCTOR_DEPT = "general"
-MAX_QUESTIONS = 10
+MAX_QUESTIONS = 5
+
+
+def _normalize_text(text: str) -> str:
+    return re.sub(r"\s+", " ", text or "").strip().lower()
+
+
+def _contains_any(text: str, phrases: list[str]) -> bool:
+    lowered = _normalize_text(text)
+    return any(phrase in lowered for phrase in phrases)
+
+
+def _build_initial_doctor_message(chief_complaint: str | None, patient_name: str) -> str:
+    cleaned = (chief_complaint or "").strip()
+    if not cleaned:
+        return (
+            f"Hi {patient_name}, thanks for reaching out. I’m here to help you make sense of what’s going on today."
+        )
+
+    lowered = _normalize_text(cleaned)
+    if _contains_any(lowered, [
+        "just fine",
+        "feeling fine",
+        "all good",
+        "no symptoms",
+        "nothing at all",
+        "no complaints",
+        "nothing serious",
+        "i'm fine",
+        "i am fine",
+        "okay",
+        "ok",
+    ]):
+        return (
+            f"Thanks for letting me know, {patient_name}. If you’re feeling well and there are no new symptoms, I’d keep this simple and only look into testing if anything changes."
+        )
+
+    if _contains_any(lowered, ["cough", "cold", "flu", "sore throat", "headache", "body aches", "runny nose", "fever"]):
+        complaint_hint = next(
+            phrase for phrase in ["cough", "cold", "flu", "sore throat", "headache", "body aches", "runny nose", "fever"]
+            if phrase in lowered
+        )
+        return (
+            f"Thanks for sharing that about your {complaint_hint}, {patient_name}. I’m going to ask a couple of focused questions so I can tell whether this looks mild or needs a closer look."
+        )
+
+    return (
+        f"Thanks for telling me about that, {patient_name}. I’d like to ask a few focused questions so I can give you the right next step."
+    )
+
+
+def _should_recommend_tests(parsed: dict | None, conversation: list[dict], chief_complaint: str | None) -> bool:
+    parsed = parsed or {}
+    if parsed.get("recommend_tests") is False:
+        return False
+
+    tests = _sanitize_tests(parsed.get("tests") or [])
+    if not tests:
+        return False
+
+    conversation_text = " ".join(
+        str(m.get("content", ""))
+        for m in conversation
+        if m.get("role") in ("user", "assistant")
+    )
+    combined = f"{chief_complaint or ''} {conversation_text}".strip()
+    lowered = _normalize_text(combined)
+
+    if _contains_any(lowered, [
+        "just fine",
+        "feeling fine",
+        "all good",
+        "no symptoms",
+        "nothing at all",
+        "no complaints",
+        "nothing serious",
+        "i'm fine",
+        "i am fine",
+        "everything is fine",
+    ]):
+        return False
+
+    red_flags = [
+        "shortness of breath",
+        "trouble breathing",
+        "chest pain",
+        "blood",
+        "bleeding",
+        "severe pain",
+        "passing out",
+        "collapse",
+        "seizure",
+        "confusion",
+        "weight loss",
+        "high fever",
+        "39c",
+        "39°c",
+        "more than 2 weeks",
+        "lasting more than 7 days",
+        "persistent",
+        "coughing blood",
+        "vomiting blood",
+    ]
+    if _contains_any(lowered, red_flags):
+        return True
+
+    mild_patterns = [
+        "cold",
+        "cough",
+        "mild",
+        "viral",
+        "flu",
+        "sore throat",
+        "headache",
+        "body aches",
+        "runny nose",
+        "sinus",
+        "allergy",
+        "fatigue",
+    ]
+    if _contains_any(lowered, mild_patterns) and not _contains_any(lowered, [
+        "worse",
+        "worsening",
+        "severe",
+        "breathing",
+        "chest pain",
+        "persistent",
+        "recurrent",
+    ]):
+        return False
+
+    return bool(parsed.get("recommend_tests"))
 
 
 def _remember(user_id: str, role: str, content: str, session_id: str | None = None) -> None:
@@ -80,6 +215,113 @@ def _extract_json(text: str) -> dict | None:
         return json.loads(m.group(0))
     except json.JSONDecodeError:
         return None
+
+REPORTS_DIR = Path(__file__).resolve().parents[1] / "reports"
+LAB_TESTS = [
+    {
+        "name": "Complete Blood Count (CBC)",
+        "reason": "Evaluates red and white blood cells, hemoglobin, and platelets.",
+    },
+    {
+        "name": "Basic Metabolic Panel (BMP)",
+        "reason": "Checks electrolytes, kidney function, and metabolic status.",
+    },
+]
+_ALLOWED_TEST_NAMES = {
+    "cbc": "Complete Blood Count (CBC)",
+    "complete blood count": "Complete Blood Count (CBC)",
+    "complete blood count (cbc)": "Complete Blood Count (CBC)",
+    "bmp": "Basic Metabolic Panel (BMP)",
+    "basic metabolic panel": "Basic Metabolic Panel (BMP)",
+    "basic metabolic panel (bmp)": "Basic Metabolic Panel (BMP)",
+}
+DEFAULT_REPORT_RESULTS = {
+    "Complete Blood Count (CBC)": (
+        "All values are within normal range. White blood cells, hemoglobin, and "
+        "platelets are normal."
+    ),
+    "Basic Metabolic Panel (BMP)": (
+        "Electrolytes and kidney function are within normal limits. No abnormalities detected."
+    ),
+}
+
+
+def _canonical_test_name(name: str) -> str | None:
+    normalized = re.sub(r"\s+", " ", name or "").strip().lower()
+    return _ALLOWED_TEST_NAMES.get(normalized)
+
+
+def _sanitize_tests(raw_tests: list[dict[str, str]] | None) -> list[dict[str, str]]:
+    tests: list[dict[str, str]] = []
+    if not raw_tests:
+        return tests
+    for item in raw_tests:
+        if not isinstance(item, dict):
+            continue
+        canonical_name = _canonical_test_name(str(item.get("name", "")).strip())
+        if not canonical_name:
+            continue
+        reason = str(item.get("reason", "")).strip()
+        if not reason:
+            reason = next(
+                (t["reason"] for t in LAB_TESTS if t["name"] == canonical_name),
+                "",
+            )
+        tests.append({"name": canonical_name, "reason": reason})
+    return tests
+
+
+def _ensure_reports_dir() -> None:
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _generate_lab_report_pdf(
+    report_id: str,
+    doctor_name: str,
+    patient_name: str,
+    tests: list[dict[str, str]],
+) -> str:
+    _ensure_reports_dir()
+    path = REPORTS_DIR / f"{report_id}.pdf"
+    from fpdf import FPDF
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    pdf.set_font("Helvetica", size=16)
+    pdf.cell(0, 10, "Ally Hospital Lab Report", ln=True, align="C")
+    pdf.ln(6)
+
+    pdf.set_font("Helvetica", size=12)
+    pdf.cell(0, 8, f"Patient: {patient_name}", ln=True)
+    pdf.cell(0, 8, f"Doctor: {doctor_name}", ln=True)
+    pdf.cell(0, 8, f"Report ID: {report_id}", ln=True)
+    pdf.cell(0, 8, f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True)
+    pdf.ln(8)
+
+    pdf.set_font("Helvetica", size=12, style="B")
+    pdf.cell(0, 8, "Recommended Tests and Results", ln=True)
+    pdf.ln(4)
+    pdf.set_font("Helvetica", size=11)
+
+    for test in tests:
+        pdf.set_font("Helvetica", size=12, style="B")
+        pdf.cell(0, 7, f"{test['name']}", ln=True)
+        pdf.set_font("Helvetica", size=11)
+        result = DEFAULT_REPORT_RESULTS.get(test["name"], "Result: Normal.")
+        pdf.multi_cell(0, 6, result)
+        pdf.ln(3)
+
+    pdf.set_font("Helvetica", size=11)
+    pdf.multi_cell(
+        0,
+        6,
+        "These tests were ordered by Dr. Shankar during your consultation at Ally Hospital. "
+        "Please follow up with your clinician if you have any questions about the results.",
+    )
+    pdf.output(str(path))
+    return str(path)
 
 
 def _call_llm(messages: list[dict], model: str | None = None) -> str:
@@ -129,8 +371,35 @@ def _should_end_questioning(reply: str) -> bool:
             "i have enough to",
             "sufficient information",
             "review everything",
+            "rest and fluids",
+            "mild case",
+            "nothing serious",
         ]
     )
+
+
+_NEGATION_WORDS = {"no", "none", "nothing", "nope", "nah", "na", "not", "not really", "not at all", "everything is fine", "everything looks fine", "everything goes well", "all good", "i'm fine", "i am fine"}
+
+
+def _is_negation(text: str) -> bool:
+    lower = text.lower().strip().rstrip(".?!,")
+    if lower in _NEGATION_WORDS:
+        return True
+    return any(lower.startswith(w) for w in ("no ", "none ", "nothing ", "not really", "not at all", "everything is"))
+
+
+def _update_symptom_summary(state: DoctorState, user_message: str, doctor_reply: str) -> str:
+    parts = []
+    if state.symptom_summary:
+        parts.append(state.symptom_summary)
+    if user_message:
+        parts.append(f"Patient says: {user_message}")
+    if doctor_reply:
+        q = doctor_reply.strip()
+        if "?" in q:
+            q = q[:q.index("?") + 1]
+            parts.append(f"Doctor asked: {q}")
+    return "\n".join(parts[-6:])
 
 
 # ---- Nodes --------------------------------------------------------------------
@@ -163,6 +432,7 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
     rag_context = rag_retrieve(
         department=DOCTOR_DEPT,
         messages=state.conversation_history or [{"role": "user", "content": state.user_id}],
+        chief_complaint=state.chief_complaint or None,
     )
 
     prior = _load_prior_context(
@@ -172,41 +442,9 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
     health_data = state.health_data or {}
 
     patient_name = state.user_id.replace("_", " ").title()
+    reply = _build_initial_doctor_message(state.chief_complaint, patient_name)
 
-    system = DOCTOR_SYSTEM_PROMPT.format(
-        rag_context=rag_context or "(no clinical reference retrieved)",
-        name=patient_name,
-        age=health_data.get("age", "unknown"),
-        health_data=prior or "(no prior visits)",
-        messages=_format_messages(state.conversation_history),
-        q_count=0,
-        chief_complaint=state.chief_complaint or "(not yet stated)",
-    )
-
-    messages = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": "Begin the consultation."},
-    ]
-    try:
-        reply = _stream_into_emit(messages, emit, sender=DOCTOR_ID)
-    except Exception:
-        logger.exception(
-            "LLM stream failed in session_init() for user=%s apt=%s",
-            state.user_id, state.appointment_id,
-        )
-        try:
-            reply = _call_llm(messages)
-            emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
-        except Exception:
-            logger.exception(
-                "Fallback non-stream LLM also failed in session_init() user=%s",
-                state.user_id,
-            )
-            reply = (
-                "I'm having trouble starting the consultation right now - "
-                f"could you tell me, in your own words, what's been bothering you, {patient_name}?"
-            )
-            emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
+    emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
     state.conversation_history.append({"role": "assistant", "content": reply})
     state.current_node = "QUESTIONING"
     state.questions_asked = 0
@@ -214,8 +452,6 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
 
 
 def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
-    state.questions_asked = (state.questions_asked or 0) + 1
-
     if state.questions_asked >= MAX_QUESTIONS:
         emit(WSEvent(type="text", payload={
             "content": "Thanks for sharing all that - I have a good picture now. "
@@ -225,9 +461,31 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
         state.current_node = "EVALUATION"
         return state
 
+    state.questions_asked = (state.questions_asked or 0) + 1
+
+    last_user_msg = ""
+    if state.conversation_history and state.conversation_history[-1].get("role") == "user":
+        last_user_msg = state.conversation_history[-1]["content"]
+
+    if _is_negation(last_user_msg):
+        state.consecutive_negatives = (state.consecutive_negatives or 0) + 1
+    else:
+        state.consecutive_negatives = 0
+
+    if state.consecutive_negatives >= 3:
+        msg = (
+            "It sounds like this is a mild case with no concerning symptoms — "
+            "I think rest and fluids should do. Let me wrap up our consultation."
+        )
+        state.conversation_history.append({"role": "assistant", "content": msg})
+        emit(WSEvent(type="text", payload={"content": msg, "from": DOCTOR_ID}))
+        state.current_node = "EVALUATION"
+        return state
+
     rag_context = rag_retrieve(
         department=DOCTOR_DEPT,
         messages=state.conversation_history,
+        chief_complaint=state.chief_complaint or None,
     )
 
     prior = _load_prior_context(
@@ -237,6 +495,8 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
     health_data = state.health_data or {}
     patient_name = state.user_id.replace("_", " ").title()
 
+    state.symptom_summary = _update_symptom_summary(state, last_user_msg, "")
+
     system = DOCTOR_SYSTEM_PROMPT.format(
         rag_context=rag_context or "(no clinical reference retrieved)",
         name=patient_name,
@@ -245,6 +505,7 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
         messages=_format_messages(state.conversation_history),
         q_count=state.questions_asked,
         chief_complaint=state.chief_complaint or "(not yet stated)",
+        symptom_summary=state.symptom_summary or "(no symptoms discussed yet)",
     )
 
     messages = [
@@ -272,6 +533,7 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
             )
             emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
 
+    state.symptom_summary = _update_symptom_summary(state, last_user_msg, reply)
     state.conversation_history.append({"role": "assistant", "content": reply})
     if _should_end_questioning(reply):
         state.current_node = "EVALUATION"
@@ -286,12 +548,19 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
         for m in state.conversation_history
         if m["role"] in ("user", "assistant")
     )
-    prompt = EVALUATION_PROMPT.format(conversation=conv_text)
+    prompt = EVALUATION_PROMPT.format(
+        conversation=conv_text,
+        chief_complaint=state.chief_complaint or "(not stated)",
+    )
     raw = _call_llm([{"role": "user", "content": prompt}], model=ROUTING_MODEL)
     parsed = _extract_json(raw) or {}
 
-    state.lab_tests_recommended = bool(parsed.get("recommend_tests", False))
-    state.tests_list = parsed.get("tests", [])
+    state.tests_list = _sanitize_tests(parsed.get("tests") or [])
+    state.lab_tests_recommended = _should_recommend_tests(
+        parsed,
+        state.conversation_history,
+        state.chief_complaint,
+    )
 
     if state.lab_tests_recommended and state.tests_list:
         test_names = ", ".join(t.get("name", "?") for t in state.tests_list)
@@ -312,8 +581,9 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
         emit(WSEvent(type="text", payload={
             "content": (
                 "Good news - based on everything you've told me, I don't think we need "
-                "any tests right now. Get some rest, stay hydrated, and come back if "
-                "anything changes or gets worse."
+                "any tests right now. This sounds mild and manageable, so rest, fluids, "
+                "and a little patience should be enough for now. Please come back if anything "
+                "changes or gets worse."
             ),
             "from": DOCTOR_ID,
         }))
@@ -353,28 +623,38 @@ def lab_notification(state: DoctorState, emit: Emitter) -> DoctorState:
 
 def user_decision(state: DoctorState, emit: Emitter) -> DoctorState:
     if state.user_lab_decision == "accept":
+        # Don't claim the doctor 'ordered' the tests — present this as a lab/system action.
         emit(WSEvent(type="text", payload={
-            "content": "Great, I'm ordering those tests now. You'll get the report shortly!",
-            "from": DOCTOR_ID,
+            "content": "Thanks — the lab has been requested. You'll get the report shortly!",
         }))
         state.current_node = "REPORT_PENDING"
     else:
         emit(WSEvent(type="text", payload={
             "content": "No problem. Watch for any new symptoms, stay hydrated, and feel free to come back anytime.",
-            "from": DOCTOR_ID,
         }))
         state.current_node = "SESSION_COMPLETE"
     return state
 
 
 def report_pending(state: DoctorState, emit: Emitter) -> DoctorState:
+    report_id = f"report-{state.appointment_id}"
+    patient_name = state.user_id.replace("_", " ").title()
+    try:
+        logger.info("Generating lab report PDF report_id=%s for user=%s tests=%s", report_id, state.user_id, [t.get('name') for t in (state.tests_list or [])])
+        _generate_lab_report_pdf(report_id, DOCTOR_NAME, patient_name, state.tests_list)
+    except Exception:
+        logger.exception("Failed to generate lab report PDF for report_id=%s", report_id)
+
     emit(WSEvent(type="report_ready", payload={
-        "inbox_id": f"report-{state.appointment_id}",
+        "inbox_id": report_id,
+        "report_id": report_id,
+        "report_url": f"/reports/{report_id}",
         "doctor": DOCTOR_NAME,
+        "tests": state.tests_list,
     }))
+    # Announce report availability (system message — not attributed to the doctor).
     emit(WSEvent(type="text", payload={
         "content": "Your lab report is ready. Take care, and follow up if anything changes!",
-        "from": DOCTOR_ID,
     }))
     state.current_node = "SESSION_COMPLETE"
     return state

@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _user_state: dict[str, str] = {}
+_doctor_sessions: dict[str, str] = {}
 
 
 async def _send(ws: WebSocket, event: WSEvent) -> None:
@@ -45,16 +46,25 @@ async def _drive_routing(ws: WebSocket, user_id: str, message: str | None,
         routing_graph.run_step, user_id, message, pending_event)
     for ev in events:
         await _send(ws, ev)
+
     if state.current_node == "DONE":
         if state.appointment_id:
-            _user_state[user_id] = "DOCTOR"
-            appointment_id = state.appointment_id
-            first_user_msg = next(
-                (m["content"] for m in state.message_history if m.get("role") == "user"),
-                None,
+            # Instead of auto-switching to doctor, emit a doctor_ready event
+            # so the frontend can offer a tab-based handoff.
+            doctors = store.list_doctors(state.selected_dept or "general")
+            doc_name = next(
+                (d["name"] for d in doctors if d["id"] == state.selected_doctor),
+                "Dr. Shankar",
             )
-            await _drive_doctor(ws, user_id, appointment_id, first_user_msg, None)
-            return appointment_id
+            await _send(ws, WSEvent(type="doctor_ready", payload={
+                "appointment_id": state.appointment_id,
+                "doctor_name": doc_name,
+                "doctor_id": state.selected_doctor or DOCTOR_ID,
+            }))
+            # Reset routing graph so the receptionist can handle new requests
+            routing_graph.reset_state(user_id)
+            _user_state[user_id] = "ROUTING"
+            return state.appointment_id
         _user_state[user_id] = "DONE"
     else:
         _user_state[user_id] = "ROUTING"
@@ -70,6 +80,20 @@ async def _drive_doctor(ws: WebSocket, user_id: str, appointment_id: str,
         doctor_step, user_id, appointment_id, message, pending_event)
     for ev in events:
         await _send(ws, ev)
+
+
+async def _handle_start_consultation(ws: WebSocket, user_id: str,
+                                     payload: dict) -> None:
+    appointment_id = payload.get("appointment_id", "")
+    if not appointment_id:
+        await _send(ws, WSEvent(type="text", payload={
+            "content": "No appointment ID provided.",
+        }))
+        return
+
+    _doctor_sessions[user_id] = appointment_id
+    # Pass the first user message from the routing history as the doctor's context.
+    await _drive_doctor(ws, user_id, appointment_id, None, None)
 
 
 @router.websocket("/ws/{user_id}")
@@ -89,9 +113,40 @@ async def ws_endpoint(ws: WebSocket, user_id: str) -> None:
                 continue
 
             try:
-                if _user_state.get(user_id) == "DOCTOR" and appointment_id:
-                    await _drive_doctor(ws, user_id, appointment_id,
-                                        evt.payload.get("content"), evt.model_dump())
+                if evt.type == "start_consultation":
+                    await _handle_start_consultation(ws, user_id, evt.payload)
+                    continue
+
+                if evt.type == "select":
+                    # If this select has a start_consultation action, handle it
+                    action = evt.payload.get("action", "")
+                    if action == "start_consultation":
+                        await _handle_start_consultation(ws, user_id, evt.payload)
+                        continue
+
+                # Route text/select messages based on context
+                msg_context = evt.payload.get("context", "receptionist")
+                if msg_context == "doctor":
+                    # If we already have an active doctor session for this user, drive it.
+                    if user_id in _doctor_sessions:
+                        apt_id = _doctor_sessions[user_id]
+                        await _drive_doctor(ws, user_id, apt_id,
+                                            evt.payload.get("content"), evt.model_dump())
+                    else:
+                        # No active doctor session: try to extract a session/appointment id
+                        # from the payload (e.g. lab decision carries session_id). If found,
+                        # attach it as the doctor's session and route the event to the
+                        # doctor graph so decisions like lab accept/reject are handled.
+                        possible_apt = evt.payload.get("session_id") or evt.payload.get("appointment_id")
+                        if possible_apt:
+                            _doctor_sessions[user_id] = possible_apt
+                            await _drive_doctor(ws, user_id, possible_apt,
+                                                evt.payload.get("content"), evt.model_dump())
+                        else:
+                            # Fall back to routing if we can't determine an appointment id
+                            apt = await _drive_routing(ws, user_id, evt.payload.get("content"), evt.model_dump())
+                            if apt:
+                                appointment_id = apt
                 elif _user_state.get(user_id) == "DONE":
                     routing_graph.reset_state(user_id)
                     _user_state[user_id] = "ROUTING"
@@ -120,7 +175,8 @@ async def ws_endpoint(ws: WebSocket, user_id: str) -> None:
                     ))
                 except Exception:
                     logger.exception("Failed to send error notice to client user=%s", user_id)
-                # Continue the loop; do NOT close the connection on a processing error.
                 continue
     except WebSocketDisconnect:
+        if user_id in _doctor_sessions:
+            del _doctor_sessions[user_id]
         return

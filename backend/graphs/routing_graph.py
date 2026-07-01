@@ -52,9 +52,9 @@ def _llm_reply(system: str, user: str) -> str:
         if user == "Patient cancelled.":
             return "I understand. If you'd like to book another time, just let me know."
         if user.startswith("Appointment") and "confirmed" in user:
-            return "Your appointment is confirmed. Dr. Shankar is coming online now to speak with you!"
+            return "Your appointment is confirmed! Dr. Shankar is ready to see you in the Appointments tab."
         if user == "Transitioning to doctor.":
-            return "Dr. Shankar is joining the chat now."
+            return "Dr. Shankar is ready for you in the Appointments tab."
         return "Okay, let me take care of that for you."
 
 
@@ -89,23 +89,100 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
     if not last_user:
         return state
 
+    state.selected_dept = "general"
+    if state.symptom_round == 0:
+        reply = _llm_reply(
+            RECEPTIONIST_PERSONA + (
+                "The patient just described their symptoms. In 1-2 short sentences, acknowledge "
+                "what they said warmly, then ask a follow-up question about duration, onset, location, "
+                "or what makes the symptoms better or worse. Mention the symptom once, then move on "
+                "to a new question. No bullet points, no lists."
+            ),
+            f"Patient said: {last_user}",
+        )
+        emit(WSEvent(type="text", payload={"content": reply}))
+        state.message_history.append({"role": "assistant", "content": reply})
+        state.symptom_round = 1
+        return state
+
+    if state.symptom_round == 1:
+        reply = _llm_reply(
+            RECEPTIONIST_PERSONA + (
+                "The patient has already described their main symptom. Acknowledge that briefly, "
+                "then ask another short follow-up about timing, severity, triggers, or whether anything "
+                "has changed. Use a different angle than the prior question."
+            ),
+            f"Patient said: {last_user}",
+        )
+        emit(WSEvent(type="text", payload={"content": reply}))
+        state.message_history.append({"role": "assistant", "content": reply})
+        state.symptom_round = 2
+        return state
+
+    if state.symptom_round == 2:
+        reply = _llm_reply(
+            RECEPTIONIST_PERSONA + (
+                "You've got a few follow-up details now. Acknowledge what they said warmly, then ask one more "
+                "brief, specific question about location, intensity, swelling, or other symptoms before moving "
+                "toward booking. No bullet points, no lists."
+            ),
+            f"Patient said: {last_user}",
+        )
+        emit(WSEvent(type="text", payload={"content": reply}))
+        state.message_history.append({"role": "assistant", "content": reply})
+        state.symptom_round = 3
+        return state
+
     reply = _llm_reply(
         RECEPTIONIST_PERSONA + (
-            " The patient just described their symptoms. In 1-2 short sentences, acknowledge "
-            "what they said warmly, then say you're going to book them with Dr. Shankar, "
-            "our General Physician, who can help. No bullet points, no lists."
+            "The patient has now shared several follow-up details. Acknowledge that warmly, then say you're "
+            "going to help them choose a doctor and a time. No bullet points, no lists."
         ),
         f"Patient said: {last_user}",
     )
     emit(WSEvent(type="text", payload={"content": reply}))
     state.message_history.append({"role": "assistant", "content": reply})
 
-    state.selected_dept = "general"
-    state.selected_doctor = GP_DOCTOR_ID
+    doctors = store.list_doctors(state.selected_dept)
+    if doctors:
+        emit(WSEvent(type="doctor_select", payload={
+            "options": doctors,
+            "department_id": state.selected_dept,
+        }))
+        state.current_node = "DOCTOR_SELECTION"
+    else:
+        emit(WSEvent(type="text", payload={"content": "I'm sorry, there are no doctors available right now. Please try again later."}))
+        state.current_node = "DONE"
+    return state
 
-    doc_name = GP_DOCTOR_NAME
+
+def doctor_selection_node(state: RoutingState, emit: Emitter) -> RoutingState:
+    pending = state.pending_event or {}
+    state.pending_event = None
+    doctors = store.list_doctors(state.selected_dept or "general")
+    for d in doctors:
+        d["available"] = d["id"] == GP_DOCTOR_ID
+
+    if pending.get("type") == "select":
+        selected_doctor = pending.get("payload", {}).get("id") or pending.get("payload", {}).get("doctor_id")
+        if selected_doctor:
+            state.selected_doctor = selected_doctor
+        else:
+            state.selected_doctor = state.selected_doctor or GP_DOCTOR_ID
+    else:
+        state.selected_doctor = state.selected_doctor or GP_DOCTOR_ID
+
+    chosen = next((d for d in doctors if d["id"] == state.selected_doctor), None)
+    if chosen and not chosen.get("available", True):
+        emit(WSEvent(type="text", payload={"content": "I’m sorry, that doctor isn’t available right now. Let’s book with Dr. Shankar, who is available."}))
+        state.selected_doctor = GP_DOCTOR_ID
+
+    if not any(d["id"] == state.selected_doctor for d in doctors):
+        state.selected_doctor = next((d["id"] for d in doctors if d.get("available", False)), GP_DOCTOR_ID)
+
     slots = store.list_slots(state.selected_doctor or GP_DOCTOR_ID)
     if slots:
+        doc_name = next((d["name"] for d in doctors if d["id"] == state.selected_doctor), GP_DOCTOR_NAME)
         emit(WSEvent(type="slot_select", payload={
             "options": slots,
             "doctor_id": state.selected_doctor or GP_DOCTOR_ID,
@@ -113,7 +190,7 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
         }))
         state.current_node = "SLOT_SELECTION"
     else:
-        emit(WSEvent(type="text", payload={"content": "I'm sorry, there are no available slots right now. Please try again later."}))
+        emit(WSEvent(type="text", payload={"content": "I'm sorry, there are no available slots for that doctor right now. Please try again later."}))
         state.current_node = "DONE"
     return state
 
@@ -155,16 +232,43 @@ def slot_node(state: RoutingState, emit: Emitter) -> RoutingState:
     except Exception:
         nice_time = chosen["start_time"]
 
+    status, body = store.book_appointment(
+        doctor_id=state.selected_doctor or GP_DOCTOR_ID,
+        slot_id=chosen["id"],
+        patient=state.user_id,
+        reason="booked via Ally receptionist",
+    )
+
+    if status == 409:
+        reply = _llm_reply(
+            RECEPTIONIST_PERSONA + " The slot was just taken by someone else. Apologize and show new available slots.",
+            "Slot conflict - need new slot.",
+        )
+        emit(WSEvent(type="text", payload={"content": reply}))
+        slots = store.list_slots(state.selected_doctor or GP_DOCTOR_ID)
+        if slots:
+            state.selected_slot = slots[0]["id"]
+            emit(WSEvent(type="slot_select", payload={"options": slots, "doctor_id": state.selected_doctor}))
+            state.current_node = "SLOT_SELECTION"
+        return state
+
+    if status >= 400:
+        emit(WSEvent(type="text", payload={
+            "content": f"Sorry, something went wrong on our end (code {status}). Could you try again?"
+        }))
+        return state
+
+    state.appointment_id = body.get("id") if isinstance(body, dict) else None
     reply = _llm_reply(
         RECEPTIONIST_PERSONA + (
-            f" The patient picked a slot on {nice_time} with Dr. Shankar. "
-            "Confirm this with them naturally and ask if they'd like to confirm. "
-            "Something like 'So I've got you down for {nice_time} with Dr. Rivera - does that sound good?'"
+            f"Your appointment is confirmed for {nice_time} with Dr. Shankar. "
+            "I’ve got everything booked and the doctor will be ready for you in the Appointments tab."
         ),
-        f"Confirming slot {chosen['id']} at {nice_time}.",
+        f"Appointment confirmed for {chosen['id']} at {nice_time}.",
     )
     emit(WSEvent(type="text", payload={"content": reply}))
-    state.current_node = "BOOKING_CONFIRMATION"
+    state.message_history.append({"role": "assistant", "content": f"Appointment {state.appointment_id} confirmed."})
+    state.current_node = "DONE"
     return state
 
 
@@ -176,7 +280,12 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
             break
 
     cancelled = "cancel" in last_user or "no" in last_user or "nope" in last_user
-    confirmed = "confirm" in last_user or "yes" in last_user or "yeah" in last_user or "sure" in last_user or "good" in last_user
+    confirmed = (
+        "confirm" in last_user or "yes" in last_user or "yeah" in last_user
+        or "sure" in last_user or "good" in last_user
+        or "selected a time slot" in last_user
+        or "selected a slot" in last_user
+    )
 
     if not confirmed and not cancelled:
         reply = _llm_reply(
@@ -226,19 +335,16 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
         RECEPTIONIST_PERSONA + (
             f" The appointment is confirmed! Appointment ID: {state.appointment_id}. "
             "In 1-2 short sentences, congratulate the patient warmly and tell them "
-            "Dr. Shankar will be right with them. No bullet points, no lists."
+            "Dr. Shankar is ready to see them in the Appointments tab. "
+            "No bullet points, no lists."
         ),
         f"Appointment {state.appointment_id} confirmed.",
     )
     emit(WSEvent(type="text", payload={"content": reply}))
     state.message_history.append({"role": "assistant", "content": f"Appointment {state.appointment_id} confirmed."})
 
-    transition = _llm_reply(
-        RECEPTIONIST_PERSONA + (
-            " The appointment is booked. Now tell the patient that Dr. Shankar is ready to see them now "
-            "and will be joining the chat. Say something warm like 'Dr. Shankar is coming online now to speak with you!'"
-        ),
-        "Transitioning to doctor.",
+    transition = (
+        "Your appointment is confirmed. The doctor will be available from the Appointments tab when you're ready to continue."
     )
     emit(WSEvent(type="text", payload={"content": transition}))
     state.current_node = "DONE"
@@ -248,7 +354,7 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
 # ---- Edge routing -------------------------------------------------------------
 
 def _route_after_intent(state: RoutingState) -> str:
-    return "SLOT_SELECTION" if state.selected_dept else "GREETING"
+    return "DOCTOR_SELECTION" if state.selected_dept else "GREETING"
 
 
 def _route_after_slot(state: RoutingState) -> str:
@@ -265,12 +371,15 @@ def build_graph():
     g = StateGraph(RoutingState)
     g.add_node("GREETING", greeting_node)
     g.add_node("INTENT_CLASSIFICATION", intent_node)
+    g.add_node("DOCTOR_SELECTION", doctor_selection_node)
     g.add_node("SLOT_SELECTION", slot_node)
     g.add_node("BOOKING_CONFIRMATION", booking_node)
 
     g.set_entry_point("GREETING")
     g.add_edge("GREETING", "INTENT_CLASSIFICATION")
     g.add_conditional_edges("INTENT_CLASSIFICATION", _route_after_intent,
+                            {"DOCTOR_SELECTION": "DOCTOR_SELECTION", "GREETING": "GREETING"})
+    g.add_conditional_edges("DOCTOR_SELECTION", _route_after_intent,
                             {"SLOT_SELECTION": "SLOT_SELECTION", "GREETING": "GREETING"})
     g.add_conditional_edges("SLOT_SELECTION", _route_after_slot,
                             {"BOOKING_CONFIRMATION": "BOOKING_CONFIRMATION", "DONE": END})
@@ -355,6 +464,7 @@ def run_step(user_id: str, message: str | None, pending_event: dict | None) -> t
 _NODE_FNS = {
     "GREETING": greeting_node,
     "INTENT_CLASSIFICATION": intent_node,
+    "DOCTOR_SELECTION": doctor_selection_node,
     "SLOT_SELECTION": slot_node,
     "BOOKING_CONFIRMATION": booking_node,
 }
