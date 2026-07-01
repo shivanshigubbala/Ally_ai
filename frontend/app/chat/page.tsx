@@ -40,7 +40,6 @@ export default function ChatPage() {
     connected,
     thinking,
     doctorName,
-    appointmentPending,
     appointmentBooked,
     doctorReady,
     doctorMessages,
@@ -56,6 +55,7 @@ export default function ChatPage() {
     unreadCount,
     addSampleReport,
   } = useChatSocket(userId);
+  const activeTab: SidebarTab = doctorReady ? "appointments" : tab;
 
   useEffect(() => {
     const validateSession = () => {
@@ -83,12 +83,6 @@ export default function ChatPage() {
     return () => window.removeEventListener("pageshow", handlePageShow);
   }, [router]);
 
-  useEffect(() => {
-    if (doctorReady) {
-      setTab("appointments");
-    }
-  }, [doctorReady]);
-
   const logout = () => {
     clearProfile();
     window.localStorage.removeItem("token");
@@ -98,65 +92,65 @@ export default function ChatPage() {
   if (!ready || !profile) return null;
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar
-        active={tab}
-        onChange={setTab}
-        patientName={profile.name}
-        unreadCount={unreadCount}
-      />
+    <div className="min-h-screen bg-[#c9edf2] px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1600px] gap-4 lg:grid-cols-[16rem_1fr]">
+        <Sidebar
+          active={activeTab}
+          onChange={setTab}
+          patientName={profile.name}
+          unreadCount={unreadCount}
+        />
 
-      <main className="flex-1 flex flex-col min-h-0">
-        {tab === "chat" && (
-          <>
-            <ChatHeader connected={connected} doctorName={null} />
+        <main className="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white/88 shadow-[0_30px_100px_rgba(15,23,42,0.12)] backdrop-blur">
+          {activeTab === "chat" && (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <ChatHeader connected={connected} doctorName={doctorName} />
+              <ChatThread
+                messages={messages}
+                cards={cards}
+                thinking={thinking}
+                onSelectDoctor={selectDoctor}
+                onSelectSlot={resolveSlot}
+                onLabDecision={resolveLabDecision}
+              />
+              <ChatComposer onSend={sendText} disabled={!connected} />
+            </div>
+          )}
 
-            <ChatThread
-              messages={messages}
-              cards={cards}
-              thinking={thinking}
-              onSelectDoctor={selectDoctor}
+          {activeTab === "inbox" && (
+            <InboxPanel
+              notifications={inbox}
+              onMarkRead={markInboxRead}
+              onViewReports={() => setTab("reports")}
+            />
+          )}
+
+          {activeTab === "reports" && (
+            <LabReportsPanel reports={reports} onAddSampleReport={addSampleReport} />
+          )}
+
+          {activeTab === "appointments" && (
+            <AppointmentsPanel
+              doctorName={doctorName}
+              booked={appointmentBooked}
+              slotCards={cards.filter((card) => card.kind === "slot_select")}
+              labCards={cards.filter((card) => card.kind === "lab_notification")}
               onSelectSlot={resolveSlot}
               onLabDecision={resolveLabDecision}
+              doctorReady={doctorReady}
+              doctorMessages={doctorMessages}
+              doctorThinking={doctorThinking}
+              consultationActive={consultationActive}
+              onStartConsultation={startConsultation}
+              onSendDoctorMessage={sendDoctorMessage}
             />
+          )}
 
-            <ChatComposer onSend={sendText} disabled={!connected} />
-          </>
-        )}
-
-        {tab === "inbox" && (
-          <InboxPanel
-            notifications={inbox}
-            onMarkRead={markInboxRead}
-            onViewReports={() => setTab("reports")}
-          />
-        )}
-
-        {tab === "reports" && (
-          <LabReportsPanel reports={reports} onAddSampleReport={addSampleReport} />
-        )}
-
-        {tab === "appointments" && (
-          <AppointmentsPanel
-            doctorName={doctorName}
-            booked={appointmentBooked}
-            slotCards={cards.filter((card) => card.kind === "slot_select")}
-            labCards={cards.filter((card) => card.kind === "lab_notification")}
-            onSelectSlot={resolveSlot}
-            onLabDecision={resolveLabDecision}
-            doctorReady={doctorReady}
-            doctorMessages={doctorMessages}
-            doctorThinking={doctorThinking}
-            consultationActive={consultationActive}
-            onStartConsultation={startConsultation}
-            onSendDoctorMessage={sendDoctorMessage}
-          />
-        )}
-
-        {tab === "profile" && (
-          <ProfilePanel profile={profile} reports={reports} onLogout={logout} />
-        )}
-      </main>
+          {activeTab === "profile" && (
+            <ProfilePanel profile={profile} reports={reports} onLogout={logout} />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
