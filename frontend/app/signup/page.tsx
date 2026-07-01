@@ -270,7 +270,7 @@ export default function SignupPage() {
 
             <section>
               <SectionTitle
-                title={`Health Assessment (7 Questions)`}
+                title={`Health Assessment`}
                 subtitle={`Use Yes / No checkboxes for each. ${selectedCount}/7 answered.`}
               />
               <div className="grid gap-3 md:grid-cols-2">
