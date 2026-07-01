@@ -7,6 +7,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import Body, FastAPI, HTTPException
+from starlette.responses import FileResponse
 
 try:
     from backend.graphs import routing_graph
@@ -55,6 +56,14 @@ def root() -> dict:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/reports/{report_id}")
+def download_report(report_id: str) -> FileResponse:
+    report_path = Path(__file__).resolve().parents[1] / "reports" / f"{report_id}.pdf"
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="Report not found")
+    return FileResponse(str(report_path), filename=f"{report_id}.pdf", media_type="application/pdf")
 
 
 @app.get("/nv-test")

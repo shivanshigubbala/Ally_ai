@@ -64,6 +64,8 @@ class LocalStore:
 
         docs = [
             Doctor("d5", "Dr. Shankar", "general"),
+            Doctor("d6", "Dr. Maya Patel", "general"),
+            Doctor("d7", "Dr. Omar Khan", "general"),
         ]
         for d in docs:
             self._doctors[d.id] = d
