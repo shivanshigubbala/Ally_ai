@@ -10,7 +10,8 @@ export type WSEventType =
   | "slot_select"
   | "lab_notification"
   | "report_ready"
-  | "doctor_ready";
+  | "doctor_ready"
+  | "emergency_alert";
 
 export interface WSEvent {
   type: WSEventType;
@@ -68,7 +69,7 @@ export interface ChatCard {
   resolved?: boolean;
 }
 
-export type InboxKind = "appointment_booked" | "report_ready" | "lab_suggested";
+export type InboxKind = "appointment_booked" | "lab_notification" | "report_ready" | "lab_suggested";
 
 export interface InboxNotification {
   id: string;
@@ -80,7 +81,9 @@ export interface InboxNotification {
   decision?: "pending" | "accepted" | "rejected";
   reportId?: string;
   cardId?: string;
+  sessionId?: string;
   tests?: LabTest[];
+  urgent?: boolean;
 }
 
 export interface LabReport {

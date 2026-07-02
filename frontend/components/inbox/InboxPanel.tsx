@@ -100,6 +100,37 @@ export default function InboxPanel({
                   </div>
                   <p className="mt-1 text-sm leading-6 text-slate-600">{n.body}</p>
 
+                  {n.kind === "lab_notification" && n.decision === "pending" && n.cardId && n.sessionId && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onLabDecision(n.cardId || "", n.sessionId || "", "reject");
+                        }}
+                        className="inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-rose-700 shadow-sm ring-1 ring-rose-200 transition hover:-translate-y-0.5"
+                      >
+                        Decline tests
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onLabDecision(n.cardId || "", n.sessionId || "", "accept");
+                        }}
+                        className="inline-flex rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-blue-200 transition hover:-translate-y-0.5"
+                      >
+                        Accept tests
+                      </button>
+                    </div>
+                  )}
+
+                  {n.kind === "lab_notification" && n.decision && n.decision !== "pending" && (
+                    <p className="mt-3 text-xs font-semibold text-slate-500">
+                      {n.decision === "accepted" ? "Tests accepted" : "Tests declined"}
+                    </p>
+                  )}
+
                   {n.kind === "report_ready" && (
                     <div className="mt-4">
                       <button

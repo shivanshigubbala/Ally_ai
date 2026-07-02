@@ -6,17 +6,23 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 try:
     from backend.graphs.cardiology_agent import (
+        _graph,
         _build_initial_doctor_message,
         _is_emergency,
         _should_recommend_tests,
+        step,
     )
+    from backend.services import local_store as store
     from backend.specialties.cardiology.test_recommender import sanitize_tests
 except ImportError:
     from graphs.cardiology_agent import (
+        _graph,
         _build_initial_doctor_message,
         _is_emergency,
         _should_recommend_tests,
+        step,
     )
+    from services import local_store as store
     from specialties.cardiology.test_recommender import sanitize_tests
 
 
@@ -68,6 +74,42 @@ class CardiologyAgentTests(unittest.TestCase):
         self.assertIn("ECG", names)
         self.assertIn("Echocardiogram", names)
         self.assertNotIn("MRI Brain", names)
+
+    def test_accepting_tests_generates_report_ready_immediately(self):
+        slots = store.list_slots("d8")
+        status, body = store.book_appointment(
+            "d8",
+            slots[0]["id"],
+            "cardiology_test_user",
+            "chest pain",
+        )
+        self.assertEqual(status, 200)
+        appointment_id = body["id"]
+
+        state, _ = step("cardiology_test_user", appointment_id, None, None)
+        state.tests_list = [{"name": "ECG", "reason": "Chest pain evaluation"}]
+        state.current_node = "LAB_NOTIFICATION"
+        _graph.update_state(
+            {"configurable": {"thread_id": f"doc:cardiology_test_user:{appointment_id}"}},
+            state.model_dump(),
+        )
+
+        state, events = step(
+            "cardiology_test_user",
+            appointment_id,
+            None,
+            {
+                "type": "select",
+                "payload": {
+                    "context": "doctor",
+                    "decision": "accept",
+                    "session_id": appointment_id,
+                },
+            },
+        )
+
+        self.assertEqual(state.current_node, "SESSION_COMPLETE")
+        self.assertTrue(any(event.type == "report_ready" for event in events))
 
 
 if __name__ == "__main__":

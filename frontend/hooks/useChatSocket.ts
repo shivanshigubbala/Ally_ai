@@ -74,6 +74,11 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
   const doctorStreamingIdRef = useRef<string | null>(null);
   const appointmentBookedRef = useRef(false);
   const doctorNameRef = useRef<string | null>(null);
+  const consultationActiveRef = useRef(false);
+
+  useEffect(() => {
+    consultationActiveRef.current = consultationActive;
+  }, [consultationActive]);
 
   const pushInbox = useCallback(
     (notif: Omit<InboxNotification, "id" | "createdAt" | "read">) => {
@@ -93,7 +98,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
       switch (evt.type) {
         case "thinking": {
           const content = (evt.payload.content as string) || "";
-          if (/dr\.?\s+shankar/i.test(content)) {
+          if (/doctor|dr\.?\s+/i.test(content) || consultationActiveRef.current) {
             setDoctorThinking(content);
           } else {
             setThinking(content);
@@ -281,10 +286,13 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
         case "lab_notification": {
           const waiting = evt.payload.waiting as boolean | undefined;
           if (waiting) break;
+
           const tests = (evt.payload.tests as { name: string; reason: string }[]) || [];
+          const cardId = newId();
+          const sessionId = evt.payload.session_id as string;
+          const urgent = Boolean(evt.payload.urgent);
           const docName = (evt.payload.doctor_name as string) || doctorNameRef.current || "your doctor";
           const formattedTests = tests.map((test) => `• ${test.name}: ${test.reason}`).join("\n");
-          const cardId = newId();
 
           setDoctorMessages((prev) => [
             ...prev,
@@ -297,14 +305,39 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
             },
           ]);
 
+          setCards((prev) => [
+            ...prev,
+            {
+              id: cardId,
+              kind: "lab_notification",
+              tests,
+              sessionId,
+            },
+          ]);
+
           pushInbox({
-            kind: "lab_suggested",
-            title: "Lab tests recommended",
-            body: "Review the suggested tests before continuing.",
+            kind: "lab_notification",
+            title: urgent ? "Urgent cardiac tests requested" : "Cardiac tests requested",
+            body: urgent
+              ? "Your cardiology doctor flagged urgent tests. Please review and accept or decline."
+              : "Your cardiology doctor recommended tests. Please review and accept or decline.",
             decision: "pending",
-            reportId: evt.payload.session_id as string,
             cardId,
+            sessionId,
             tests,
+            urgent,
+          });
+          break;
+        }
+
+        case "emergency_alert": {
+          const content = (evt.payload.content as string) || "";
+          pushInbox({
+            kind: "lab_notification",
+            title: "Urgent cardiology alert",
+            body: content || "The cardiology doctor marked this conversation as urgent.",
+            decision: "pending",
+            urgent: true,
           });
           break;
         }
@@ -319,13 +352,16 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
           const reportUrl =
             (evt.payload.report_url as string) ||
             `${HTTP_BASE}/reports/${encodeURIComponent(reportId)}`;
+          const normalizedReportUrl = reportUrl.startsWith("/")
+            ? `${HTTP_BASE}${reportUrl}`
+            : reportUrl;
           setReports((prev) => [
             {
               id: reportId,
               doctorName: doctor,
               tests,
               createdAt: Date.now(),
-              url: reportUrl,
+              url: normalizedReportUrl,
             },
             ...prev,
           ]);
@@ -496,6 +532,8 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
 
     setConsultationActive(true);
     setDoctorReady(null);
+    setDoctorMessages([]);
+    setDoctorThinking(null);
     sendRaw({
       type: "start_consultation",
       payload: { appointment_id: doctorReady.appointmentId },
@@ -506,6 +544,17 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
     (cardId: string, sessionId: string, decision: "accept" | "reject") => {
       setCards((prev) =>
         prev.map((c) => (c.id === cardId ? { ...c, resolved: true } : c))
+      );
+      setInbox((prev) =>
+        prev.map((n) =>
+          n.cardId === cardId || (sessionId && n.sessionId === sessionId)
+            ? {
+                ...n,
+                read: true,
+                decision: decision === "accept" ? "accepted" : "rejected",
+              }
+            : n
+        )
       );
       setDoctorMessages((prev) => [
         ...prev,
