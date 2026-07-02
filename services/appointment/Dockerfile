@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o appointment .
+RUN go build -o appointment ./cmd/server
 
 FROM alpine:3.20
 

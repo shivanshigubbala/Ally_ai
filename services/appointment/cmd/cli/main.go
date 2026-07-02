@@ -1,6 +1,11 @@
 // services/appointment/cmd/cli/main.go
 package main
 
+/*
+
+this file is basically to test the layers 
+
+*/
 import (
 	"bufio"
 	"bytes"
