@@ -14,6 +14,12 @@ except ImportError:
 
 _pool = None
 
+# Production table (used by the team)
+KNOWLEDGE_TABLE = "knowledge_chunks"
+
+# Development table (used only for your Neurology pipeline)
+DEV_KNOWLEDGE_TABLE = "knowledge_chunks_neurology_dev"
+
 
 def _get_pool():
     global _pool
@@ -99,6 +105,22 @@ def init_db():
                 created_at TIMESTAMPTZ DEFAULT NOW()
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS knowledge_chunks_neurology_dev (
+                id SERIAL PRIMARY KEY,
+                department TEXT NOT NULL,
+                source TEXT NOT NULL,
+                page INTEGER,
+                content TEXT NOT NULL,
+                embedding vector(384),
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS knowledge_chunks_neuro_dev_idx
+            ON knowledge_chunks_neurology_dev(department)
+       """)
         cur.execute("""
             CREATE INDEX IF NOT EXISTS knowledge_chunks_dept_idx
                 ON knowledge_chunks(department)
@@ -351,3 +373,82 @@ def search_knowledge(
             rows = cur.fetchall()
         cur.close()
     return [dict(r) for r in rows]
+def insert_knowledge_chunks_dev(
+    department: str,
+    source: str,
+    page: int,
+    contents: list[str],
+    embeddings: list[list[float]],
+) -> int:
+
+    if not HAS_PG:
+        return 0
+
+    if not contents or len(contents) != len(embeddings):
+        return 0
+
+    with _conn() as conn:
+
+        if conn is None:
+            return 0
+
+        cur = conn.cursor()
+
+        psycopg2.extras.execute_values(
+            cur,
+            f"""
+            INSERT INTO {DEV_KNOWLEDGE_TABLE}
+            (department, source, page, content, embedding)
+            VALUES %s
+            """,
+            [
+                (department, source, page, c, e)
+                for c, e in zip(contents, embeddings)
+            ],
+            template="(%s, %s, %s, %s, %s::vector)",
+        )
+
+        count = cur.rowcount
+
+        cur.close()
+
+    return count
+def count_knowledge_chunks_dev(
+    department: str | None = None,
+) -> int:
+
+    if not HAS_PG:
+        return 0
+
+    with _conn() as conn:
+
+        if conn is None:
+            return 0
+
+        cur = conn.cursor()
+
+        if department:
+
+            cur.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM {DEV_KNOWLEDGE_TABLE}
+                WHERE department=%s
+                """,
+                (department,),
+            )
+
+        else:
+
+            cur.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM {DEV_KNOWLEDGE_TABLE}
+                """
+            )
+
+        n = cur.fetchone()[0]
+
+        cur.close()
+
+    return int(n)

@@ -21,6 +21,7 @@ WSEventType = Literal[
     "lab_notification",
     "report_ready",
     "doctor_ready",
+    "emergency_alert",
 ]
 
 ClientEventType = Literal["text", "select", "start_consultation"]
@@ -94,6 +95,7 @@ class RoutingState(BaseModel):
 DoctorNode = Literal[
     "SESSION_INIT",
     "QUESTIONING",
+    "EMERGENCY",
     "EVALUATION",
     "LAB_NOTIFICATION",
     "USER_DECISION",
@@ -120,3 +122,7 @@ class DoctorState(BaseModel):
     pending_event: dict[str, Any] | None = None
     symptom_summary: str = ""
     consecutive_negatives: int = 0
+    # Specialty-specific fields (currently used by the cardiology agent;
+    # harmless no-ops for other specialties).
+    risk_level: str = "Unknown"
+    emergency: bool = False

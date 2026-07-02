@@ -1,0 +1,58 @@
+Cardiac Diagnostic Tests — Overview
+
+This reference summarizes the tests the cardiology agent is permitted to
+recommend (matching backend/specialties/cardiology/guidelines.json), what
+each test is for, and roughly when it is appropriate — so recommendations
+made during a consultation are explainable to the patient.
+
+ECG (Electrocardiogram): a quick, noninvasive recording of the heart's
+electrical activity. First-line for chest pain, palpitations, syncope, or
+any suspected arrhythmia or ischemia. Painless, takes only a few minutes.
+
+Troponin (blood test): measures a protein released into the blood when
+heart muscle is injured. The key test for diagnosing or ruling out a heart
+attack in someone with chest pain concerning for acute coronary syndrome.
+Often repeated after a few hours since levels can take time to rise.
+
+Echocardiogram (cardiac ultrasound): a noninvasive ultrasound of the heart
+that shows chamber size, wall motion, pumping strength (ejection
+fraction), and valve function. Useful for shortness of breath, suspected
+heart failure, murmurs, and structural concerns. Painless, no radiation.
+
+Holter Monitor: a portable ECG worn continuously for 24-48 hours (or
+longer with newer patch monitors) to capture intermittent arrhythmias that
+a single resting ECG would miss. Appropriate for palpitations or suspected
+arrhythmia that isn't caught on a resting ECG.
+
+Lipid Profile (blood test): measures LDL, HDL, triglycerides, and total
+cholesterol. Used for cardiovascular risk assessment, particularly
+relevant for patients with risk factors, family history, or existing
+cardiovascular disease, even if not the primary complaint.
+
+Blood Pressure Monitoring (home or ambulatory): repeated blood pressure
+readings over time, used to confirm a hypertension diagnosis, assess
+control of known hypertension, and rule out "white coat" effects from a
+single clinic reading.
+
+Chest X-Ray: a plain radiograph of the chest, useful for assessing heart
+size (an enlarged cardiac silhouette can suggest heart failure or
+cardiomyopathy) and for looking at the lungs to rule out fluid, pneumonia,
+or other pulmonary causes of breathlessness.
+
+BNP / NT-proBNP (blood test): a hormone released by the heart under
+strain. Elevated levels support a diagnosis of heart failure and help
+gauge its severity; useful when shortness of breath or leg swelling raises
+concern for heart failure.
+
+Stress Test (exercise or pharmacologic): evaluates how the heart responds
+to increased demand, used to investigate suspected coronary artery disease
+when someone has exertional chest pain or risk factors but the resting
+ECG and other basic tests are inconclusive. Not typically a first-line
+test in an acute triage conversation — usually appropriate after initial
+evaluation has stabilized the patient and ruled out an acute event.
+
+General principle for recommending tests: match the test to the symptom
+pattern and risk level, explain briefly why each test is being suggested,
+and avoid recommending tests when the symptom picture is mild, self-limited,
+and without red flags or significant risk factors — over-testing can cause
+unnecessary anxiety and cost without clinical benefit.
