@@ -57,17 +57,15 @@ class LocalStore:
 
     def _seed(self):
         depts = [
-            Department("general", "General Practice"),
+            Department("general", "General Physician"),
             Department("cardiology", "Cardiology"),
+            Department("neurology", "Neurology"),
         ]
         for d in depts:
             self._depts[d.id] = d
 
         docs = [
             Doctor("d5", "Dr. Shankar", "general"),
-            Doctor("d6", "Dr. Maya Patel", "general"),
-            Doctor("d7", "Dr. Omar Khan", "general"),
-            Doctor("d8", "Dr. Meera Rao", "cardiology"),
         ]
         for d in docs:
             self._doctors[d.id] = d

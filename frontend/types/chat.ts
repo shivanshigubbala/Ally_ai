@@ -11,7 +11,8 @@ export type WSEventType =
   | "lab_notification"
   | "report_ready"
   | "doctor_ready"
-  | "emergency_alert";
+  | "emergency_alert"
+  | "consultation_chart";
 
 export interface WSEvent {
   type: WSEventType;

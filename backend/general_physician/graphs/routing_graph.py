@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import logging
 import re
@@ -41,6 +41,8 @@ def _extract_patient_name(text: str) -> str | None:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             name = match.group(1).strip(" .")
+            name = re.split(r"\s+\b(?:and|but|or|with|for|to|a|an|the|have|having|feel|feeling|need|i|im|is)\b", name, flags=re.IGNORECASE)[0]
+            name = name.strip(" .")
             if name.lower() not in {"a", "an", "the"}:
                 return name or None
     return None
@@ -115,11 +117,19 @@ _CARDIAC_KEYWORDS = [
     "shortness of breath", "breathless",
 ]
 
+_NEURO_KEYWORDS = [
+    "headache", "migraine", "seizure", "convulsion", "numbness", "tingling",
+    "stroke", "paralysis", "dizziness", "vertigo", "brain", "neurological",
+    "memory loss", "confusion", "slurred speech", "tremor"
+]
+
 
 def _detect_department(text: str) -> str:
-    lowered = (text or "").lower()
-    if any(keyword in lowered for keyword in _CARDIAC_KEYWORDS):
+    lowered = text.lower()
+    if any(k in lowered for k in _CARDIAC_KEYWORDS):
         return "cardiology"
+    if any(k in lowered for k in _NEURO_KEYWORDS):
+        return "neurology"
     return "general"
 
 
@@ -209,6 +219,8 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
         if any(keyword in last_user.lower() for keyword in ["appointment", "book", "doctor", "now", "asap", "urgent"]):
             state.skip_health_questions = True
             doctors = store.list_doctors(state.selected_dept)
+            if not doctors:
+                doctors = store.list_doctors("general")
             if doctors:
                 emit(WSEvent(type="doctor_select", payload={
                     "options": doctors,
@@ -250,10 +262,18 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
         state.symptom_round = 3
         return state
 
+    dept_name = "General Physician"
+    if state.selected_dept == "cardiology":
+        dept_name = "Cardiology"
+    elif state.selected_dept == "neurology":
+        dept_name = "Neurology"
+
     reply = _llm_reply(
         RECEPTIONIST_PERSONA + (
-            "The patient has now shared several follow-up details. Acknowledge that warmly, then say you're "
-            "going to help them choose a doctor and a time. No bullet points, no lists."
+            f"The patient has now shared several follow-up details. Acknowledge that warmly. "
+            f"Mention that based on their symptoms, they might benefit from a consultation with the {dept_name} department. "
+            f"Explain that only our General Physician (Dr. Shankar) is open for booking today, so we will show available options. "
+            f"Say you're going to help them choose a doctor and a time. No bullet points, no lists."
         ),
         f"Patient said: {last_user}",
     )
@@ -261,6 +281,9 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
     state.message_history.append({"role": "assistant", "content": reply})
 
     doctors = store.list_doctors(state.selected_dept)
+    if not doctors:
+        doctors = store.list_doctors("general")
+
     if doctors:
         emit(WSEvent(type="doctor_select", payload={
             "options": doctors,
@@ -312,10 +335,19 @@ def health_status_questions_node(state: RoutingState, emit: Emitter) -> RoutingS
         return state
 
     if state.health_question_round == 2:
+        dept_name = "General Physician"
+        if state.selected_dept == "cardiology":
+            dept_name = "Cardiology"
+        elif state.selected_dept == "neurology":
+            dept_name = "Neurology"
+
         reply = _llm_reply(
             RECEPTIONIST_PERSONA + (
-                "Ask one final quick health question to get a complete picture before booking. "
-                "Keep it brief, empathetic, and then tell the patient you'll help them choose a doctor."
+                f"Ask one final quick health question to get a complete picture before booking. "
+                f"Warmly suggest/mention that based on their symptoms, they might need a consultation with the {dept_name} department. "
+                f"Note that since only the General Physician department is currently open for booking today, "
+                f"we will proceed with booking them with our General Physician (Dr. Shankar). "
+                f"Keep it brief, empathetic, and then tell the patient you'll help them choose a doctor."
             ),
             f"Patient said: {last_user}",
         )
@@ -324,6 +356,9 @@ def health_status_questions_node(state: RoutingState, emit: Emitter) -> RoutingS
         state.health_question_round = 3
 
         doctors = store.list_doctors(state.selected_dept)
+        if not doctors:
+            doctors = store.list_doctors("general")
+
         if doctors:
             emit(WSEvent(type="doctor_select", payload={
                 "options": doctors,
@@ -356,6 +391,8 @@ def doctor_selection_node(state: RoutingState, emit: Emitter) -> RoutingState:
     default_name = CARDIOLOGY_DOCTOR_NAME if dept == "cardiology" else GP_DOCTOR_NAME
 
     doctors = store.list_doctors(dept)
+    if not doctors:
+        doctors = store.list_doctors("general")
     for d in doctors:
         try:
             # derive availability from whether the doctor has any free slots
@@ -401,13 +438,21 @@ def slot_node(state: RoutingState, emit: Emitter) -> RoutingState:
     pending = state.pending_event or {}
     state.pending_event = None
 
+    dept = state.selected_dept or "general"
+    doc_id = state.selected_doctor or GP_DOCTOR_ID
+    doctors = store.list_doctors(dept)
+    doc_name = next((d["name"] for d in doctors if d["id"] == doc_id), GP_DOCTOR_NAME)
+
     if pending.get("type") == "select" and pending.get("payload", {}).get("target") == "slot":
         state.selected_slot = pending["payload"].get("id")
-    elif pending.get("type") == "select":
-        state.selected_slot = pending["payload"].get("id", "")
+    elif message := _last_user_message(state):
+        if _is_confirmation_message(message) and state.selected_slot:
+            slots = store.list_slots(state.selected_doctor or GP_DOCTOR_ID)
+            if any(s["id"] == state.selected_slot for s in slots):
+                state.current_node = "BOOKING_CONFIRMATION"
+                return booking_node(state, emit)
     else:
         slots = store.list_slots(state.selected_doctor or GP_DOCTOR_ID)
-        doc_name = GP_DOCTOR_NAME
         emit(WSEvent(type="text", payload={
             "content": f"I understand. When you're ready, please pick a slot from the available times with {doc_name}."
         }))
@@ -433,7 +478,7 @@ def slot_node(state: RoutingState, emit: Emitter) -> RoutingState:
 
     reply = _llm_reply(
         RECEPTIONIST_PERSONA + (
-            f"The patient selected {nice_time} with Dr. Shankar. "
+            f"The patient selected {nice_time} with {doc_name}. "
             "Ask them to confirm the booking in one short, warm sentence."
         ),
         f"Confirming slot {chosen['id']} at {nice_time}.",
@@ -444,11 +489,8 @@ def slot_node(state: RoutingState, emit: Emitter) -> RoutingState:
     return state
 
 def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
-    last_user = ""
-    for m in reversed(state.message_history):
-        if m["role"] == "user":
-            last_user = m["content"].lower().strip()
-            break
+    state.pending_event = None
+    last_user = _last_user_message(state).lower().strip()
 
     # Use word-boundary regexes to avoid substring false positives and detect common confirmations/cancellations
     cancelled = bool(re.search(r"\b(cancel|cancelled|nope|never|abort|stop)\b", last_user))
@@ -594,6 +636,36 @@ def reset_state(user_id: str) -> None:
     _graph.update_state(cfg, RoutingState(user_id=user_id).model_dump())
 
 
+def has_in_progress_booking(user_id: str) -> bool:
+    """True when the user is mid-intake/booking and should not be reset on reconnect."""
+    cfg = {"configurable": {"thread_id": user_id}}
+    snapshot = _graph.get_state(cfg)
+    if not snapshot or not snapshot.values:
+        return False
+    node = snapshot.values.get("current_node")
+    return node not in (None, "DONE", "GREETING")
+
+
+def _is_confirmation_message(text: str) -> bool:
+    lowered = (text or "").lower().strip()
+    if not lowered:
+        return False
+    cancelled = bool(re.search(r"\b(cancel|cancelled|nope|never|abort|stop)\b", lowered))
+    if cancelled:
+        return False
+    confirmed = bool(re.search(r"\b(confirm|confirmed|yes|yep|yeah|sure|ok|okay)\b", lowered))
+    if confirmed and re.search(r"\bnot\b\s+\b(confirm|sure|yes)\b", lowered):
+        return False
+    return confirmed
+
+
+def _last_user_message(state: RoutingState) -> str:
+    for m in reversed(state.message_history):
+        if m.get("role") == "user":
+            return m.get("content", "")
+    return ""
+
+
 def run_step(user_id: str, message: str | None, pending_event: dict | None) -> tuple[RoutingState, list[WSEvent]]:
     events: list[WSEvent] = []
     cfg = {"configurable": {"thread_id": user_id}}
@@ -616,7 +688,17 @@ def run_step(user_id: str, message: str | None, pending_event: dict | None) -> t
         _update_patient_intake(state, message)
         state.message_history.append({"role": "user", "content": message})
         _remember(user_id, "user", message, session_id=f"routing:{user_id}")
-    state.pending_event = pending_event
+    state.pending_event = pending_event if (pending_event or {}).get("type") == "select" else None
+
+    if (
+        message
+        and state.current_node == "SLOT_SELECTION"
+        and state.selected_slot
+        and _is_confirmation_message(message)
+    ):
+        slots = store.list_slots(state.selected_doctor or GP_DOCTOR_ID)
+        if any(s["id"] == state.selected_slot for s in slots):
+            state.current_node = "BOOKING_CONFIRMATION"
 
     prev_history_len = len(state.message_history)
     iterations = 0

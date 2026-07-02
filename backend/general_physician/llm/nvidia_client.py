@@ -2,6 +2,7 @@ import logging
 import os
 import time
 from pathlib import Path
+from typing import Iterator
 
 from dotenv import load_dotenv
 from openai import OpenAI

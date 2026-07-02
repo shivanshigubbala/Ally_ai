@@ -13,10 +13,6 @@ try:
         DOCTOR_ID,
         step as gp_step,
     )
-    from backend.graphs.cardiology_agent import (
-        DOCTOR_ID as CARDIOLOGY_DOCTOR_ID,
-        step as cardiology_step,
-    )
     from backend.general_physician.models.session_state import ClientEvent, WSEvent
     from backend.general_physician.services import local_store as store
 except ImportError:
@@ -25,10 +21,6 @@ except ImportError:
         DOCTOR_ID,
         step as gp_step,
     )
-    from graphs.cardiology_agent import (
-        DOCTOR_ID as CARDIOLOGY_DOCTOR_ID,
-        step as cardiology_step,
-    )
     from models.session_state import ClientEvent, WSEvent
     from services import local_store as store
 
@@ -36,11 +28,9 @@ except ImportError:
 # Department -> doctor-graph step function. Add new specialties here.
 _DOCTOR_STEP_BY_DEPARTMENT = {
     "general": gp_step,
-    "cardiology": cardiology_step,
 }
 _DOCTOR_STEP_BY_ID = {
     DOCTOR_ID: gp_step,
-    CARDIOLOGY_DOCTOR_ID: cardiology_step,
 }
 
 
@@ -64,10 +54,81 @@ router = APIRouter()
 
 _user_state: dict[str, str] = {}
 _doctor_sessions: dict[str, str] = {}
+# Stores extracted document text per "user_id:appointment_id" key
+_doc_store: dict[str, list[dict]] = {}
 
 
 async def _send(ws: WebSocket, event: WSEvent) -> None:
     await ws.send_text(event.model_dump_json())
+
+
+async def _generate_and_send_chart_delayed(
+    ws: WebSocket,
+    user_id: str,
+    appointment_id: str,
+    patient_name: str,
+    current_complaint: str,
+    dept: str,
+    doctor_name: str,
+    slot_id: str,
+    message_history: list,
+) -> None:
+    try:
+        await asyncio.sleep(4.0)  # Wait 4 seconds as requested
+        
+        history_str = ""
+        for m in message_history:
+            role_label = m.get("role", "user").title()
+            content = m.get("content", "")
+            if role_label and content:
+                history_str += f"{role_label}: {content}\n"
+
+        prompt = (
+            "You are an intake coordinator. Summarize the patient's intake interview. "
+            "Extract the following details into a concise, professional medical consultation chart:\n"
+            "- Patient Name\n"
+            "- Chief Complaint\n"
+            "- Suggested Department\n"
+            "- Confirmed Doctor\n"
+            "- Selected Time Slot\n"
+            "- Key Symptoms and Answers to Health Questions (such as fever, duration, pain location)\n\n"
+            "Format the chart as clean Markdown with clear headings and bullet points. "
+            "Be professional and direct, with no conversational filler."
+        )
+
+        try:
+            from backend.general_physician.llm.nvidia_client import chat as nv_chat, ROUTING_MODEL
+        except ImportError:
+            from llm.nvidia_client import chat as nv_chat, ROUTING_MODEL
+
+        try:
+            chart_content = await asyncio.to_thread(
+                nv_chat,
+                [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": f"Intake Interview History:\n{history_str}"}
+                ],
+                model=ROUTING_MODEL
+            )
+        except Exception as exc:
+            logger.warning("Error generating consultation chart: %s", exc)
+            chart_content = (
+                f"### Intake Consultation Chart\n\n"
+                f"- **Patient Name:** {patient_name or user_id}\n"
+                f"- **Chief Complaint:** {current_complaint or 'Intake evaluation'}\n"
+                f"- **Department:** {dept.title() if dept else 'General Physician'}\n"
+                f"- **Doctor:** {doctor_name}\n"
+                f"- **Slot:** {slot_id}\n"
+                f"- **Status:** Confirmed"
+            )
+
+        event = WSEvent(type="consultation_chart", payload={
+            "appointment_id": appointment_id,
+            "chart_content": chart_content,
+        })
+        await _send(ws, event)
+    except Exception as e:
+        logger.exception("Background chart generation failed")
 
 
 async def _drive_routing(ws: WebSocket, user_id: str, message: str | None,
@@ -88,12 +149,23 @@ async def _drive_routing(ws: WebSocket, user_id: str, message: str | None,
                 (d["name"] for d in doctors if d["id"] == state.selected_doctor),
                 "Dr. Shankar",
             )
-            await _send(ws, WSEvent(type="doctor_ready", payload={
-                "appointment_id": state.appointment_id,
-                "doctor_name": doc_name,
-                "doctor_id": state.selected_doctor or DOCTOR_ID,
-            }))
-            # Reset routing graph so the receptionist can handle new requests
+            
+            # Start background task to generate consultation chart after delay
+            asyncio.create_task(
+                _generate_and_send_chart_delayed(
+                    ws,
+                    user_id,
+                    state.appointment_id,
+                    state.patient_name or "",
+                    state.current_complaint or "",
+                    state.selected_dept or "general",
+                    doc_name,
+                    state.selected_slot or "",
+                    state.message_history,
+                )
+            )
+
+            # booking_node already emits doctor_ready; avoid duplicate events.
             routing_graph.reset_state(user_id)
             _user_state[user_id] = "ROUTING"
             return state.appointment_id
@@ -125,16 +197,40 @@ async def _handle_start_consultation(ws: WebSocket, user_id: str,
         return
 
     _doctor_sessions[user_id] = appointment_id
-    # Pass the first user message from the routing history as the doctor's context.
+
+    # If the user uploaded documents before starting, inject them into the
+    # LangGraph doctor state so the doctor's prompt includes the file contents.
+    doc_key = f"{user_id}:{appointment_id}"
+    uploaded_docs = _doc_store.pop(doc_key, [])
+    if uploaded_docs:
+        try:
+            from backend.general_physician.agent import _graph, _checkpointer  # type: ignore
+        except ImportError:
+            try:
+                from general_physician.agent import _graph, _checkpointer  # type: ignore
+            except ImportError:
+                _graph = None
+        if _graph is not None:
+            cfg = {"configurable": {"thread_id": f"doc:{user_id}:{appointment_id}"}}
+            try:
+                _graph.update_state(cfg, {"uploaded_documents": uploaded_docs})
+            except Exception:
+                logger.warning("Could not inject uploaded docs into doctor state")
+
+    # Kick off the session init (first doctor message).
     await _drive_doctor(ws, user_id, appointment_id, None, None)
 
 
 @router.websocket("/ws/{user_id}")
 async def ws_endpoint(ws: WebSocket, user_id: str) -> None:
     await ws.accept()
-    routing_graph.reset_state(user_id)
-    _user_state[user_id] = "ROUTING"
-    appointment_id = await _drive_routing(ws, user_id, None, None)
+    if not routing_graph.has_in_progress_booking(user_id):
+        routing_graph.reset_state(user_id)
+        _user_state[user_id] = "ROUTING"
+        appointment_id = await _drive_routing(ws, user_id, None, None)
+    else:
+        _user_state[user_id] = "ROUTING"
+        appointment_id = ""
 
     try:
         while True:
@@ -191,7 +287,7 @@ async def ws_endpoint(ws: WebSocket, user_id: str) -> None:
                                                evt.model_dump())
                     if apt:
                         appointment_id = apt
-            except Exception:
+            except Exception as e:
                 logger.exception(
                     "WebSocket handler error for user=%s (state=%s, has_apt=%s)",
                     user_id,
@@ -199,10 +295,11 @@ async def ws_endpoint(ws: WebSocket, user_id: str) -> None:
                     bool(appointment_id),
                 )
                 try:
+                    error_msg = str(e) if str(e) else "I hit a snag - please try again."
                     await _send(ws, WSEvent(
                         type="text",
                         payload={
-                            "content": "I hit a snag - please try again.",
+                            "content": f"I hit a snag - {error_msg}",
                             "from": DOCTOR_ID,
                         },
                     ))

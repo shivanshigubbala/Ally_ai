@@ -1,12 +1,14 @@
-﻿# backend/general_physician/main.py
+# backend/general_physician/main.py
 # FastAPI entrypoint. Owns the WebSocket dispatcher and the REST /chat shortcut.
 
+import io
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
 
 try:
@@ -45,6 +47,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Ally AI Backend", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(ws_router)
 
 
@@ -56,6 +65,56 @@ def root() -> dict:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.post("/upload-document/{user_id}/{appointment_id}")
+async def upload_document(
+    user_id: str,
+    appointment_id: str,
+    file: UploadFile = File(...),
+) -> dict:
+    """
+    Receive a document (PDF / TXT / image) uploaded before consultation.
+    Extracts plain text and stores it in the ws router's in-memory doc store
+    so the doctor agent can read it during the session.
+    """
+    try:
+        from backend.general_physician.ws.router import _doc_store
+    except ImportError:
+        from ws.router import _doc_store  # type: ignore
+
+    content = await file.read()
+    filename = file.filename or "document"
+    extracted = ""
+
+    lower_name = filename.lower()
+    if lower_name.endswith(".pdf"):
+        try:
+            import fitz  # pymupdf
+            pdf = fitz.open(stream=content, filetype="pdf")
+            pages = [page.get_text() for page in pdf]
+            extracted = "\n".join(pages).strip()
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"PDF extraction failed: {exc}") from exc
+    elif lower_name.endswith((".txt", ".md", ".csv")):
+        try:
+            extracted = content.decode("utf-8", errors="replace").strip()
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Text decode failed: {exc}") from exc
+    else:
+        # For images or unsupported types, store a placeholder so the doctor
+        # at least knows a document was provided.
+        extracted = f"[Patient uploaded a file: {filename}. Manual review required.]"
+
+    doc_key = f"{user_id}:{appointment_id}"
+    if doc_key not in _doc_store:
+        _doc_store[doc_key] = []
+    _doc_store[doc_key].append({
+        "filename": filename,
+        "text": extracted[:8000],  # cap at 8k chars to keep prompt size reasonable
+    })
+
+    return {"ok": True, "filename": filename, "text_length": len(extracted)}
 
 
 @app.get("/reports/{report_id}")

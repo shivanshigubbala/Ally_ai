@@ -51,6 +51,7 @@ interface UseChatSocketResult {
   sendDoctorMessage: (content: string) => void;
   unreadCount: number;
   addSampleReport: () => void;
+  consultationChart: string | null;
 }
 
 export function useChatSocket(userId: string | null): UseChatSocketResult {
@@ -67,6 +68,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
   const [doctorMessages, setDoctorMessages] = useState<ChatMessage[]>([]);
   const [doctorThinking, setDoctorThinking] = useState<string | null>(null);
   const [consultationActive, setConsultationActive] = useState(false);
+  const [consultationChart, setConsultationChart] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const pendingEventsRef = useRef<ClientEvent[]>([]);
@@ -136,6 +138,13 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
             appointmentBookedRef.current = true;
             setAppointmentBooked(true);
             setAppointmentPending(false);
+            setCards((prev) =>
+              prev.map((c) =>
+                c.kind === "doctor_select" || c.kind === "slot_select"
+                  ? { ...c, resolved: true }
+                  : c
+              )
+            );
             pushInbox({
               kind: "appointment_booked",
               title: "Appointment booked",
@@ -259,6 +268,13 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
           setDoctorName(docName);
           setAppointmentBooked(true);
           setAppointmentPending(false);
+          setCards((prev) =>
+            prev.map((c) =>
+              c.kind === "doctor_select" || c.kind === "slot_select"
+                ? { ...c, resolved: true }
+                : c
+            )
+          );
 
           setDoctorMessages((prev) => [
             ...prev,
@@ -374,6 +390,12 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
           break;
         }
 
+        case "consultation_chart": {
+          const content = (evt.payload.chart_content as string) || "";
+          setConsultationChart(content);
+          break;
+        }
+
         default:
           break;
       }
@@ -430,6 +452,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
   useEffect(() => {
     if (!userId) return;
 
+    setConsultationChart(null);
     connectWebSocket();
 
     return () => {
@@ -519,7 +542,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
       ]);
       sendRaw({
         type: "select",
-        payload: { id: doctorId, doctor_id: doctorId },
+        payload: { id: doctorId, doctor_id: doctorId, context: "receptionist" },
       });
     },
     [sendRaw]
@@ -625,5 +648,6 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
     sendDoctorMessage,
     unreadCount,
     addSampleReport,
+    consultationChart,
   };
 }

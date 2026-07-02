@@ -23,7 +23,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: backend/general_physician/Dockerfile
 
     volumes:
       - ./backend:/app/backend
