@@ -9,7 +9,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 try:
     from backend.graphs import routing_graph
-    from backend.graphs.general_physician_agent import (
+    from backend.graphs.doctors.general_physician.agent import (
         DOCTOR_ID,
         step as gp_step,
     )
@@ -21,7 +21,7 @@ try:
     from backend.services import local_store as store
 except ImportError:
     from graphs import routing_graph
-    from graphs.general_physician_agent import (
+    from graphs.doctors.general_physician.agent import (
         DOCTOR_ID,
         step as gp_step,
     )
