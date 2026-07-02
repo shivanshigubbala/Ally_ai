@@ -6,16 +6,29 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../backend')))
-from db import Base
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+BACKEND_ROOT = os.path.join(REPO_ROOT, "backend")
+GENERAL_PHYSICIAN_ROOT = os.path.join(BACKEND_ROOT, "general_physician")
+
+for path in (REPO_ROOT, BACKEND_ROOT, GENERAL_PHYSICIAN_ROOT):
+    if path not in sys.path:
+        sys.path.insert(0, path)
+
+try:
+    from backend.general_physician.db.models import Base
+except ImportError:
+    from db import Base
 
 config = context.config
 fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
-DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql+psycopg2://allyai:allyai@localhost:5432/allyai')
-config.set_main_option('sqlalchemy.url', DATABASE_URL)
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+psycopg2://allyai:allyai@localhost:5432/allyai",
+)
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 
 def run_migrations_offline():
