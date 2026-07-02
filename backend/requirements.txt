@@ -16,3 +16,4 @@ langchain-text-splitters
 tiktoken
 sentence-transformers
 fpdf
+pytest

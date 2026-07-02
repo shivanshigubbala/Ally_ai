@@ -11,7 +11,11 @@ try:
     from backend.graphs import routing_graph
     from backend.graphs.general_physician_agent import (
         DOCTOR_ID,
-        step as doctor_step,
+        step as gp_step,
+    )
+    from backend.graphs.cardiology_agent import (
+        DOCTOR_ID as CARDIOLOGY_DOCTOR_ID,
+        step as cardiology_step,
     )
     from backend.models.session_state import ClientEvent, WSEvent
     from backend.services import local_store as store
@@ -19,10 +23,38 @@ except ImportError:
     from graphs import routing_graph
     from graphs.general_physician_agent import (
         DOCTOR_ID,
-        step as doctor_step,
+        step as gp_step,
+    )
+    from graphs.cardiology_agent import (
+        DOCTOR_ID as CARDIOLOGY_DOCTOR_ID,
+        step as cardiology_step,
     )
     from models.session_state import ClientEvent, WSEvent
     from services import local_store as store
+
+
+# Department -> doctor-graph step function. Add new specialties here.
+_DOCTOR_STEP_BY_DEPARTMENT = {
+    "general": gp_step,
+    "cardiology": cardiology_step,
+}
+_DOCTOR_STEP_BY_ID = {
+    DOCTOR_ID: gp_step,
+    CARDIOLOGY_DOCTOR_ID: cardiology_step,
+}
+
+
+def _resolve_doctor_step(appointment_id: str):
+    """Pick the right doctor graph's step() for this appointment's department/doctor."""
+    apt = store.get_appointment(appointment_id)
+    if apt:
+        fn = _DOCTOR_STEP_BY_DEPARTMENT.get(apt.get("department"))
+        if fn:
+            return fn
+        fn = _DOCTOR_STEP_BY_ID.get(apt.get("doctor_id"))
+        if fn:
+            return fn
+    return gp_step
 
 
 logger = logging.getLogger(__name__)
@@ -74,8 +106,9 @@ async def _drive_routing(ws: WebSocket, user_id: str, message: str | None,
 async def _drive_doctor(ws: WebSocket, user_id: str, appointment_id: str,
                         message: str | None,
                         pending_event: dict | None) -> None:
+    doctor_step = _resolve_doctor_step(appointment_id)
     if message is not None or pending_event is not None:
-        await _send(ws, WSEvent(type="thinking", payload={"content": "Dr. Shankar is thinking..."}))
+        await _send(ws, WSEvent(type="thinking", payload={"content": "The doctor is thinking..."}))
     _, events = await asyncio.to_thread(
         doctor_step, user_id, appointment_id, message, pending_event)
     for ev in events:

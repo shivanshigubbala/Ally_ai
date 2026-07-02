@@ -47,7 +47,6 @@ class Session(Base):
         server_default=text("'{}'::jsonb")
     )
 
-
 class Message(Base):
     __tablename__ = "messages"
 
