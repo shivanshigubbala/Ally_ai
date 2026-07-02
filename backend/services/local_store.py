@@ -58,6 +58,7 @@ class LocalStore:
     def _seed(self):
         depts = [
             Department("general", "General Practice"),
+            Department("cardiology", "Cardiology"),
         ]
         for d in depts:
             self._depts[d.id] = d
@@ -66,6 +67,7 @@ class LocalStore:
             Doctor("d5", "Dr. Shankar", "general"),
             Doctor("d6", "Dr. Maya Patel", "general"),
             Doctor("d7", "Dr. Omar Khan", "general"),
+            Doctor("d8", "Dr. Meera Rao", "cardiology"),
         ]
         for d in docs:
             self._doctors[d.id] = d
@@ -139,6 +141,20 @@ class LocalStore:
             self._appointments[aid] = apt
             return 200, {"id": aid, "confirmed": True}
 
+    def get_appointment(self, appointment_id: str) -> Optional[dict]:
+        with self._lock:
+            apt = self._appointments.get(appointment_id)
+            if not apt:
+                return None
+            return {
+                "id": apt.id,
+                "doctor_id": apt.doctor_id,
+                "slot_id": apt.slot_id,
+                "patient": apt.patient,
+                "reason": apt.reason,
+                "department": apt.department,
+            }
+
 
 # Singleton
 _store = LocalStore()
@@ -158,3 +174,7 @@ def list_slots(doctor_id: Optional[str] = None) -> list[dict]:
 
 def book_appointment(doctor_id: str, slot_id: str, patient: str, reason: str) -> tuple[int, dict]:
     return _store.book_appointment(doctor_id, slot_id, patient, reason)
+
+
+def get_appointment(appointment_id: str) -> Optional[dict]:
+    return _store.get_appointment(appointment_id)
