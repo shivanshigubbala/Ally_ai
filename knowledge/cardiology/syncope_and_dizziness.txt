@@ -1,0 +1,54 @@
+Syncope and Dizziness — Clinical Reference
+
+Syncope is a transient, complete loss of consciousness and postural tone
+with spontaneous full recovery, caused by temporarily reduced blood flow
+to the brain. Dizziness is a broader, vaguer term that patients may use for
+lightheadedness, a spinning sensation (vertigo), unsteadiness, or a feeling
+of nearly passing out (presyncope). Distinguishing which the patient means
+is an important first step.
+
+Cardiac causes of syncope (higher concern, need prompt evaluation):
+- Arrhythmias: both very fast (tachyarrhythmia) and very slow
+  (bradyarrhythmia, heart block) rhythms can drop blood flow to the brain
+  enough to cause fainting, often with little or no warning
+- Structural heart disease: conditions such as aortic stenosis or
+  hypertrophic cardiomyopathy can cause fainting, classically with
+  exertion
+- Pulmonary embolism or other causes of sudden reduced cardiac output
+
+Non-cardiac (usually lower-risk) causes:
+- Vasovagal (reflex) syncope: triggered by prolonged standing, pain, fear,
+  the sight of blood, or a hot/crowded environment, often with a prodrome
+  of nausea, sweating, and tunnel vision before fainting
+- Orthostatic (postural) hypotension: fainting or lightheadedness on
+  standing up quickly, especially in the elderly, the dehydrated, or those
+  on blood pressure medication
+- Situational syncope: triggered by coughing, urinating, or straining
+
+Features that raise concern for a cardiac cause and warrant urgent
+evaluation:
+- Syncope during exertion rather than after standing still
+- Syncope with no warning symptoms (sudden, "like a light switch")
+- Syncope with chest pain, palpitations, or shortness of breath
+- Syncope in someone with known heart disease or an abnormal ECG
+- A family history of sudden cardiac death at a young age
+- Syncope resulting in injury, or occurring while sitting or lying down
+
+Reassuring features more typical of benign vasovagal syncope: a clear
+trigger (prolonged standing, emotional stress, medical procedures), a
+prodrome of warmth, sweating, and nausea beforehand, and quick, complete
+recovery afterward without confusion.
+
+Dizziness that is a spinning sensation (vertigo) rather than fainting is
+usually related to the inner ear or the vestibular system rather than the
+heart, though it is still worth briefly screening for cardiac red flags
+(chest pain, palpitations, exertional trigger) since patients do not
+always describe symptoms precisely.
+
+Typical workup for suspected cardiac syncope: a 12-lead ECG is essential
+in every case of true syncope to look for arrhythmia, conduction disease,
+or signs of structural heart disease. Depending on the history, this may
+be followed by ambulatory rhythm monitoring (Holter or longer-term event
+monitor), an echocardiogram to assess structural heart disease, and
+orthostatic blood pressure measurements (checking blood pressure lying
+down and then standing) to evaluate for postural hypotension.

@@ -1,0 +1,54 @@
+Heart Failure and Shortness of Breath (Dyspnea) — Clinical Reference
+
+Shortness of breath is a common presenting symptom with both cardiac and
+non-cardiac causes. In a cardiology context, the priority is distinguishing
+heart failure and other cardiac causes from pulmonary or other causes.
+
+Key history features suggesting a cardiac cause:
+- Exertional dyspnea that has progressively worsened over days to weeks
+- Orthopnea: breathlessness when lying flat, relieved by sitting up or
+  propping on extra pillows
+- Paroxysmal nocturnal dyspnea: waking suddenly at night gasping for air
+- Rapid weight gain over days (fluid retention) alongside breathlessness
+- Swelling in the ankles or legs developing alongside the breathlessness
+- A history of prior heart attack, longstanding hypertension, valvular
+  heart disease, or a known weak heart muscle (cardiomyopathy)
+
+Key features suggesting a non-cardiac or alternative cause:
+- Fever, productive cough, and breathlessness pointing toward a
+  respiratory infection such as pneumonia
+- Wheeze and a history of asthma or COPD suggesting an airway cause
+- Sudden-onset, severe breathlessness with one-sided chest pain and leg
+  swelling raising concern for pulmonary embolism, which is itself an
+  emergency
+- Breathlessness tied closely to anxiety, with tingling around the mouth
+  or fingers and a clear situational trigger
+
+Red flags requiring urgent or emergency evaluation:
+- Severe shortness of breath at rest or breathlessness that prevents
+  speaking in full sentences
+- Shortness of breath with chest pain, fainting, or blue-tinged lips
+- Sudden-onset severe breathlessness, especially with one-sided leg
+  swelling or pain (possible pulmonary embolism)
+- Known heart failure with rapidly worsening symptoms despite usual
+  medications
+
+Heart failure basics: heart failure means the heart is not pumping or
+filling efficiently enough to meet the body's needs. It can result from
+weakened squeezing function (reduced ejection fraction) or from a stiff
+heart that does not relax and fill properly (preserved ejection fraction).
+Common causes include prior heart attacks, longstanding high blood
+pressure, valve disease, and cardiomyopathies. Hallmark symptoms are
+exertional breathlessness, orthopnea, paroxysmal nocturnal dyspnea,
+fatigue, and fluid retention (leg swelling, rapid weight gain, abdominal
+bloating).
+
+Typical workup: a chest X-ray to look for fluid in the lungs or an
+enlarged heart silhouette, BNP or NT-proBNP blood testing (a hormone
+released when the heart is under strain, useful for supporting or
+excluding a heart failure diagnosis), an ECG to look for prior heart
+attack or rhythm abnormalities, and an echocardiogram to directly assess
+heart muscle function and valve structure. Basic blood work (kidney
+function, electrolytes, thyroid function, and a blood count to exclude
+anemia) is also routinely useful, since anemia and thyroid disease can
+both mimic or worsen breathlessness.

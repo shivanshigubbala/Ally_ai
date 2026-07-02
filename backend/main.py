@@ -60,16 +60,26 @@ def health() -> dict:
 
 @app.get("/reports/{report_id}")
 def download_report(report_id: str) -> FileResponse:
-    report_path = Path(__file__).resolve().parents[1] / "reports" / f"{report_id}.pdf"
+    # backend/main.py -> parents[0] is backend/. Both cardiology_agent.py and
+    # general_physician_agent.py write PDFs to backend/reports/ (their own
+    # parents[1] is also backend/), so this route must look in the same place.
+    report_path = Path(__file__).resolve().parents[0] / "reports" / f"{report_id}.pdf"
     if not report_path.exists():
         raise HTTPException(status_code=404, detail="Report not found")
-    return FileResponse(str(report_path), filename=f"{report_id}.pdf", media_type="application/pdf")
+    return FileResponse(
+        str(report_path),
+        filename=f"{report_id}.pdf",
+        media_type="application/pdf",
+    )
 
 
 @app.get("/nv-test")
 def nv_test() -> dict:
     try:
-        msg = nv_chat([{"role": "user", "content": "Say OK in one word."}], model=ROUTING_MODEL)
+        msg = nv_chat(
+            [{"role": "user", "content": "Say OK in one word."}],
+            model=ROUTING_MODEL,
+        )
         return {"status": "ok", "model": ROUTING_MODEL, "response": msg}
     except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -80,12 +90,15 @@ def chat_endpoint(req: ChatRequest = Body(...)) -> ChatResponse:
     """REST shortcut that drives the same RoutingGraph as the WebSocket."""
     user_id = req.user_id or "rest-user"
     state, events = routing_graph.run_step(
-        user_id=user_id, message=req.message, pending_event=None,
+        user_id=user_id,
+        message=req.message,
+        pending_event=None,
     )
 
     reply = ""
     doctors: list[dict] = []
     slots: list[dict] = []
+
     for ev in events:
         if ev.type == "text":
             reply = ev.payload.get("content", reply)
@@ -99,5 +112,7 @@ def chat_endpoint(req: ChatRequest = Body(...)) -> ChatResponse:
         model=ROUTING_MODEL,
         doctors=doctors,
         slots=slots,
-        routing={"doctor_id": state.selected_doctor} if state.selected_doctor else None,
+        routing={"doctor_id": state.selected_doctor}
+        if state.selected_doctor
+        else None,
     )
