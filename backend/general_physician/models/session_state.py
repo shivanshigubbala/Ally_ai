@@ -1,4 +1,4 @@
-﻿# backend/general_physician/models/session_state.py
+# backend/general_physician/models/session_state.py
 # Bhargav (P2-B3, P4-B1, P4-B2).
 # LangGraph state shapes + IC-13 WebSocket envelope for the routing & doctor graphs.
 
@@ -22,6 +22,7 @@ WSEventType = Literal[
     "report_ready",
     "doctor_ready",
     "emergency_alert",
+    "consultation_chart",
 ]
 
 ClientEventType = Literal["text", "select", "start_consultation"]

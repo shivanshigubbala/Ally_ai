@@ -263,11 +263,19 @@ export default function ChatThread({
   onLabDecision,
 }: ChatThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const allMessages = [...messages, ...doctorMessages].sort(
     (a, b) => (a.timestamp || 0) - (b.timestamp || 0)
   );
 
+  // Scroll to bottom instantly on first render
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
+
+  // Smooth scroll on new messages/cards
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [allMessages, cards, thinking, doctorThinking]);
@@ -280,7 +288,10 @@ export default function ChatThread({
     !thinking && !doctorThinking;
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6">
+    <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6 flex flex-col">
+      {/* Spacer: pushes content to the bottom when there are few messages */}
+      <div className="flex-1" />
+
       <div className="space-y-5">
         {emptyState ? (
           <div className="grid gap-6 overflow-hidden rounded-[2rem] border border-cyan-100 bg-[linear-gradient(180deg,#f8fdff_0%,#eefafd_100%)] p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)] lg:grid-cols-[1.1fr_0.9fr]">
@@ -330,7 +341,14 @@ export default function ChatThread({
           <SlotCard key={card.id} card={card} onSelectSlot={onSelectSlot} />
         ))}
 
-        {/* Lab suggestion cards are handled in the Appointments panel; do not render here. */}
+        {labCards.map((card) => (
+          <LabCard
+            key={card.id}
+            card={card}
+            connected={connected}
+            onLabDecision={onLabDecision}
+          />
+        ))}
 
         {(thinking || doctorThinking) && (
           <div className="flex items-start gap-3">

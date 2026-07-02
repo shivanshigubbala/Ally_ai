@@ -54,6 +54,7 @@ export default function ChatPage() {
     sendDoctorMessage,
     unreadCount,
     addSampleReport,
+    consultationChart,
   } = useChatSocket(userId);
   const activeTab: SidebarTab = tab;
 
@@ -158,6 +159,8 @@ export default function ChatPage() {
               consultationActive={consultationActive}
               onStartConsultation={handleStartConsultation}
               onSendDoctorMessage={sendDoctorMessage}
+              consultationChart={consultationChart}
+              userId={userId}
             />
           )}
 

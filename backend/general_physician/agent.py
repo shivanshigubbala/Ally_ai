@@ -60,7 +60,7 @@ from backend.general_physician.config import get_default_doctor_id, get_default_
 DOCTOR_ID = get_default_doctor_id()
 DOCTOR_NAME = get_default_doctor_name()
 DOCTOR_DEPT = "general"
-MAX_QUESTIONS = 10
+MAX_QUESTIONS = 5
 
 
 def build_patient_context(state: DoctorState | Any) -> str:
@@ -86,10 +86,23 @@ def build_patient_context(state: DoctorState | Any) -> str:
     sections.append("Current Complaint\n- " + complaint_text)
 
     if documents:
-        doc_names = ", ".join(str(doc.get("name") or doc.get("filename") or doc.get("source") or "document") for doc in documents if isinstance(doc, dict))
-        sections.append("Relevant Documents\n- " + doc_names)
+        doc_sections = []
+        for doc in documents[:3]:  # limit to 3 docs to keep prompt size sane
+            if not isinstance(doc, dict):
+                continue
+            name = doc.get("filename") or doc.get("name") or doc.get("source") or "document"
+            text = doc.get("text", "").strip()
+            if text:
+                # Truncate individual doc text to 2000 chars
+                doc_sections.append(f"  [{name}]:\n  {text[:2000]}")
+            else:
+                doc_sections.append(f"  [{name}]: (no text extracted)")
+        if doc_sections:
+            sections.append("Uploaded Patient Documents\n" + "\n\n".join(doc_sections))
+        else:
+            sections.append("Uploaded Patient Documents\n- No readable content found.")
     else:
-        sections.append("Relevant Documents\n- No uploaded documents.")
+        sections.append("Uploaded Patient Documents\n- No documents uploaded.")
 
     if conversation_summary:
         sections.append("Conversation Summary\n- " + conversation_summary)
@@ -319,7 +332,7 @@ def _extract_json(text: str) -> dict | None:
     return None
 
 
-REPORTS_DIR = (Path(__file__).resolve().parents[2] / "reports").resolve()
+REPORTS_DIR = (Path(__file__).resolve().parents[0] / "reports").resolve()
 LAB_TESTS = [
     {
         "name": "Complete Blood Count (CBC)",
@@ -570,6 +583,7 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
         name=patient_name,
         age=health_data.get("age", "unknown"),
         health_data=prior or "(no prior visits)",
+        patient_context=build_patient_context(state),
         messages=_format_messages(state.conversation_history),
         q_count=state.questions_asked,
         chief_complaint=state.chief_complaint or "(not yet stated)",
@@ -628,7 +642,12 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
         state.conversation_history,
         state.chief_complaint,
     )
-    state.tests_list = LAB_TESTS.copy() if state.lab_tests_recommended else []
+    if state.lab_tests_recommended:
+        state.tests_list = _sanitize_tests(parsed.get("tests"))
+        if not state.tests_list:
+            state.tests_list = LAB_TESTS.copy()
+    else:
+        state.tests_list = []
 
     if state.lab_tests_recommended and state.tests_list:
         test_names = ", ".join(t.get("name", "?") for t in state.tests_list)
@@ -643,6 +662,7 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
         emit(WSEvent(type="lab_notification", payload={
             "tests": state.tests_list,
             "session_id": state.appointment_id,
+            "doctor_name": DOCTOR_NAME,
         }))
         state.current_node = "LAB_NOTIFICATION"
     else:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import type { ChatCard, ChatMessage, DoctorReadyInfo } from "@/types/chat";
 
 interface AppointmentsPanelProps {
@@ -14,6 +14,8 @@ interface AppointmentsPanelProps {
   consultationActive: boolean;
   onStartConsultation: () => void;
   onSendDoctorMessage: (content: string) => void;
+  consultationChart: string | null;
+  userId: string | null;
 }
 
 function formatSlotTime(iso: string): string {
@@ -162,6 +164,166 @@ function DoctorChat({
   );
 }
 
+/** Pre-consultation step: ask the user if they have prior records to upload */
+function PreConsultationUpload({
+  doctorReady,
+  userId,
+  onProceed,
+}: {
+  doctorReady: DoctorReadyInfo;
+  userId: string | null;
+  onProceed: (files: string[]) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    setUploadError(null);
+
+    const newNames: string[] = [];
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(
+          `http://localhost:8000/upload-document/${encodeURIComponent(userId || "")}/${encodeURIComponent(doctorReady.appointmentId)}`,
+          { method: "POST", body: formData }
+        );
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+          setUploadError(`${file.name}: ${err.detail || "Upload failed"}`);
+        } else {
+          newNames.push(file.name);
+        }
+      } catch {
+        setUploadError(`${file.name}: Could not reach server`);
+      }
+    }
+    setUploadedFiles((prev) => [...prev, ...newNames]);
+    setUploading(false);
+    // Reset input so the same file can be re-uploaded if needed
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
+      <div className="mb-5">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Before you start</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Let the doctor know if you have any prior medical records.
+        </p>
+      </div>
+
+      {/* Upload card */}
+      <div className="max-w-2xl rounded-3xl border border-sky-100 bg-gradient-to-b from-sky-50 to-white p-6 shadow-sm">
+        {/* Icon + question */}
+        <div className="flex items-start gap-4 mb-5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinecap="round" strokeLinejoin="round" />
+              <polyline points="14 2 14 8 20 8" strokeLinecap="round" strokeLinejoin="round" />
+              <line x1="12" y1="18" x2="12" y2="12" strokeLinecap="round" />
+              <line x1="9" y1="15" x2="15" y2="15" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-base font-semibold text-slate-900">
+              Have you visited another doctor for this issue?
+            </p>
+            <p className="mt-1.5 text-sm leading-6 text-slate-600">
+              If you have any previous reports, prescriptions, or test results, you can upload them
+              now so {doctorReady.doctorName} can review them during your consultation.
+            </p>
+          </div>
+        </div>
+
+        {/* Uploaded files list */}
+        {uploadedFiles.length > 0 && (
+          <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 space-y-1.5">
+            {uploadedFiles.map((name, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm text-emerald-800">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0 text-emerald-500">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15 4.293 10.879a1 1 0 011.414-1.414L8.414 12.172l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">{name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Error */}
+        {uploadError && (
+          <p className="mb-3 text-xs text-rose-600 bg-rose-50 rounded-xl px-3 py-2">{uploadError}</p>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-sky-200 bg-white px-5 py-3 text-sm font-semibold text-sky-700 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {uploading ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-sky-300 border-t-sky-600" />
+                Uploading…
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+                  <path d="M4 16v1a2 2 0 002 2h8a2 2 0 002-2v-1M10 3v9m0-9L7 6m3-3l3 3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {uploadedFiles.length > 0 ? "Upload more files" : "Upload files"}
+              </>
+            )}
+          </button>
+
+          <button
+            disabled={uploading}
+            onClick={() => onProceed(uploadedFiles)}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {uploadedFiles.length > 0 ? (
+              <>
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 000 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
+                </svg>
+                Start Consultation
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 000 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
+                </svg>
+                No, start without files
+              </>
+            )}
+          </button>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".pdf,.txt,.md,.csv,.png,.jpg,.jpeg"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </div>
+
+      {/* Supported formats note */}
+      <p className="mt-3 ml-1 text-xs text-slate-400">
+        Supported: PDF, TXT, CSV, PNG, JPG
+      </p>
+    </div>
+  );
+}
+
 export default function AppointmentsPanel({
   doctorName,
   booked,
@@ -173,8 +335,43 @@ export default function AppointmentsPanel({
   consultationActive,
   onStartConsultation,
   onSendDoctorMessage,
+  consultationChart,
+  userId,
 }: AppointmentsPanelProps) {
   const activeSlotCard = slotCards.find((card) => !card.resolved) || slotCards[0];
+  /** Whether the pre-consultation upload step has been completed */
+  const [uploadStepDone, setUploadStepDone] = useState(false);
+
+  // Reset upload step whenever a new appointment becomes ready
+  useEffect(() => {
+    if (doctorReady) setUploadStepDone(false);
+  }, [doctorReady?.appointmentId]);
+
+  const renderConsultationChart = () => {
+    return (
+      <div className="mt-6 max-w-2xl">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          Intake Consultation Chart
+        </h3>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          {consultationChart ? (
+            <div className="prose prose-slate max-w-none space-y-2">
+              {parseMarkdown(consultationChart)}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 py-2 text-slate-500 text-sm">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-500"></span>
+              </span>
+              <span>Generating consultation chart... please wait.</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   if (consultationActive) {
     return (
@@ -199,7 +396,21 @@ export default function AppointmentsPanel({
     );
   }
 
-  if (doctorReady) {
+  // Doctor ready but upload step not done yet → show pre-consultation screen
+  if (doctorReady && !uploadStepDone) {
+    return (
+      <PreConsultationUpload
+        doctorReady={doctorReady}
+        userId={userId}
+        onProceed={(_files) => {
+          setUploadStepDone(true);
+        }}
+      />
+    );
+  }
+
+  // Upload step done → show the Start Consultation button
+  if (doctorReady && uploadStepDone) {
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
         <div className="mb-5">
@@ -234,6 +445,7 @@ export default function AppointmentsPanel({
           </div>
         </div>
 
+        {renderConsultationChart()}
       </div>
     );
   }
@@ -267,6 +479,8 @@ export default function AppointmentsPanel({
           </div>
         </div>
 
+        {renderConsultationChart()}
+
         {activeSlotCard && !activeSlotCard.resolved && (
           <div className="mt-5">
             <SlotCard card={activeSlotCard} onSelectSlot={onSelectSlot} />
@@ -299,4 +513,60 @@ export default function AppointmentsPanel({
       </div>
     </div>
   );
+}
+
+function parseMarkdown(md: string) {
+  const lines = md.split("\n");
+  return lines.map((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return <div key={idx} className="h-2" />;
+    }
+
+    if (trimmed.startsWith("###")) {
+      return (
+        <h4 key={idx} className="mt-4 mb-2 text-sm font-semibold text-slate-800 uppercase tracking-wider">
+          {parseBoldText(trimmed.substring(3).trim())}
+        </h4>
+      );
+    }
+    if (trimmed.startsWith("##")) {
+      return (
+        <h3 key={idx} className="mt-5 mb-2 text-base font-bold text-slate-900 border-b border-slate-100 pb-1">
+          {parseBoldText(trimmed.substring(2).trim())}
+        </h3>
+      );
+    }
+    if (trimmed.startsWith("#")) {
+      return (
+        <h2 key={idx} className="mt-6 mb-3 text-lg font-bold text-slate-900 border-b border-slate-200 pb-1.5">
+          {parseBoldText(trimmed.substring(1).trim())}
+        </h2>
+      );
+    }
+
+    if (trimmed.startsWith("-") || trimmed.startsWith("*")) {
+      return (
+        <li key={idx} className="ml-4 list-disc text-sm text-slate-600 py-1">
+          {parseBoldText(trimmed.substring(1).trim())}
+        </li>
+      );
+    }
+
+    return (
+      <p key={idx} className="text-sm text-slate-600 leading-6 my-1">
+        {parseBoldText(trimmed)}
+      </p>
+    );
+  });
+}
+
+function parseBoldText(text: string) {
+  const parts = text.split(/\*\*([^*]+)\*\*/g);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      return <strong key={i} className="font-bold text-slate-900">{part}</strong>;
+    }
+    return part;
+  });
 }
