@@ -1,0 +1,53 @@
+Palpitations and Arrhythmias — Clinical Reference
+
+Palpitations are an uncomfortable awareness of the heartbeat — racing,
+pounding, fluttering, or skipped beats. Most palpitations are benign, but a
+careful history helps separate low-risk causes from arrhythmias that need
+further testing.
+
+Useful history to gather:
+- Onset and offset: sudden start and sudden stop suggests a re-entrant
+  arrhythmia such as supraventricular tachycardia (SVT). Gradual onset and
+  offset is more typical of sinus tachycardia from anxiety, caffeine,
+  exertion, fever, or dehydration.
+- Regularity: a regular fast heartbeat suggests sinus tachycardia or SVT.
+  An irregularly irregular rhythm raises concern for atrial fibrillation,
+  especially in older patients or those with hypertension, diabetes, or
+  thyroid disease.
+- Single skipped beats or a "flip-flop" sensation are often benign
+  premature atrial or ventricular contractions (PACs/PVCs), particularly
+  if brief and infrequent, though frequent or symptomatic ectopy still
+  merits an ECG.
+- Duration: seconds versus sustained episodes lasting minutes to hours
+  changes both differential diagnosis and urgency.
+- Triggers: caffeine, alcohol, stimulant use, poor sleep, stress, and
+  intense exercise are common benign triggers. Palpitations triggered by
+  minimal exertion, or occurring at rest without a clear trigger, deserve
+  more attention.
+- Associated symptoms: chest pain, shortness of breath, dizziness,
+  near-fainting, or actual fainting alongside palpitations are red flags
+  and suggest a hemodynamically significant arrhythmia.
+
+Red flags requiring urgent evaluation:
+- Palpitations with fainting (syncope) or a sensation of nearly fainting
+- Palpitations with chest pain or significant shortness of breath
+- A very fast, sustained heart rate that does not resolve on its own
+- Known structural heart disease, prior heart attack, or a family history
+  of sudden cardiac death alongside new palpitations
+
+Common underlying causes to consider: atrial fibrillation, supraventricular
+tachycardia, frequent premature beats, thyroid dysfunction (both
+hyperthyroidism and hypothyroidism can cause palpitations), anemia,
+electrolyte disturbances, medication or stimulant effects, anxiety and
+panic disorder, and, less commonly, structural or electrical heart disease
+such as cardiomyopathy or accessory conduction pathways.
+
+Diagnostic approach: a resting 12-lead ECG is the first step and can be
+diagnostic if the arrhythmia is present at the time of recording. Because
+many arrhythmias are intermittent, ambulatory monitoring — a Holter monitor
+(continuous recording over 24-48 hours) or a longer event monitor — is
+often needed to capture an episode. Blood tests for thyroid function and
+electrolytes, and an echocardiogram to assess for structural heart disease,
+are commonly paired with rhythm monitoring when the history or ECG is
+abnormal, when episodes are frequent, or when red-flag symptoms are
+present.

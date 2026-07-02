@@ -1,0 +1,54 @@
+Leg Swelling (Peripheral Edema) — Clinical Reference
+
+Leg swelling is a common complaint with a wide range of causes, from
+prolonged sitting to serious cardiac, kidney, liver, or vascular disease.
+A cardiology consultation should focus on distinguishing heart failure and
+venous disease from other causes and identifying red flags.
+
+Useful history features:
+- Laterality: bilateral (both legs) swelling more often suggests a
+  systemic cause such as heart failure, kidney disease, liver disease, or
+  medication side effects. Unilateral (one leg) swelling, especially if
+  sudden and painful, raises concern for deep vein thrombosis (DVT), which
+  is an emergency.
+- Onset: gradual swelling over weeks fits chronic venous insufficiency or
+  early heart failure. Sudden swelling over hours to a day or two,
+  particularly one-sided, is more concerning for DVT.
+- Associated symptoms: shortness of breath, orthopnea, and fatigue
+  alongside bilateral leg swelling point toward heart failure. Pain,
+  warmth, and redness in one leg point toward DVT or cellulitis. Abdominal
+  swelling and yellowing of the skin/eyes point toward liver disease.
+- Timing pattern: swelling that is worse at the end of the day and
+  improves overnight is typical of venous or dependent edema. Swelling
+  that is present on waking and does not fully resolve suggests a more
+  systemic process such as heart failure or kidney disease.
+- Medications: calcium channel blockers, NSAIDs, and steroids are common
+  medication causes of leg swelling worth asking about.
+
+Red flags requiring urgent evaluation:
+- Sudden, painful, unilateral leg swelling (possible DVT), especially with
+  new shortness of breath or chest pain (possible pulmonary embolism)
+- Leg swelling with significant shortness of breath, orthopnea, or
+  paroxysmal nocturnal dyspnea (possible decompensated heart failure)
+- Swelling with skin breakdown, spreading redness, warmth, and fever
+  (possible cellulitis or infection)
+- Rapid, severe swelling in someone with known kidney or liver disease
+
+Cardiac mechanism: in heart failure, reduced pumping efficiency leads to
+increased pressure in the veins, which pushes fluid out into the tissues,
+typically starting in the most dependent areas (the ankles and lower legs
+when upright). This is usually bilateral and accompanied by other signs of
+fluid overload such as weight gain and breathlessness.
+
+Non-cardiac causes to keep in mind: chronic venous insufficiency (weak leg
+vein valves, often with varicose veins and improvement when legs are
+elevated), lymphedema, kidney disease (nephrotic syndrome causing
+significant protein loss and swelling), liver disease with low protein
+production, hypothyroidism, and simple dependent edema from prolonged
+sitting or standing, pregnancy, or certain medications.
+
+Typical workup when a cardiac cause is suspected: examination for other
+signs of fluid overload, an ECG, a BNP/NT-proBNP blood test, basic kidney
+and liver function tests, and an echocardiogram if heart failure is a
+realistic concern. If DVT is suspected, urgent vascular imaging (leg
+Doppler ultrasound) is needed rather than routine outpatient follow-up.

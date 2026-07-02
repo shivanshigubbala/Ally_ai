@@ -1,0 +1,59 @@
+Chest Pain and Acute Coronary Syndrome — Clinical Reference
+
+Chest pain is the single most important symptom a cardiology triage
+conversation must characterize carefully, because it can range from a
+harmless musculoskeletal strain to a life-threatening heart attack.
+
+Key features to establish in a history:
+- Location: central/retrosternal chest pain is more concerning for cardiac
+  origin than pain that is sharply localized to one small spot with the
+  fingertip, which is more often musculoskeletal.
+- Character: pressure, tightness, squeezing, or a heavy weight on the chest
+  is classic for cardiac ischemia. Sharp, stabbing pain that changes with
+  breathing or position is more typical of pleuritic or musculoskeletal
+  causes.
+- Radiation: pain spreading to the left arm, both arms, the jaw, neck, or
+  between the shoulder blades raises concern for a cardiac cause.
+- Associated symptoms: shortness of breath, sweating (diaphoresis), nausea,
+  vomiting, or a sense of impending doom alongside chest pain are red flags
+  for acute coronary syndrome (ACS), which includes unstable angina and
+  heart attack (myocardial infarction).
+- Triggers and relief: pain brought on by exertion and relieved by rest is
+  classic for stable angina. Pain occurring at rest, waking someone from
+  sleep, or lasting more than 15-20 minutes is more concerning and may
+  indicate an evolving heart attack rather than stable angina.
+- Duration and pattern: brief (seconds), fleeting, needle-like pains are
+  rarely cardiac. Pain lasting many hours without any change is less likely
+  to be an acute coronary event but can still reflect other serious cardiac
+  or non-cardiac pathology and should not be dismissed.
+
+Emergency red flags requiring immediate emergency care rather than routine
+consultation:
+- Crushing or severe chest pain, especially with radiation to the arm, jaw,
+  or back
+- Chest pain with profuse sweating, nausea, or vomiting
+- Chest pain with fainting or a sense of collapse
+- Severe, sudden shortness of breath accompanying chest discomfort
+- Chest pain in a patient with known coronary artery disease, diabetes, or
+  prior heart attack that feels similar to a previous cardiac event
+
+Risk factors that raise the pre-test probability of a cardiac cause:
+older age, male sex, smoking, diabetes, hypertension, high cholesterol,
+family history of premature coronary artery disease, obesity, and sedentary
+lifestyle.
+
+Typical initial workup when ACS is suspected: a 12-lead ECG to look for
+ST-segment changes, cardiac troponin blood testing to detect heart muscle
+injury, and often a chest X-ray and echocardiogram to assess heart function
+and rule out other causes. Ongoing or worsening chest pain of cardiac
+character always warrants urgent in-person evaluation rather than
+reassurance over a chat interface.
+
+Non-cardiac causes worth keeping in mind so the consultation does not
+over-medicalize benign pain: costochondritis (tenderness reproducible by
+pressing on the chest wall), gastroesophageal reflux (burning pain related
+to meals or lying down), muscle strain after exertion or coughing, and
+anxiety/panic attacks (often with hyperventilation, tingling, and a rapid
+onset tied to a stressful trigger). These should still be asked about
+directly rather than assumed, and red flags always take precedence over a
+benign-sounding story.
