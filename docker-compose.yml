@@ -54,6 +54,17 @@ services:
       context: ./services/appointment
       dockerfile: Dockerfile
 
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: allyai
+      POSTGRES_USER: allyai
+      POSTGRES_PASSWORD: allyai
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
     ports:
       - "8081:8081"
 

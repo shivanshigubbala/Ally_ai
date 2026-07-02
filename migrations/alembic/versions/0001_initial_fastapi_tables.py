@@ -16,15 +16,7 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        'users',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('email', sa.String(length=255), nullable=False, unique=True),
-        sa.Column('profile', sa.dialects.postgresql.JSONB(), nullable=False, server_default=sa.text("'{}'::jsonb")),
-        sa.Column('health_data', sa.dialects.postgresql.JSONB(), nullable=False, server_default=sa.text("'{}'::jsonb")),
-        sa.Column('created_at', sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text('now()')),
-    )
-
+   
     op.create_table(
         'sessions',
         sa.Column('id', sa.Integer(), primary_key=True),
@@ -58,4 +50,4 @@ def downgrade():
     op.drop_table('doctor_knowledge')
     op.drop_table('messages')
     op.drop_table('sessions')
-    op.drop_table('users')
+    

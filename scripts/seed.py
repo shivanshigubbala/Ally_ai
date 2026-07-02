@@ -4,8 +4,11 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine, text
 
 DATABASE_URL = os.environ.get(
-    'DATABASE_URL', 'postgresql+psycopg2://allyai:allyai@localhost:5432/allyai'
+    "DATABASE_URL",
+    "postgresql+psycopg2://allyai:allyai@localhost:5432/allyai",
 )
+
+print(DATABASE_URL)
 
 engine = create_engine(DATABASE_URL, future=True)
 
