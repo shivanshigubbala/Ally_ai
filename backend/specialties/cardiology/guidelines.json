@@ -1,0 +1,67 @@
+{
+  "risk_levels": ["Low", "Moderate", "High", "Emergency"],
+  "emergency_red_flags": [
+    "crushing chest pain",
+    "severe chest pain",
+    "chest pain radiating to left arm",
+    "chest pain radiating to jaw",
+    "fainting",
+    "collapse",
+    "severe shortness of breath",
+    "profuse sweating with chest discomfort"
+  ],
+  "symptom_guidelines": {
+    "chest pain": {
+      "risk": "Moderate",
+      "recommended_tests": ["ECG", "Troponin", "Echocardiogram"],
+      "rationale": "Chest pain warrants ruling out ischemia and structural heart disease."
+    },
+    "palpitations": {
+      "risk": "Moderate",
+      "recommended_tests": ["ECG", "Holter Monitor"],
+      "rationale": "Palpitations may reflect an arrhythmia that intermittent ECG monitoring can capture."
+    },
+    "shortness of breath": {
+      "risk": "Moderate",
+      "recommended_tests": ["ECG", "Chest X-Ray", "BNP"],
+      "rationale": "Breathlessness can indicate heart failure or another cardiopulmonary cause."
+    },
+    "high blood pressure": {
+      "risk": "Low",
+      "recommended_tests": ["Blood Pressure Monitoring", "Lipid Profile", "ECG"],
+      "rationale": "Hypertension screening and cardiovascular risk-factor assessment."
+    },
+    "dizziness": {
+      "risk": "Low",
+      "recommended_tests": ["ECG", "Blood Pressure Monitoring"],
+      "rationale": "Rules out arrhythmia or blood pressure related causes."
+    },
+    "fainting": {
+      "risk": "High",
+      "recommended_tests": ["ECG", "Holter Monitor", "Echocardiogram"],
+      "rationale": "Syncope can have a cardiac cause and needs prompt evaluation."
+    },
+    "leg swelling": {
+      "risk": "Moderate",
+      "recommended_tests": ["Echocardiogram", "BNP"],
+      "rationale": "Peripheral edema can be an early sign of heart failure."
+    },
+    "fatigue": {
+      "risk": "Low",
+      "recommended_tests": [],
+      "rationale": "Nonspecific alone; tests are added only if paired with other cardiac symptoms."
+    },
+    "irregular heartbeat": {
+      "risk": "Moderate",
+      "recommended_tests": ["ECG", "Holter Monitor"],
+      "rationale": "Arrhythmia should be characterized with rhythm monitoring."
+    }
+  },
+  "lifestyle_advice": [
+    "Maintain a heart-healthy diet low in saturated fat and sodium.",
+    "Engage in regular moderate exercise as tolerated.",
+    "Avoid smoking and limit alcohol intake.",
+    "Monitor and manage blood pressure, blood sugar, and cholesterol.",
+    "Maintain a healthy weight and manage stress."
+  ]
+}

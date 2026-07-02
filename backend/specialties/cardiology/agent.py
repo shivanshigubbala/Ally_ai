@@ -1,17 +1,14 @@
 from typing import List, Dict
 
 from backend.specialties.cardiology.prompt import CARDIOLOGY_SYSTEM_PROMPT
-
-try:
-    from backend.llm.nvidia_client import chat
-except ImportError:
-    from llm.nvidia_client import chat
+from backend.specialties.cardiology.llm_adapter import CardiologyLLMAdapter
 
 
 class CardiologyAgent:
 
     def __init__(self):
         self.system_prompt = CARDIOLOGY_SYSTEM_PROMPT
+        self.llm = CardiologyLLMAdapter()
 
     def consult(
         self,
@@ -35,6 +32,6 @@ class CardiologyAgent:
             }
         )
 
-        response = chat(messages)
+        response = self.llm.chat(messages)
 
         return response
