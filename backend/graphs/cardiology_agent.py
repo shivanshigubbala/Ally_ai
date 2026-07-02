@@ -517,10 +517,10 @@ def lab_notification(state: DoctorState, emit: Emitter) -> DoctorState:
 
 def user_decision(state: DoctorState, emit: Emitter) -> DoctorState:
     if state.user_lab_decision == "accept":
-        emit(WSEvent(type="text", payload={"content": build_lab_accept_message()}))
+        emit(WSEvent(type="text", payload={"content": build_lab_accept_message(), "from": DOCTOR_ID}))
         state.current_node = "REPORT_PENDING"
     else:
-        emit(WSEvent(type="text", payload={"content": build_lab_reject_message()}))
+        emit(WSEvent(type="text", payload={"content": build_lab_reject_message(), "from": DOCTOR_ID}))
         state.current_node = "SESSION_COMPLETE"
     return state
 
@@ -540,7 +540,7 @@ def report_pending(state: DoctorState, emit: Emitter) -> DoctorState:
         "doctor": DOCTOR_NAME,
         "tests": state.tests_list,
     }))
-    emit(WSEvent(type="text", payload={"content": build_report_ready_message()}))
+    emit(WSEvent(type="text", payload={"content": build_report_ready_message(), "from": DOCTOR_ID}))
     state.current_node = "SESSION_COMPLETE"
     return state
 
@@ -651,7 +651,7 @@ def step(
             break
         node_fn = node_map[state.current_node]
         state = node_fn(state, events.append)
-        if state.current_node in {"QUESTIONING", "LAB_NOTIFICATION", "REPORT_PENDING"}:
+        if state.current_node in {"QUESTIONING", "LAB_NOTIFICATION"}:
             break
 
     for m in state.conversation_history[prev_len:]:

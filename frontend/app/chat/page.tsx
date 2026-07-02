@@ -57,6 +57,17 @@ export default function ChatPage() {
   } = useChatSocket(userId);
   const activeTab: SidebarTab = tab;
 
+  const handleStartConsultation = () => {
+    setTab("appointments");
+    startConsultation();
+  };
+
+  useEffect(() => {
+    if (doctorReady) {
+      setTab("appointments");
+    }
+  }, [doctorReady]);
+
   useEffect(() => {
     const validateSession = () => {
       const p = getProfile();
@@ -145,7 +156,7 @@ export default function ChatPage() {
               doctorMessages={doctorMessages}
               doctorThinking={doctorThinking}
               consultationActive={consultationActive}
-              onStartConsultation={startConsultation}
+              onStartConsultation={handleStartConsultation}
               onSendDoctorMessage={sendDoctorMessage}
             />
           )}
