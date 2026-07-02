@@ -25,6 +25,30 @@ logger = logging.getLogger(__name__)
 GP_DOCTOR_ID = "d5"
 GP_DOCTOR_NAME = "Dr. Shankar"
 
+CARDIOLOGY_DOCTOR_ID = "d8"
+CARDIOLOGY_DOCTOR_NAME = "Dr. Meera Rao"
+
+DEFAULT_DOCTOR_BY_DEPT = {
+    "general": GP_DOCTOR_ID,
+    "cardiology": CARDIOLOGY_DOCTOR_ID,
+}
+
+_CARDIAC_KEYWORDS = [
+    "chest pain", "chest tightness", "pressure in chest", "palpitations",
+    "racing heart", "irregular heartbeat", "skipped beat", "skipping beat",
+    "skipping beats", "heart attack", "heart racing", "heart keeps racing",
+    "fainting", "fainted", "collapse", "high blood pressure",
+    "hypertension", "leg swelling", "heart disease", "cardiac",
+    "shortness of breath", "breathless",
+]
+
+
+def _detect_department(text: str) -> str:
+    lowered = (text or "").lower()
+    if any(keyword in lowered for keyword in _CARDIAC_KEYWORDS):
+        return "cardiology"
+    return "general"
+
 
 def _remember(user_id: str, role: str, content: str, session_id: str | None = None) -> None:
     """Persist a single turn to the pgvector messages table (best-effort)."""
@@ -89,7 +113,10 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
     if not last_user:
         return state
 
-    state.selected_dept = "general"
+    # Only lock in the department on the first symptom message so later
+    # follow-up answers (which may mention unrelated words) don't flip it.
+    if not state.selected_dept:
+        state.selected_dept = _detect_department(last_user)
     if state.symptom_round == 0:
         reply = _llm_reply(
             RECEPTIONIST_PERSONA + (
@@ -159,33 +186,37 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
 def doctor_selection_node(state: RoutingState, emit: Emitter) -> RoutingState:
     pending = state.pending_event or {}
     state.pending_event = None
-    doctors = store.list_doctors(state.selected_dept or "general")
+    dept = state.selected_dept or "general"
+    default_doctor = DEFAULT_DOCTOR_BY_DEPT.get(dept, GP_DOCTOR_ID)
+    default_name = CARDIOLOGY_DOCTOR_NAME if dept == "cardiology" else GP_DOCTOR_NAME
+
+    doctors = store.list_doctors(dept)
     for d in doctors:
-        d["available"] = d["id"] == GP_DOCTOR_ID
+        d["available"] = d["id"] == default_doctor
 
     if pending.get("type") == "select":
         selected_doctor = pending.get("payload", {}).get("id") or pending.get("payload", {}).get("doctor_id")
         if selected_doctor:
             state.selected_doctor = selected_doctor
         else:
-            state.selected_doctor = state.selected_doctor or GP_DOCTOR_ID
+            state.selected_doctor = state.selected_doctor or default_doctor
     else:
-        state.selected_doctor = state.selected_doctor or GP_DOCTOR_ID
+        state.selected_doctor = state.selected_doctor or default_doctor
 
     chosen = next((d for d in doctors if d["id"] == state.selected_doctor), None)
     if chosen and not chosen.get("available", True):
-        emit(WSEvent(type="text", payload={"content": "I’m sorry, that doctor isn’t available right now. Let’s book with Dr. Shankar, who is available."}))
-        state.selected_doctor = GP_DOCTOR_ID
+        emit(WSEvent(type="text", payload={"content": f"I’m sorry, that doctor isn’t available right now. Let’s book with {default_name}, who is available."}))
+        state.selected_doctor = default_doctor
 
     if not any(d["id"] == state.selected_doctor for d in doctors):
-        state.selected_doctor = next((d["id"] for d in doctors if d.get("available", False)), GP_DOCTOR_ID)
+        state.selected_doctor = next((d["id"] for d in doctors if d.get("available", False)), default_doctor)
 
-    slots = store.list_slots(state.selected_doctor or GP_DOCTOR_ID)
+    slots = store.list_slots(state.selected_doctor or default_doctor)
     if slots:
-        doc_name = next((d["name"] for d in doctors if d["id"] == state.selected_doctor), GP_DOCTOR_NAME)
+        doc_name = next((d["name"] for d in doctors if d["id"] == state.selected_doctor), default_name)
         emit(WSEvent(type="slot_select", payload={
             "options": slots,
-            "doctor_id": state.selected_doctor or GP_DOCTOR_ID,
+            "doctor_id": state.selected_doctor or default_doctor,
             "doctor_name": doc_name,
         }))
         state.current_node = "SLOT_SELECTION"
@@ -206,8 +237,9 @@ def slot_node(state: RoutingState, emit: Emitter) -> RoutingState:
         state.selected_slot = pending["payload"].get("id", "")
     else:
         # Text message during slot selection — acknowledge and re-show slots
-        slots = store.list_slots(state.selected_doctor or GP_DOCTOR_ID)
-        doc_name = GP_DOCTOR_NAME
+        default_doctor = DEFAULT_DOCTOR_BY_DEPT.get(state.selected_dept or "general", GP_DOCTOR_ID)
+        slots = store.list_slots(state.selected_doctor or default_doctor)
+        doc_name = CARDIOLOGY_DOCTOR_NAME if state.selected_dept == "cardiology" else GP_DOCTOR_NAME
         emit(WSEvent(type="text", payload={
             "content": f"I understand. When you're ready, please pick a slot from the available times with {doc_name} by typing the slot id (e.g. s1, s2, etc.)."
         }))
@@ -259,9 +291,10 @@ def slot_node(state: RoutingState, emit: Emitter) -> RoutingState:
         return state
 
     state.appointment_id = body.get("id") if isinstance(body, dict) else None
+    confirmed_doc_name = CARDIOLOGY_DOCTOR_NAME if state.selected_dept == "cardiology" else GP_DOCTOR_NAME
     reply = _llm_reply(
         RECEPTIONIST_PERSONA + (
-            f"Your appointment is confirmed for {nice_time} with Dr. Shankar. "
+            f"Your appointment is confirmed for {nice_time} with {confirmed_doc_name}. "
             "I’ve got everything booked and the doctor will be ready for you in the Appointments tab."
         ),
         f"Appointment confirmed for {chosen['id']} at {nice_time}.",
