@@ -1,0 +1,53 @@
+Hypertension (High Blood Pressure) — Clinical Reference
+
+Hypertension is usually asymptomatic and discovered incidentally, but a
+cardiology consultation should still assess for symptoms, complications,
+and risk factors when a patient reports high blood pressure or blood
+pressure-related symptoms.
+
+Blood pressure categories commonly used as a reference (values in mmHg,
+systolic/diastolic):
+- Normal: below 120/80
+- Elevated: systolic 120-129 and diastolic below 80
+- Stage 1 hypertension: systolic 130-139 or diastolic 80-89
+- Stage 2 hypertension: systolic 140 or higher, or diastolic 90 or higher
+- Hypertensive crisis: systolic above 180 and/or diastolic above 120,
+  which requires urgent evaluation, especially if accompanied by symptoms
+
+Most people with hypertension have no symptoms at all, which is why it is
+sometimes called a "silent" condition. When symptoms do occur, they are
+often nonspecific: headache, dizziness, or nosebleeds, and these do not
+reliably correlate with the actual blood pressure reading.
+
+Symptoms that suggest a hypertensive emergency and require urgent care:
+- Severe headache with blurred vision or confusion
+- Chest pain or shortness of breath alongside very high blood pressure
+- Severe headache with nausea/vomiting and a very high reading
+- New weakness, numbness, or difficulty speaking (possible stroke)
+- Any very high reading (systolic above 180 or diastolic above 120)
+  accompanied by symptoms rather than an isolated number
+
+History to gather: duration of known hypertension, current medications and
+adherence, home blood pressure readings if available, salt intake, alcohol
+use, caffeine intake, family history of hypertension or early
+cardiovascular disease, and other cardiovascular risk factors (diabetes,
+smoking, high cholesterol, obesity, sedentary lifestyle). It is also worth
+asking about symptoms of secondary causes in younger patients or those with
+resistant hypertension: episodic sweating and palpitations (pheochromocytoma),
+snoring and daytime sleepiness (obstructive sleep apnea), or a history of
+kidney disease.
+
+Complications to be aware of: uncontrolled long-term hypertension is a
+major driver of heart attack, stroke, heart failure, kidney disease, and
+damage to the blood vessels of the eyes. This is why control matters even
+though the condition itself is often silent.
+
+Typical workup and monitoring: home or ambulatory blood pressure monitoring
+to confirm the diagnosis and rule out "white coat" effect, basic blood
+tests (kidney function, electrolytes, glucose, and a lipid profile) to
+assess overall cardiovascular risk and screen for secondary causes, an ECG
+to look for evidence of longstanding strain on the heart, and, in some
+cases, an echocardiogram if there is concern for heart enlargement or
+reduced function. Lifestyle counseling (reduced salt intake, regular
+exercise, weight management, limiting alcohol, and smoking cessation) is a
+core part of management alongside medication.
