@@ -17,7 +17,7 @@ func NewUserService(repo *repository.UserRepository) *UserService {
 // Create creates a new user with the provided name.
 func (s *UserService) Create(name string) (models.User, error) {
 	if s.repo == nil {
-		return models.User{ID: "user-1", Name: name}, nil
+		return models.User{ID: 1, Name: name}, nil
 	}
 	return s.repo.Create(name)
 }

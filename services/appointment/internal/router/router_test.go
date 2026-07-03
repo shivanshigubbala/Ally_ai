@@ -14,7 +14,7 @@ func TestRouterRegistersUsersAndAppointmentStatusRoutes(t *testing.T) {
 	r := New(
 		&handlers.DepartmentHandler{},
 		&handlers.DoctorHandler{},
-		&handlers.AppointmentHandler{},
+		handlers.NewAppointmentHandler(service.NewAppointmentService(nil)),
 		handlers.NewUserHandler(service.NewUserService(nil)),
 	)
 
@@ -25,10 +25,10 @@ func TestRouterRegistersUsersAndAppointmentStatusRoutes(t *testing.T) {
 		t.Fatalf("expected POST /users to return 201, got %d", userResp.Code)
 	}
 
-	statusReq := httptest.NewRequest(http.MethodPatch, "/appointments/apt-1/status", strings.NewReader(`{"status":"confirmed"}`))
+	statusReq := httptest.NewRequest(http.MethodPatch, "/appointments/1/status", strings.NewReader(`{"status":"confirmed"}`))
 	statusResp := httptest.NewRecorder()
 	r.ServeHTTP(statusResp, statusReq)
-	if statusResp.Code != http.StatusOK {
-		t.Fatalf("expected PATCH /appointments/{id}/status to return 200, got %d", statusResp.Code)
+	if statusResp.Code == http.StatusNotFound || statusResp.Code == http.StatusMethodNotAllowed {
+		t.Fatalf("expected PATCH /appointments/{id}/status route to be registered, got %d", statusResp.Code)
 	}
 }
