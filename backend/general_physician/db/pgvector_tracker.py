@@ -102,9 +102,12 @@ def init_db():
                 page INTEGER,
                 content TEXT NOT NULL,
                 embedding vector(1024),
+                patient_id TEXT,
                 created_at TIMESTAMPTZ DEFAULT NOW()
             )
         """)
+        cur.execute("ALTER TABLE knowledge_chunks ADD COLUMN IF NOT EXISTS patient_id TEXT")
+        cur.execute("CREATE INDEX IF NOT EXISTS knowledge_chunks_patient_idx ON knowledge_chunks(patient_id)")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS knowledge_chunks_neurology_dev (
                 id SERIAL PRIMARY KEY,
@@ -338,6 +341,7 @@ def insert_knowledge_chunks(
     page: int,
     contents: list[str],
     embeddings: list[list[float]],
+    patient_id: str | None = None,
 ) -> int:
     if not HAS_PG:
         return 0
@@ -350,14 +354,14 @@ def insert_knowledge_chunks(
         psycopg2.extras.execute_values(
             cur,
             """
-            INSERT INTO knowledge_chunks (department, source, page, content, embedding)
+            INSERT INTO knowledge_chunks (department, source, page, content, embedding, patient_id)
             VALUES %s
             """,
             [
-                (department, source, page, c, e)
+                (department, source, page, c, e, patient_id)
                 for c, e in zip(contents, embeddings)
             ],
-            template="(%s, %s, %s, %s, %s::vector)",
+            template="(%s, %s, %s, %s, %s::vector, %s)",
         )
         count = cur.rowcount
         cur.close()
@@ -403,7 +407,7 @@ def search_knowledge(
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             """
-            SELECT content, page, source,
+            SELECT content, page, source, patient_id,
                    1 - (embedding <=> %s::vector) AS similarity
             FROM knowledge_chunks
             WHERE department = %s
@@ -418,7 +422,7 @@ def search_knowledge(
             fallback_threshold = 0.30
             cur.execute(
                 """
-                SELECT content, page, source,
+                SELECT content, page, source, patient_id,
                        1 - (embedding <=> %s::vector) AS similarity
                 FROM knowledge_chunks
                 WHERE department = %s

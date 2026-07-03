@@ -280,11 +280,11 @@ export default function ChatThread({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [allMessages, cards, thinking, doctorThinking]);
 
-  const doctorCards = cards.filter((card) => card.kind === "doctor_select");
-  const slotCards = cards.filter((card) => card.kind === "slot_select");
-  const labCards = cards.filter((card) => card.kind === "lab_notification");
+  const doctorCards = cards.filter((card) => card.kind === "doctor_select" && !card.resolved);
+  const slotCards = cards.filter((card) => card.kind === "slot_select" && !card.resolved);
+  const labCards = cards.filter((card) => card.kind === "lab_notification" && !card.resolved);
   const emptyState =
-    messages.length === 0 && doctorMessages.length === 0 && cards.length === 0 &&
+    messages.length === 0 && doctorMessages.length === 0 && cards.filter(c => !c.resolved).length === 0 &&
     !thinking && !doctorThinking;
 
   return (
