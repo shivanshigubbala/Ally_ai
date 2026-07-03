@@ -10,10 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/shivanshigubbala/Ally_ai/services/lab/database"
+	"github.com/shivanshigubbala/Ally_ai/services/lab/handlers"
 )
-
-var db *pgxpool.Pool
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -27,46 +26,42 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	databaseURL := os.Getenv("DATABASE_URL")
+	database.Connect()
+	defer database.DB.Close()
 
-	if databaseURL == "" {
-		databaseURL = "postgres://allyai:allyai@localhost:5432/allyai"
-	}
-
-	ctx := context.Background()
-
-	var err error
-	db, err = pgxpool.New(ctx, databaseURL)
-	if err != nil {
-		log.Fatalf("failed to create database pool: %v", err)
-	}
-
-	if err := db.Ping(ctx); err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
-	}
-
-	defer db.Close()
-
+	// Routes
 	http.HandleFunc("/health", healthHandler)
+	http.HandleFunc("/lab-tests", handlers.CreateLabTest)
+	http.HandleFunc("/lab-test", handlers.GetLabTest)
+	http.HandleFunc("/lab-test/update", handlers.UpdateLabTest)
+	http.HandleFunc("/users/history", handlers.GetUserLabHistory)
+	http.HandleFunc("/users/tests", handlers.GetUserTests)
 
+	http.HandleFunc("/report", handlers.GetReport)
+	http.HandleFunc("/reports/user", handlers.GetUserReports)
+	http.HandleFunc("/reports/download", handlers.DownloadReport)
+	http.HandleFunc("/inbox", handlers.GetInbox)
 	server := &http.Server{
 		Addr: ":8082",
 	}
 
 	go func() {
-		log.Println("lab service started on http://localhost:8082")
+
+		log.Println("Lab Service started on http://localhost:8082")
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
+
 	}()
 
 	stop := make(chan os.Signal, 1)
+
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
 	<-stop
 
-	log.Println("Shutting down lab service...")
+	log.Println("Shutting down Lab Service...")
 
 	ctxShutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
