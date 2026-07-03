@@ -3,12 +3,10 @@ package models
 import "time"
 
 type Appointment struct {
-	ID         string    `json:"id"`
-	DoctorID   string    `json:"doctor_id"`
-	SlotID     string    `json:"slot_id"`
-	Patient    string    `json:"patient"`
-	Reason     string    `json:"reason"`
-	BookedAt   time.Time `json:"booked_at"`
-	Department string    `json:"department"`
+	ID         int       `json:"id"`
+	DoctorID   int       `json:"doctor_id"`
+	UserID     int       `json:"user_id"`
+	TimeSlotID int       `json:"time_slot_id"`
 	Status     string    `json:"status"`
+	BookedAt   time.Time `json:"booked_at"`
 }

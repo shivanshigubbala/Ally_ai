@@ -24,12 +24,12 @@ func (s *AppointmentService) ListSlots(doctorID string) []models.Slot {
 	return s.repo.ListSlots(doctorID)
 }
 
-// Book creates a new appointment for a doctor and slot.
-func (s *AppointmentService) Book(doctorID, slotID, patient, reason string) (models.Appointment, error) {
+// Book creates a new appointment for a doctor, user, and time slot.
+func (s *AppointmentService) Book(doctorID, userID, timeSlotID int) (models.Appointment, error) {
 	if s.repo == nil {
 		return models.Appointment{}, errors.New("appointment repository unavailable")
 	}
-	return s.repo.Book(doctorID, slotID, patient, reason)
+	return s.repo.Book(doctorID, userID, timeSlotID)
 }
 
 // List returns all appointments in the system.
