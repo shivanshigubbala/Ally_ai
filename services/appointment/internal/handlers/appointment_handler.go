@@ -19,10 +19,9 @@ func NewAppointmentHandler(s *service.AppointmentService) *AppointmentHandler {
 }
 
 type bookReq struct {
-	DoctorID string `json:"doctor_id"`
-	SlotID   string `json:"slot_id"`
-	Patient  string `json:"patient"`
-	Reason   string `json:"reason"`
+	DoctorID   int `json:"doctor_id"`
+	UserID     int `json:"user_id"`
+	TimeSlotID int `json:"time_slot_id"`
 }
 
 // writeJSON writes a JSON response with the provided status code and payload.
@@ -58,11 +57,11 @@ func (h *AppointmentHandler) Book(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid json")
 		return
 	}
-	if req.DoctorID == "" || req.SlotID == "" || req.Patient == "" {
-		writeErr(w, http.StatusBadRequest, "doctor_id, slot_id, patient required")
+	if req.DoctorID == 0 || req.UserID == 0 || req.TimeSlotID == 0 {
+		writeErr(w, http.StatusBadRequest, "doctor_id, user_id, time_slot_id required")
 		return
 	}
-	apt, err := h.service.Book(req.DoctorID, req.SlotID, req.Patient, req.Reason)
+	apt, err := h.service.Book(req.DoctorID, req.UserID, req.TimeSlotID)
 	if err != nil {
 		status := http.StatusInternalServerError
 		switch err {
@@ -71,6 +70,8 @@ func (h *AppointmentHandler) Book(w http.ResponseWriter, r *http.Request) {
 		case repository.ErrSlotBooked:
 			status = http.StatusConflict
 		case repository.ErrDoctorNotFound:
+			status = http.StatusNotFound
+		case repository.ErrUserNotFound:
 			status = http.StatusNotFound
 		}
 		writeErr(w, status, err.Error())

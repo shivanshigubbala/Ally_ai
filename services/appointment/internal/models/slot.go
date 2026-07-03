@@ -3,7 +3,9 @@ package models
 import "time"
 
 type Slot struct {
-	ID        string    `json:"id"`
-	DoctorID  string    `json:"doctor_id"`
-	StartTime time.Time `json:"start_time"`
+	ID          int       `json:"id"`
+	DoctorID    int       `json:"doctor_id"`
+	StartTime   time.Time `json:"start_time"`
+	EndTime     time.Time `json:"end_time"`
+	IsAvailable bool      `json:"is_available"`
 }

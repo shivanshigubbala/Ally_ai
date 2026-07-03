@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"sort"
+	"strconv"
 
 	"github.com/shivanshigubbala/Ally_ai/services/appointment/internal/models"
 )
@@ -41,4 +42,12 @@ func (r *DepartmentRepository) List() []models.Department {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
+}
+
+func parseOptionalID(raw string) (int, bool) {
+	if raw == "" {
+		return 0, true
+	}
+	id, err := strconv.Atoi(raw)
+	return id, err == nil
 }
