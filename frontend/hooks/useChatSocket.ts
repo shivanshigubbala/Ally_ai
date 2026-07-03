@@ -84,10 +84,22 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
 
   const pushInbox = useCallback(
     (notif: Omit<InboxNotification, "id" | "createdAt" | "read">) => {
-      setInbox((prev) => [
-        { ...notif, id: newId(), createdAt: Date.now(), read: false },
-        ...prev,
-      ]);
+      setInbox((prev) => {
+        if (
+          notif.kind === "appointment_booked" &&
+          prev.some(
+            (n) =>
+              n.kind === "appointment_booked" &&
+              (notif.appointmentId ? n.appointmentId === notif.appointmentId : true)
+          )
+        ) {
+          return prev;
+        }
+        return [
+          { ...notif, id: newId(), createdAt: Date.now(), read: false },
+          ...prev,
+        ];
+      });
     },
     []
   );
@@ -130,11 +142,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
             content
           );
 
-          if (
-            !appointmentBookedRef.current &&
-            !from &&
-            isBookingConfirmation
-          ) {
+          if (!appointmentBookedRef.current && !from && isBookingConfirmation) {
             appointmentBookedRef.current = true;
             setAppointmentBooked(true);
             setAppointmentPending(false);
@@ -145,14 +153,6 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
                   : c
               )
             );
-            pushInbox({
-              kind: "appointment_booked",
-              title: "Appointment booked",
-              body: doctorNameRef.current
-                ? `Your appointment with ${doctorNameRef.current} is confirmed.`
-                : "Your appointment is confirmed.",
-              decision: "pending",
-            });
           }
           break;
         }
@@ -287,15 +287,14 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
             },
           ]);
 
-          if (!appointmentBookedRef.current) {
-            appointmentBookedRef.current = true;
-            pushInbox({
-              kind: "appointment_booked",
-              title: "Appointment confirmed",
-              body: `Your appointment with ${docName} is confirmed and ready in Notifications.`,
-              decision: "pending",
-            });
-          }
+          appointmentBookedRef.current = true;
+          pushInbox({
+            kind: "appointment_booked",
+            title: "Appointment confirmed",
+            body: `Your appointment with ${docName} is confirmed and ready in Notifications.`,
+            appointmentId,
+            decision: "pending",
+          });
           break;
         }
 
@@ -308,6 +307,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
           const sessionId = evt.payload.session_id as string;
           const urgent = Boolean(evt.payload.urgent);
           const docName = (evt.payload.doctor_name as string) || doctorNameRef.current || "your doctor";
+          const deptName = (evt.payload.department as string) || "your doctor";
           const formattedTests = tests.map((test) => `• ${test.name}: ${test.reason}`).join("\n");
 
           setDoctorMessages((prev) => [
@@ -328,15 +328,21 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
               kind: "lab_notification",
               tests,
               sessionId,
+              doctorName: docName,
             },
           ]);
 
+          const title = urgent
+            ? `Urgent tests requested by ${docName}`
+            : `Tests requested by ${docName}`;
+          const body = urgent
+            ? `${docName} marked this as urgent. Please review and accept or decline the tests.`
+            : `${docName} recommended tests. Please review and accept or decline.`;
+
           pushInbox({
             kind: "lab_notification",
-            title: urgent ? "Urgent cardiac tests requested" : "Cardiac tests requested",
-            body: urgent
-              ? "Your cardiology doctor flagged urgent tests. Please review and accept or decline."
-              : "Your cardiology doctor recommended tests. Please review and accept or decline.",
+            title,
+            body,
             decision: "pending",
             cardId,
             sessionId,

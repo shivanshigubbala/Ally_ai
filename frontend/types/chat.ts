@@ -79,6 +79,7 @@ export interface InboxNotification {
   body: string;
   createdAt: number;
   read: boolean;
+  appointmentId?: string;
   decision?: "pending" | "accepted" | "rejected";
   reportId?: string;
   cardId?: string;

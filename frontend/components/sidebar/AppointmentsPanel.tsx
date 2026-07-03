@@ -399,13 +399,16 @@ export default function AppointmentsPanel({
   // Doctor ready but upload step not done yet → show pre-consultation screen
   if (doctorReady && !uploadStepDone) {
     return (
-      <PreConsultationUpload
-        doctorReady={doctorReady}
-        userId={userId}
-        onProceed={(_files) => {
-          setUploadStepDone(true);
-        }}
-      />
+      <>
+        <PreConsultationUpload
+          doctorReady={doctorReady}
+          userId={userId}
+          onProceed={(_files) => {
+            setUploadStepDone(true);
+          }}
+        />
+        {renderConsultationChart()}
+      </>
     );
   }
 

@@ -1,0 +1,14 @@
+services:
+  backend-checks:
+    build:
+      context: .
+      dockerfile: backend/general_physician/Dockerfile
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app
+    # Do not mount host volumes for checks — use image copy for reproducible tests
+    command: ["bash", "-lc", "PYTHONPATH=/app pytest -q backend/general_physician/tests"]
+    # If your tests need env vars, docker will pick them from the repo .env file
+    env_file:
+      - .env
+    depends_on: []

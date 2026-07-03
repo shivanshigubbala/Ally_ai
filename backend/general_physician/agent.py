@@ -496,6 +496,8 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
             if m.get("role") == "user" and m.get("content"):
                 state.chief_complaint = m["content"].strip()
                 break
+    if state.patient_name and not state.patient_name.strip():
+        state.patient_name = None
     if not state.chief_complaint:
         try:
             prior_msgs = get_user_messages(
@@ -523,8 +525,18 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
     )
     health_data = state.health_data or {}
 
-    patient_name = state.user_id.replace("_", " ").title()
-    reply = _build_initial_doctor_message(state.chief_complaint, patient_name)
+    patient_name = state.patient_name or state.user_id.replace("_", " ").title()
+    if state.uploaded_documents:
+        summary = "I see you uploaded the following document(s): " + ", ".join(
+            doc.get("filename", "a document") for doc in state.uploaded_documents[:3]
+        )
+        reply = (
+            f"Hi {patient_name}, I’m reviewing your uploaded document(s) first. "
+            f"{summary}. "
+            "Then I’ll ask a couple of focused questions so I can understand your concern and next steps."
+        )
+    else:
+        reply = _build_initial_doctor_message(state.chief_complaint, patient_name)
 
     emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
     state.conversation_history.append({"role": "assistant", "content": reply})
@@ -644,6 +656,21 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
         state.conversation_history,
         state.chief_complaint,
     )
+    urgent = False
+    try:
+        text = " ".join(m.get("content", "") for m in state.conversation_history)
+        urgent = _contains_any(text, [
+            "chest pain",
+            "trouble breathing",
+            "severe pain",
+            "fainting",
+            "collapse",
+            "confusion",
+            "vomiting blood",
+            "coughing blood",
+        ])
+    except Exception:
+        urgent = False
     if state.lab_tests_recommended:
         state.tests_list = _sanitize_tests(parsed.get("tests"))
         if not state.tests_list:
@@ -664,7 +691,10 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
         emit(WSEvent(type="lab_notification", payload={
             "tests": state.tests_list,
             "session_id": state.appointment_id,
-            "doctor_name": DOCTOR_NAME,
+            "doctor_name": state.doctor_name or DOCTOR_NAME,
+            "doctor_id": state.doctor_id,
+            "department": state.department,
+            "urgent": urgent,
         }))
         state.current_node = "LAB_NOTIFICATION"
     else:
@@ -729,14 +759,16 @@ def user_decision(state: DoctorState, emit: Emitter) -> DoctorState:
 
 def report_pending(state: DoctorState, emit: Emitter) -> DoctorState:
     report_id = f"report-{state.appointment_id}"
-    patient_name = state.user_id.replace("_", " ").title()
-    _generate_lab_report_pdf(report_id, DOCTOR_NAME, patient_name, state.tests_list)
+    patient_name = state.patient_name or state.user_id.replace("_", " ").title()
+    doctor_name = state.doctor_name or DOCTOR_NAME
+    _generate_lab_report_pdf(report_id, doctor_name, patient_name, state.tests_list)
     emit(WSEvent(type="report_ready", payload={
         "inbox_id": report_id,
-        "doctor": DOCTOR_NAME,
+        "doctor": doctor_name,
         "report_id": report_id,
         "report_url": f"/reports/{report_id}",
         "tests": state.tests_list,
+        "department": state.department,
     }))
     emit(WSEvent(type="text", payload={
         "content": "Your lab report is ready. Take care, and follow up if anything changes!",
@@ -826,11 +858,31 @@ def step(
         doc_key = f"{user_id}:{appointment_id}"
         uploaded_docs = _doc_store.pop(doc_key, [])
 
+        doctor_id = DOCTOR_ID
+        department = DOCTOR_DEPT
+        doctor_name = DOCTOR_NAME
+        patient_name = None
+        try:
+            apt = store.get_appointment(appointment_id)
+            if apt:
+                doctor_id = apt.get("doctor_id") or doctor_id
+                department = apt.get("department") or department
+                patient_name = apt.get("patient") or None
+                if doctor_id:
+                    doctor_name = next(
+                        (d["name"] for d in store.list_doctors(department) if d["id"] == doctor_id),
+                        doctor_name,
+                    )
+        except Exception:
+            pass
+
         state = DoctorState(
             user_id=user_id,
             appointment_id=appointment_id,
-            doctor_id=DOCTOR_ID,
-            department=DOCTOR_DEPT,
+            doctor_id=doctor_id,
+            doctor_name=doctor_name,
+            department=department,
+            patient_name=patient_name,
             uploaded_documents=uploaded_docs,
         )
 
