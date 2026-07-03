@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"sort"
+	"strconv"
 
 	"github.com/shivanshigubbala/Ally_ai/services/appointment/internal/models"
 )
@@ -19,7 +20,7 @@ func NewDoctorRepository(db *sql.DB) *DoctorRepository {
 // Seed inserts initial doctor records into the database.
 func (r *DoctorRepository) Seed(doctors []models.Doctor) {
 	for _, d := range doctors {
-		_, _ = r.db.Exec(`INSERT INTO doctors (id, name, department_id) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING`, d.ID, d.Name, d.DepartmentID)
+		_, _ = r.db.Exec(`INSERT INTO doctors (id, name, department_id, specialty) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING`, d.ID, d.Name, d.DepartmentID, d.Specialty)
 	}
 }
 
@@ -28,9 +29,13 @@ func (r *DoctorRepository) List(deptID string) []models.Doctor {
 	var rows *sql.Rows
 	var err error
 	if deptID == "" {
-		rows, err = r.db.Query(`SELECT id, name, department_id FROM doctors ORDER BY id`)
+		rows, err = r.db.Query(`SELECT id, name, department_id, specialty FROM doctors ORDER BY id`)
 	} else {
-		rows, err = r.db.Query(`SELECT id, name, department_id FROM doctors WHERE department_id = $1 ORDER BY id`, deptID)
+		id, parseErr := strconv.Atoi(deptID)
+		if parseErr != nil {
+			return []models.Doctor{}
+		}
+		rows, err = r.db.Query(`SELECT id, name, department_id, specialty FROM doctors WHERE department_id = $1 ORDER BY id`, id)
 	}
 	if err != nil {
 		return []models.Doctor{}
@@ -40,7 +45,7 @@ func (r *DoctorRepository) List(deptID string) []models.Doctor {
 	out := []models.Doctor{}
 	for rows.Next() {
 		var d models.Doctor
-		if err := rows.Scan(&d.ID, &d.Name, &d.DepartmentID); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.DepartmentID, &d.Specialty); err != nil {
 			continue
 		}
 		out = append(out, d)
@@ -50,9 +55,9 @@ func (r *DoctorRepository) List(deptID string) []models.Doctor {
 }
 
 // Get loads a single doctor by ID.
-func (r *DoctorRepository) Get(id string) (models.Doctor, bool) {
+func (r *DoctorRepository) Get(id int) (models.Doctor, bool) {
 	var d models.Doctor
-	err := r.db.QueryRow(`SELECT id, name, department_id FROM doctors WHERE id = $1`, id).Scan(&d.ID, &d.Name, &d.DepartmentID)
+	err := r.db.QueryRow(`SELECT id, name, department_id, specialty FROM doctors WHERE id = $1`, id).Scan(&d.ID, &d.Name, &d.DepartmentID, &d.Specialty)
 	if err != nil {
 		return models.Doctor{}, false
 	}
