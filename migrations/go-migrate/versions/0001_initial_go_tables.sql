@@ -43,9 +43,12 @@ CREATE TABLE IF NOT EXISTS appointments (
 CREATE TABLE IF NOT EXISTS lab_tests (
     id SERIAL PRIMARY KEY,
     appointment_id INTEGER NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL,
     test_name TEXT NOT NULL,
+    reason TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
     result JSONB,
+    remarks TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
@@ -61,5 +64,22 @@ CREATE TABLE IF NOT EXISTS inbox (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     message TEXT NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS lab_reports (
+    id SERIAL PRIMARY KEY,
+
+    appointment_id INTEGER NOT NULL
+        REFERENCES appointments(id) ON DELETE CASCADE,
+
+    user_id INTEGER NOT NULL,
+
+    pdf_name TEXT NOT NULL,
+
+    pdf_path TEXT NOT NULL,
+
+    status TEXT NOT NULL DEFAULT 'generated',
+
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
