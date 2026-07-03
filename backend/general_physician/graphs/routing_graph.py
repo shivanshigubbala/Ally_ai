@@ -102,10 +102,13 @@ def _update_patient_intake(state: RoutingState, text: str | None) -> None:
 
 CARDIOLOGY_DOCTOR_ID = "d8"
 CARDIOLOGY_DOCTOR_NAME = "Dr. Meera Rao"
+NEUROLOGY_DOCTOR_ID = "d9"
+NEUROLOGY_DOCTOR_NAME = "Dr. Ananya Iyer"
 
 DEFAULT_DOCTOR_BY_DEPT = {
     "general": GP_DOCTOR_ID,
     "cardiology": CARDIOLOGY_DOCTOR_ID,
+    "neurology": NEUROLOGY_DOCTOR_ID,
 }
 
 _CARDIAC_KEYWORDS = [
@@ -179,7 +182,7 @@ def greeting_node(state: RoutingState, emit: Emitter) -> RoutingState:
     if state.message_history and state.message_history[-1]["role"] == "user":
         state.current_node = "INTENT_CLASSIFICATION"
         return state
-    patient_name = (state.user_id or "there").replace("_", " ").title()
+    patient_name = state.patient_name or (state.user_id or "there").replace("_", " ").title()
     reply = (
         f"Hi {patient_name}! I'm Ally, here at Ally Hospital. "
         "How are you feeling today, and what brings you in?"
@@ -204,10 +207,15 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
     if not state.selected_dept:
         state.selected_dept = _detect_department(last_user)
     if state.symptom_round == 0:
+        dept_name = "General Physician"
+        if state.selected_dept == "cardiology":
+            dept_name = "Cardiology"
+        elif state.selected_dept == "neurology":
+            dept_name = "Neurology"
         reply = _llm_reply(
             RECEPTIONIST_PERSONA + (
-                "The patient shared their concern clearly. Acknowledge it warmly and let them know "
-                "you can help them choose a doctor and a time. No bullet points, no lists."
+                f"The patient shared their concern clearly. Acknowledge it warmly and let them know "
+                f"you can help them choose a doctor in {dept_name}. No bullet points, no lists."
             ),
             f"Patient said: {last_user}",
         )
@@ -393,6 +401,8 @@ def doctor_selection_node(state: RoutingState, emit: Emitter) -> RoutingState:
     doctors = store.list_doctors(dept)
     if not doctors:
         doctors = store.list_doctors("general")
+    all_doctors = store.list_doctors(None)
+
     for d in doctors:
         try:
             # derive availability from whether the doctor has any free slots
@@ -406,22 +416,38 @@ def doctor_selection_node(state: RoutingState, emit: Emitter) -> RoutingState:
         selected_doctor = pending.get("payload", {}).get("id") or pending.get("payload", {}).get("doctor_id")
         if selected_doctor:
             state.selected_doctor = selected_doctor
+            chosen = next((d for d in all_doctors if d["id"] == selected_doctor), None)
+            if chosen:
+                state.selected_dept = chosen["department_id"]
         else:
             state.selected_doctor = state.selected_doctor or default_doctor
     else:
         state.selected_doctor = state.selected_doctor or default_doctor
 
-    chosen = next((d for d in doctors if d["id"] == state.selected_doctor), None)
+    chosen = next((d for d in all_doctors if d["id"] == state.selected_doctor), None)
     if chosen and not chosen.get("available", True):
         emit(WSEvent(type="text", payload={"content": "I'm sorry, that doctor isn't available right now. Let's book with Dr. Shankar, who is available."}))
         state.selected_doctor = GP_DOCTOR_ID
+        chosen = next((d for d in all_doctors if d["id"] == GP_DOCTOR_ID), None)
+        if chosen:
+            state.selected_dept = chosen["department_id"]
 
-    if not any(d["id"] == state.selected_doctor for d in doctors):
-        state.selected_doctor = next((d["id"] for d in doctors if d.get("available", False)), default_doctor)
+    if not chosen:
+        chosen = next((d for d in doctors if d["id"] == state.selected_doctor), None)
+
+    if not chosen:
+        # If user supplied a doctor outside the detected department, fall back to any available doctor
+        chosen = next((d for d in all_doctors if d.get("available", False)), None)
+        if chosen:
+            state.selected_doctor = chosen["id"]
+            state.selected_dept = chosen["department_id"]
+        else:
+            state.selected_doctor = default_doctor
+            chosen = next((d for d in all_doctors if d["id"] == default_doctor), None)
 
     slots = store.list_slots(state.selected_doctor or default_doctor)
     if slots:
-        doc_name = next((d["name"] for d in doctors if d["id"] == state.selected_doctor), default_name)
+        doc_name = chosen["name"] if chosen else default_name
         emit(WSEvent(type="slot_select", payload={
             "options": slots,
             "doctor_id": state.selected_doctor or default_doctor,
@@ -532,7 +558,7 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
     status, body = store.book_appointment(
         doctor_id=state.selected_doctor or GP_DOCTOR_ID,
         slot_id=state.selected_slot or "",
-        patient=state.user_id,
+        patient=state.patient_name or state.user_id,
         reason="booked via Ally receptionist",
     )
 
@@ -556,10 +582,16 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
         return state
 
     state.appointment_id = body.get("id") if isinstance(body, dict) else None
+    doctors = store.list_doctors(state.selected_dept)
+    chosen = next((d for d in doctors if d["id"] == state.selected_doctor), None)
+    if not chosen:
+        chosen = next((d for d in store.list_doctors("general") if d["id"] == state.selected_doctor), None)
+    doctor_name = chosen["name"] if chosen else GP_DOCTOR_NAME
+
     reply = _llm_reply(
         RECEPTIONIST_PERSONA + (
             f" The appointment is confirmed! Appointment ID: {state.appointment_id}. "
-            "Congratulate the patient warmly and tell them Dr. Shankar is ready "
+            f"Congratulate the patient warmly and tell them {doctor_name} is ready "
             "to see them in the Appointments tab. No bullet points, no lists."
         ),
         f"Appointment {state.appointment_id} confirmed.",
@@ -570,7 +602,8 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
     emit(WSEvent(type="doctor_ready", payload={
         "appointment_id": state.appointment_id,
         "doctor_id": state.selected_doctor or GP_DOCTOR_ID,
-        "doctor_name": GP_DOCTOR_NAME,
+        "doctor_name": doctor_name,
+        "department": state.selected_dept or "general",
     }))
     state.current_node = "DONE"
     return state

@@ -120,6 +120,7 @@ class DoctorState(BaseModel):
     user_id: str
     appointment_id: str
     doctor_id: str
+    doctor_name: str | None = None
     department: str
     health_data: dict[str, Any] = Field(default_factory=dict)
     rag_chunks: list[dict[str, Any]] = Field(default_factory=list)

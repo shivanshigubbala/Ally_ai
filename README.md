@@ -198,6 +198,29 @@ See `backend/models/session_state.py` for the Pydantic shapes.
 
 - Specialist routing (cardiology / neuro / etc.) is a TODO - default is GP.
 - Lab tests are stubbed - no real lab service integration.
+
+## Checks and tests (Docker-only for CI-style checks)
+
+This repo supports running tests locally (fast) and running Docker-based checks (CI-like).
+
+- Run tests locally (recommended for development):
+
+```powershell
+make test
+```
+
+- Run checks inside Docker (reproducible image-based checks):
+
+```powershell
+make docker-checks
+# or
+docker compose -f docker-compose.checks.yml up --build --abort-on-container-exit --exit-code-from backend-checks
+```
+
+Notes:
+- `docker-compose.checks.yml` builds the backend image (no host volume mounts) and runs the test suite, then exits with the test exit code.
+- Use Docker only for checks to keep local iteration fast and simple.
+
 - Streaming only on doctor turns; receptionist uses non-streaming `chat()`.
 - No persistent auth - any user_id is accepted.
 
