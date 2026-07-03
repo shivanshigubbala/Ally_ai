@@ -514,6 +514,7 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
         department=DOCTOR_DEPT,
         messages=state.conversation_history or [{"role": "user", "content": state.user_id}],
         chief_complaint=state.chief_complaint or None,
+        patient_id=state.user_id,
     )
 
     prior = _load_prior_context(
@@ -567,6 +568,7 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
         department=DOCTOR_DEPT,
         messages=state.conversation_history,
         chief_complaint=state.chief_complaint or None,
+        patient_id=state.user_id,
     )
 
     prior = _load_prior_context(
@@ -811,11 +813,25 @@ def step(
     if snap and snap.values:
         state = DoctorState(**snap.values)
     else:
+        # First call for this appointment — create a fresh state.
+        # Pull any documents the user uploaded before starting the consultation.
+        uploaded_docs: list[dict] = []
+        try:
+            from backend.general_physician.ws.router import _doc_store
+        except ImportError:
+            try:
+                from ws.router import _doc_store  # type: ignore
+            except ImportError:
+                _doc_store = {}
+        doc_key = f"{user_id}:{appointment_id}"
+        uploaded_docs = _doc_store.pop(doc_key, [])
+
         state = DoctorState(
             user_id=user_id,
             appointment_id=appointment_id,
             doctor_id=DOCTOR_ID,
             department=DOCTOR_DEPT,
+            uploaded_documents=uploaded_docs,
         )
 
     if user_message:

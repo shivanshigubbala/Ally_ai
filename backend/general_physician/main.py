@@ -67,6 +67,16 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+def chunk_text(text: str, chunk_size: int = 800, chunk_overlap: int = 150) -> list[str]:
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = start + chunk_size
+        chunks.append(text[start:end])
+        start += chunk_size - chunk_overlap
+    return chunks
+
+
 @app.post("/upload-document/{user_id}/{appointment_id}")
 async def upload_document(
     user_id: str,
@@ -75,8 +85,8 @@ async def upload_document(
 ) -> dict:
     """
     Receive a document (PDF / TXT / image) uploaded before consultation.
-    Extracts plain text and stores it in the ws router's in-memory doc store
-    so the doctor agent can read it during the session.
+    Extracts plain text, chunks it, generates embeddings, and stores it in the
+    pgvector knowledge base for RAG, in addition to the in-memory store.
     """
     try:
         from backend.general_physician.ws.router import _doc_store
@@ -113,6 +123,51 @@ async def upload_document(
         "filename": filename,
         "text": extracted[:8000],  # cap at 8k chars to keep prompt size reasonable
     })
+
+    # Chunk, embed, and store in pgvector knowledge base
+    chunks: list[tuple[int, str]] = []
+    if lower_name.endswith(".pdf"):
+        try:
+            import fitz
+            pdf = fitz.open(stream=content, filetype="pdf")
+            for page_num, page in enumerate(pdf, 1):
+                page_text = page.get_text().strip()
+                if page_text:
+                    sub_chunks = chunk_text(page_text, chunk_size=800, chunk_overlap=150)
+                    for sc in sub_chunks:
+                        chunks.append((page_num, sc))
+        except Exception as exc:
+            logging.warning("Could not extract page-by-page text: %s", exc)
+
+    if not chunks and extracted:
+        sub_chunks = chunk_text(extracted, chunk_size=800, chunk_overlap=150)
+        for sc in sub_chunks:
+            chunks.append((1, sc))
+
+    if chunks:
+        try:
+            try:
+                from backend.general_physician.llm.embeddings import embed_passages
+                from backend.general_physician.db.pgvector_tracker import insert_knowledge_chunks
+            except ImportError:
+                from llm.embeddings import embed_passages  # type: ignore
+                from db.pgvector_tracker import insert_knowledge_chunks  # type: ignore
+
+            passage_texts = [item[1] for item in chunks]
+            embeddings = embed_passages(passage_texts)
+
+            for (page_num, content_str), emb in zip(chunks, embeddings):
+                insert_knowledge_chunks(
+                    department="general",
+                    source=filename,
+                    page=page_num,
+                    contents=[content_str],
+                    embeddings=[emb],
+                    patient_id=user_id,
+                )
+            logging.info("Successfully chunked and embedded document %s for user %s (%d chunks)", filename, user_id, len(chunks))
+        except Exception as exc:
+            logging.error("RAG pipeline failed for uploaded document: %s", exc, exc_info=True)
 
     return {"ok": True, "filename": filename, "text_length": len(extracted)}
 

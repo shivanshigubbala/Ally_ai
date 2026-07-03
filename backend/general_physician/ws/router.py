@@ -198,24 +198,8 @@ async def _handle_start_consultation(ws: WebSocket, user_id: str,
 
     _doctor_sessions[user_id] = appointment_id
 
-    # If the user uploaded documents before starting, inject them into the
-    # LangGraph doctor state so the doctor's prompt includes the file contents.
-    doc_key = f"{user_id}:{appointment_id}"
-    uploaded_docs = _doc_store.pop(doc_key, [])
-    if uploaded_docs:
-        try:
-            from backend.general_physician.agent import _graph, _checkpointer  # type: ignore
-        except ImportError:
-            try:
-                from general_physician.agent import _graph, _checkpointer  # type: ignore
-            except ImportError:
-                _graph = None
-        if _graph is not None:
-            cfg = {"configurable": {"thread_id": f"doc:{user_id}:{appointment_id}"}}
-            try:
-                _graph.update_state(cfg, {"uploaded_documents": uploaded_docs})
-            except Exception:
-                logger.warning("Could not inject uploaded docs into doctor state")
+    # Docs stay in _doc_store — agent.py's step() picks them up when creating
+    # the initial DoctorState, avoiding Pydantic validation issues.
 
     # Kick off the session init (first doctor message).
     await _drive_doctor(ws, user_id, appointment_id, None, None)

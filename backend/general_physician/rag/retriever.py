@@ -47,6 +47,8 @@ def retrieve(
     if not query:
         return ""
 
+    logger.info("RAG Query: %r (patient_id=%s)", query, patient_id)
+
     try:
         vec = embed_query(query)
     except Exception as exc:
@@ -60,13 +62,25 @@ def retrieve(
         return ""
 
     if not hits:
+        logger.info("RAG search returned 0 hits for query.")
         return ""
+
+    logger.info("RAG Raw Hits (before filter): %s", [
+        {"source": h.get("source"), "patient_id": h.get("patient_id"), "sim": round(h.get("similarity", 0), 3)}
+        for h in hits
+    ])
 
     if patient_id:
         hits = [
             h for h in hits
             if str(h.get("patient_id") or "").strip() in {"", str(patient_id)}
         ]
+    
+    logger.info("RAG Hits after patient filtering: %s", [
+        {"source": h.get("source"), "patient_id": h.get("patient_id"), "sim": round(h.get("similarity", 0), 3)}
+        for h in hits
+    ])
+
     if not hits:
         return ""
 
