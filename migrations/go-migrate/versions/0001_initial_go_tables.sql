@@ -1,4 +1,12 @@
 -- Go service tables: departments, doctors, time_slots, appointments, lab_tests, reports, inbox
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age INTEGER,
+    gender TEXT,
+    health_data JSONB,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS departments (
     id SERIAL PRIMARY KEY,
@@ -26,7 +34,7 @@ CREATE TABLE IF NOT EXISTS time_slots (
 CREATE TABLE IF NOT EXISTS appointments (
     id SERIAL PRIMARY KEY,
     doctor_id INTEGER NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
-    user_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     time_slot_id INTEGER NOT NULL REFERENCES time_slots(id) ON DELETE CASCADE,
     status TEXT NOT NULL DEFAULT 'scheduled',
     booked_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
@@ -50,7 +58,7 @@ CREATE TABLE IF NOT EXISTS reports (
 
 CREATE TABLE IF NOT EXISTS inbox (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     message TEXT NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
