@@ -43,8 +43,8 @@ async def lifespan(app: FastAPI):
     try:
         init_db()
         seed_default_user()
-    except Exception:
-        pass  # pg not available, continue with in-memory store
+    except Exception as exc:
+        logging.warning("Database initialization skipped: %s", exc)
     yield
 
 

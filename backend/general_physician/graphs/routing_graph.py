@@ -15,11 +15,16 @@ try:
     from backend.general_physician.llm.nvidia_client import chat as nv_chat, ROUTING_MODEL
     from backend.general_physician.models.session_state import RoutingState, WSEvent
     from backend.general_physician.services import local_store as store
+    from backend.shared import appointment_client as appointment_client
 except ImportError:
     from db.pgvector_tracker import save_message
     from llm.nvidia_client import chat as nv_chat, ROUTING_MODEL
     from models.session_state import RoutingState, WSEvent
     from services import local_store as store
+    try:
+        import shared.appointment_client as appointment_client
+    except Exception:
+        appointment_client = None
 
 
 Emitter = Callable[[WSEvent], None]
@@ -749,16 +754,77 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
         state.current_node = "SLOT_SELECTION"
         return state
 
-    status, body = store.book_appointment(
-        doctor_id=state.selected_doctor or GP_DOCTOR_ID,
-        slot_id=state.selected_slot or "",
-        patient=state.patient_name or state.user_id,
-        reason="booked via Ally receptionist",
-        patient_id=state.patient_id,
-        session_id=f"routing:{state.user_id}",
-        department=state.recommended_department or state.selected_dept or "general",
-        status="booked",
-    )
+    # Prefer calling the external appointment microservice when available
+    if appointment_client is not None:
+        try:
+            # Ensure a Go-side user exists; try syncing via DB helper if available
+            go_user_id = None
+            try:
+                from backend.general_physician.db.pgvector_tracker import sync_go_user_id
+            except Exception:
+                try:
+                    from db.pgvector_tracker import sync_go_user_id  # type: ignore
+                except Exception:
+                    sync_go_user_id = None
+
+            if sync_go_user_id and state.patient_id:
+                try:
+                    go_user_id = sync_go_user_id(state.patient_id)
+                except Exception:
+                    go_user_id = None
+
+            if go_user_id is None:
+                # Fallback: create user in appointment service using patient name
+                try:
+                    go_user_id = appointment_client.create_user(state.patient_name or state.user_id or "rest-user")
+                except Exception:
+                    go_user_id = None
+
+            # Call appointment service
+            try:
+                resp = appointment_client.book(state.selected_doctor or GP_DOCTOR_ID, go_user_id or 0, state.selected_slot or "")
+                # normalize response to status/body similar to local_store
+                if isinstance(resp, dict) and resp.get("id"):
+                    status = 200
+                    body = resp
+                else:
+                    status = 500
+                    body = {"error": "invalid response from appointment service"}
+            except appointment_client.AppointmentNotFound as ex:
+                status = 404
+                body = {"error": str(ex)}
+            except appointment_client.SlotAlreadyBooked as ex:
+                status = 409
+                body = {"error": str(ex)}
+            except appointment_client.AppointmentServiceUnavailable as ex:
+                status = 503
+                body = {"error": str(ex)}
+            except Exception as ex:
+                status = 500
+                body = {"error": str(ex)}
+        except Exception:
+            # On any unexpected failure, fallback to local store
+            status, body = store.book_appointment(
+                doctor_id=state.selected_doctor or GP_DOCTOR_ID,
+                slot_id=state.selected_slot or "",
+                patient=state.patient_name or state.user_id,
+                reason="booked via Ally receptionist",
+                patient_id=state.patient_id,
+                session_id=f"routing:{state.user_id}",
+                department=state.recommended_department or state.selected_dept or "general",
+                status="booked",
+            )
+    else:
+        status, body = store.book_appointment(
+            doctor_id=state.selected_doctor or GP_DOCTOR_ID,
+            slot_id=state.selected_slot or "",
+            patient=state.patient_name or state.user_id,
+            reason="booked via Ally receptionist",
+            patient_id=state.patient_id,
+            session_id=f"routing:{state.user_id}",
+            department=state.recommended_department or state.selected_dept or "general",
+            status="booked",
+        )
 
     if status == 409:
         reply = _llm_reply(

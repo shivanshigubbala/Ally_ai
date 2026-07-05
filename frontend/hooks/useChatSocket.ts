@@ -12,13 +12,8 @@ import type {
   WSEvent,
 } from "@/types/chat";
 
-const WS_BASE =
-  process.env.NEXT_PUBLIC_WS_BASE_URL?.replace(/\/$/, "") ||
-  "ws://localhost:8000";
-
-const HTTP_BASE = WS_BASE.replace(/^wss?:/, (match) =>
-  match === "wss:" ? "https:" : "http:"
-);
+const WS_BASE = process.env.NEXT_PUBLIC_WS_BASE_URL?.replace(/\/$/, "") || "ws://backend:8000";
+const HTTP_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") || WS_BASE.replace(/^wss?:/, (match) => (match === "wss:" ? "https:" : "http:")));
 const CHAT_STATE_KEY_PREFIX = "ally_chat_state";
 
 function newId(): string {

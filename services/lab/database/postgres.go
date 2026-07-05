@@ -14,7 +14,10 @@ func Connect() {
 	databaseURL := os.Getenv("DATABASE_URL")
 
 	if databaseURL == "" {
-		databaseURL = "postgres://allyai:allyai@localhost:5432/allyai"
+		databaseURL = os.Getenv("DATABASE_URL")
+		if databaseURL == "" {
+			databaseURL = "postgres://allyai:allyai@postgres:5432/allyai"
+		}
 	}
 
 	var err error

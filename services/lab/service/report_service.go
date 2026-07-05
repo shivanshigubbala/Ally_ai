@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/shivanshigubbala/Ally_ai/services/lab/models"
 	"github.com/shivanshigubbala/Ally_ai/services/lab/pdf"
@@ -69,7 +70,7 @@ func (r *ReportService) GenerateReport(
 	}
 	labBase := os.Getenv("LAB_SERVICE_URL")
 	if labBase == "" {
-		labBase = "http://lab:8080"
+		labBase = "http://lab:8082"
 	}
 
 	payload := map[string]any{
@@ -84,7 +85,23 @@ func (r *ReportService) GenerateReport(
 
 	body, _ := json.Marshal(payload)
 	go func() {
-		http.Post(gpBase+"/internal/report_ready", "application/json", bytes.NewReader(body))
+		client := &http.Client{Timeout: 5 * time.Second}
+		req, err := http.NewRequest("POST", gpBase+"/internal/report_ready", bytes.NewReader(body))
+		if err != nil {
+			fmt.Println("failed to create report_ready request:", err)
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := client.Do(req)
+		if err != nil {
+			fmt.Println("report_ready POST error:", err)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			fmt.Println("report_ready returned non-2xx:", resp.StatusCode)
+			return
+		}
 	}()
 
 	return nil
