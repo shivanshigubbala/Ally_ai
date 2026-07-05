@@ -77,4 +77,67 @@ def create_lab_tests(
         "department": department or "",
         "tests": tests or [],
     }
-    return _safe_request("POST", "/lab-tests", json_data=payload)
+
+    try:
+        return _safe_request("POST", "/lab-tests", json_data=payload)
+    except Exception:
+        # Lab service unavailable — produce local mock PDF reports and return a
+        # best-effort response so the rest of the system can continue.
+        try:
+            from fpdf import FPDF
+        except Exception:
+            FPDF = None
+
+        from pathlib import Path
+        reports_root = Path(__file__).resolve().parents[1] / "reports"
+        dept = (department or "general") or "general"
+        out_dir = reports_root / dept
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        reports: list[dict[str, Any]] = []
+        tests_list = tests or []
+        for idx, t in enumerate(tests_list, 1):
+            name = t.get("name") if isinstance(t, dict) else str(t)
+            safe_name = re.sub(r"[^A-Za-z0-9_\-]+", "_", str(name))[:80]
+            filename = f"report_{appointment_id}_{idx}_{safe_name}.pdf"
+            filepath = out_dir / filename
+
+            if FPDF is not None:
+                try:
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", size=12)
+                    pdf.cell(0, 10, f"Lab Report", ln=True)
+                    pdf.ln(4)
+                    pdf.cell(0, 8, f"Appointment: {appointment_id}", ln=True)
+                    pdf.cell(0, 8, f"Patient ID: {user_id}", ln=True)
+                    pdf.cell(0, 8, f"Doctor: {doctor_id}", ln=True)
+                    pdf.ln(6)
+                    pdf.multi_cell(0, 8, f"Test: {name}")
+                    reason = t.get("reason") if isinstance(t, dict) else ""
+                    if reason:
+                        pdf.ln(2)
+                        pdf.multi_cell(0, 8, f"Reason: {reason}")
+                    pdf.ln(6)
+                    pdf.multi_cell(0, 8, "Result: This is a mock result generated locally. Please treat this as a placeholder.")
+                    pdf.output(str(filepath))
+                except Exception:
+                    # fallback: write a small text file with .pdf extension
+                    try:
+                        filepath.write_text(f"Mock report for {name}\nReason: {t.get('reason','')}\nResult: MOCK\n")
+                    except Exception:
+                        pass
+            else:
+                try:
+                    filepath.write_text(f"Mock report for {name}\nReason: {t.get('reason','')}\nResult: MOCK\n")
+                except Exception:
+                    pass
+
+            reports.append({
+                "test": name,
+                "pdf_name": filename,
+                "path": f"/reports/{dept}/{filename}",
+            })
+
+        # Best-effort: return a structured payload similar to the lab service.
+        return {"status": "mocked", "reports": reports}

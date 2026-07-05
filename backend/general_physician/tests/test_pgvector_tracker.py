@@ -1,5 +1,5 @@
 """
-Unit tests for backend.general_physician.db.pgvector_tracker.sync_go_user_id
+Unit tests for backend.db.pgvector_tracker.sync_go_user_id
 
 Tests the idempotency of sync_go_user_id: first call creates Go user and writes go_user_id,
 second call returns the cached value without calling create_user again.
@@ -12,13 +12,13 @@ Run inside Docker:
 import unittest
 from unittest.mock import patch, MagicMock, call
 
-from backend.general_physician.db.pgvector_tracker import _ensure_schema_compatibility, sync_go_user_id
+from backend.db.pgvector_tracker import _ensure_schema_compatibility, sync_go_user_id
 
 
 class TestSyncGoUserId(unittest.TestCase):
     """Test sync_go_user_id function."""
 
-    @patch('backend.general_physician.db.pgvector_tracker._conn')
+    @patch('backend.db.pgvector_tracker._conn')
     def test_ensure_schema_compatibility_migrates_integer_ids(self, mock_conn):
         """Existing integer-based user/session ids should be migrated to text."""
         mock_db_conn = MagicMock()
@@ -36,8 +36,8 @@ class TestSyncGoUserId(unittest.TestCase):
         self.assertIn("ALTER TABLE sessions DROP CONSTRAINT IF EXISTS sessions_user_id_fkey", executed_sql)
         self.assertIn("ALTER TABLE sessions ALTER COLUMN user_id TYPE TEXT USING user_id::text", executed_sql)
 
-    @patch('backend.general_physician.db.pgvector_tracker._conn')
-    @patch('backend.general_physician.db.pgvector_tracker.create_user')
+    @patch('backend.db.pgvector_tracker._conn')
+    @patch('backend.db.pgvector_tracker.create_user')
     def test_sync_go_user_id_first_call_creates_user(self, mock_create_user, mock_conn):
         """
         Test first call to sync_go_user_id: creates Go user, writes go_user_id to DB.
@@ -70,8 +70,8 @@ class TestSyncGoUserId(unittest.TestCase):
         update_calls = [sql for sql in sql_calls if str(sql).strip().upper().startswith("UPDATE")]
         self.assertEqual(len(update_calls), 1)
 
-    @patch('backend.general_physician.db.pgvector_tracker._conn')
-    @patch('backend.general_physician.db.pgvector_tracker.create_user')
+    @patch('backend.db.pgvector_tracker._conn')
+    @patch('backend.db.pgvector_tracker.create_user')
     def test_sync_go_user_id_cached_value_not_called_again(self, mock_create_user, mock_conn):
         """
         Test second call to sync_go_user_id: returns cached go_user_id, does NOT call create_user.
@@ -101,8 +101,8 @@ class TestSyncGoUserId(unittest.TestCase):
         update_calls = [sql for sql in sql_calls if str(sql).strip().upper().startswith("UPDATE")]
         self.assertEqual(len(update_calls), 0)
 
-    @patch('backend.general_physician.db.pgvector_tracker._conn')
-    @patch('backend.general_physician.db.pgvector_tracker.create_user')
+    @patch('backend.db.pgvector_tracker._conn')
+    @patch('backend.db.pgvector_tracker.create_user')
     def test_sync_go_user_id_failure_does_not_write_go_user_id(self, mock_create_user, mock_conn):
         """
         Test failure case: create_user raises exception, go_user_id is NOT written.
@@ -132,8 +132,8 @@ class TestSyncGoUserId(unittest.TestCase):
         update_calls = [sql for sql in sql_calls if str(sql).strip().upper().startswith("UPDATE")]
         self.assertEqual(len(update_calls), 0)
 
-    @patch('backend.general_physician.db.pgvector_tracker._conn')
-    @patch('backend.general_physician.db.pgvector_tracker.create_user')
+    @patch('backend.db.pgvector_tracker._conn')
+    @patch('backend.db.pgvector_tracker.create_user')
     def test_sync_go_user_id_row_lock_acquired(self, mock_create_user, mock_conn):
         """
         Test that row lock is acquired via FOR UPDATE.

@@ -16,7 +16,7 @@ from backend.specialties.base import BaseSpecialty
 logger = logging.getLogger(__name__)
 
 try:
-    from backend.general_physician.db.pgvector_tracker import (
+    from backend.db.pgvector_tracker import (
         append_timeline_entry,
         create_lab_work_item,
         create_notification,
@@ -30,7 +30,7 @@ try:
         upsert_consultation_context,
     )
     from backend.general_physician.department_config import get_department_config
-    from backend.general_physician.llm.nvidia_client import (
+    from backend.llm.nvidia_client import (
         ROUTING_MODEL,
         chat as nv_chat,
         stream_chat as nv_stream_chat,
@@ -40,9 +40,9 @@ try:
         DOCTOR_SYSTEM_PROMPT,
         EVALUATION_PROMPT,
     )
-    from backend.general_physician.models.session_state import DoctorState, WSEvent
+    from backend.models.session_state import DoctorState, WSEvent
     from backend.general_physician.rag.retriever import retrieve as rag_retrieve
-    from backend.general_physician.services import local_store as store
+    from backend.services import local_store as store
     from backend.shared.lab_client import create_lab_tests
 except ImportError:
     from db.pgvector_tracker import (
@@ -367,11 +367,12 @@ def _contains_any(text: str, phrases: list[str]) -> bool:
     return any(phrase in lowered for phrase in phrases)
 
 
-def _build_initial_doctor_message(chief_complaint: str | None, patient_name: str) -> str:
+def _build_initial_doctor_message(chief_complaint: str | None, patient_name: str, doctor_name: str = "Dr. Shankar Dada", dept_name: str = "general physician") -> str:
     cleaned = (chief_complaint or "").strip()
+    intro = f"Hi {patient_name}, I’m {doctor_name}, your {dept_name} doctor. "
     if not cleaned:
         return (
-            f"Hi {patient_name}, thanks for reaching out. I’m here to help you make sense of what’s going on today."
+            intro + "Thanks for reaching out. I’m here to help you make sense of what’s going on today."
         )
 
     lowered = _normalize_text(cleaned)
@@ -389,7 +390,7 @@ def _build_initial_doctor_message(chief_complaint: str | None, patient_name: str
         "ok",
     ]):
         return (
-            f"Thanks for letting me know, {patient_name}. If you’re feeling well and there are no new symptoms, I’d keep this simple and only look into testing if anything changes."
+            intro + "If you’re feeling well and there are no new symptoms, I’d keep this simple and only look into testing if anything changes."
         )
 
     if _contains_any(lowered, ["cough", "cold", "flu", "sore throat", "headache", "body aches", "runny nose", "fever"]):
@@ -398,11 +399,11 @@ def _build_initial_doctor_message(chief_complaint: str | None, patient_name: str
             if phrase in lowered
         )
         return (
-            f"Thanks for sharing that about your {complaint_hint}, {patient_name}. I’m going to ask a couple of focused questions so I can tell whether this looks mild or needs a closer look."
+            intro + f"Thanks for sharing that about your {complaint_hint}. I’m going to ask a couple of focused questions so I can tell whether this looks mild or needs a closer look."
         )
 
     return (
-        f"Thanks for telling me about that, {patient_name}. I’d like to ask a few focused questions so I can give you the right next step."
+        intro + "I’d like to ask a few focused questions so I can give you the right next step."
     )
 
 
@@ -732,22 +733,22 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
 
     patient_name = state.patient_name or state.user_id.replace("_", " ").title()
     department_context = _get_department_context(state)
-    if department_context.get("is_cardiology"):
-        reply = (
-            f"Hi {patient_name}, I’m {department_context.get('doctor_name')}, your cardiology doctor. "
-            "I’m going to review your history and ask a few focused questions about your heart-related symptoms so I can help you with the next step."
-        )
-    elif state.uploaded_documents:
+    doc_name = state.doctor_name or department_context.get("doctor_name") or "Dr. Shankar Dada"
+    dept_name = "general physician"
+
+    greeting_prefix = f"Hi {patient_name}, I’m {doc_name}, your {dept_name} doctor. "
+
+    if state.uploaded_documents:
         summary = "I see you uploaded the following document(s): " + ", ".join(
             doc.get("filename", "a document") for doc in state.uploaded_documents[:3]
         )
         reply = (
-            f"Hi {patient_name}, I’m reviewing your uploaded document(s) first. "
+            f"{greeting_prefix}I’m reviewing your uploaded document(s) first. "
             f"{summary}. "
             "Then I’ll ask a couple of focused questions so I can understand your concern and next steps."
         )
     else:
-        reply = _build_initial_doctor_message(state.chief_complaint, patient_name)
+        reply = _build_initial_doctor_message(state.chief_complaint, patient_name, doc_name, dept_name)
 
     emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
     state.conversation_history.append({"role": "assistant", "content": reply})
@@ -1257,7 +1258,7 @@ def step(
         # Pull any documents the user uploaded before starting the consultation.
         uploaded_docs: list[dict] = []
         try:
-            from backend.general_physician.ws.router import _doc_store
+            from backend.ws.router import _doc_store
         except ImportError:
             try:
                 from ws.router import _doc_store  # type: ignore

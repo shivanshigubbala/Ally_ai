@@ -7,7 +7,7 @@ from backend.general_physician import (
     _should_recommend_tests,
 )
 from backend.general_physician import agent as gp_agent
-from backend.general_physician.models.session_state import DoctorState
+from backend.models.session_state import DoctorState
 
 
 class GeneralPhysicianAgentTests(unittest.TestCase):

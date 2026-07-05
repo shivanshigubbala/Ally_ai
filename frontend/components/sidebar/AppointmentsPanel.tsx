@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { getBackendBase } from "@/lib/backend";
 import type { ChatCard, ChatMessage, DoctorReadyInfo } from "@/types/chat";
 
 interface AppointmentsPanelProps {
@@ -16,6 +17,7 @@ interface AppointmentsPanelProps {
   onSendDoctorMessage: (content: string) => void;
   consultationChart: string | null;
   userId: string | null;
+  hasPendingTests?: boolean;
 }
 
 function formatSlotTime(iso: string): string {
@@ -89,10 +91,12 @@ function DoctorChat({
   messages,
   thinking,
   onSend,
+  disabled,
 }: {
   messages: ChatMessage[];
   thinking: string | null;
   onSend: (content: string) => void;
+  disabled?: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -169,9 +173,10 @@ function DoctorChat({
         <input
           ref={inputRef}
           type="text"
-          placeholder="Reply to the doctor..."
+          disabled={disabled}
+          placeholder={disabled ? "Please accept or decline the recommended tests in the Notifications tab..." : "Reply to the doctor..."}
           onKeyDown={handleKeyDown}
-          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
+          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100 disabled:opacity-60 disabled:cursor-not-allowed"
         />
       </div>
     </div>
@@ -206,7 +211,7 @@ function PreConsultationUpload({
         const formData = new FormData();
         formData.append("file", file);
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://backend:8000"}/upload-document/${encodeURIComponent(userId || "")}/${encodeURIComponent(doctorReady.appointmentId)}`,
+          `${getBackendBase()}/upload-document/${encodeURIComponent(userId || "")}/${encodeURIComponent(doctorReady.appointmentId)}`,
           { method: "POST", body: formData }
         );
         if (!res.ok) {
@@ -241,7 +246,7 @@ function PreConsultationUpload({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
+    <div className="space-y-5">
       <div className="mb-5">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">Before you start</h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -380,10 +385,11 @@ export default function AppointmentsPanel({
   onSendDoctorMessage,
   consultationChart,
   userId,
+  hasPendingTests,
 }: AppointmentsPanelProps) {
   const activeSlotCard = slotCards.find((card) => !card.resolved) || slotCards[0];
   /** Whether the pre-consultation upload step has been completed */
-  const [uploadStepDone, setUploadStepDone] = useState(false);
+  const [uploadStepDone, setUploadStepDone] = useState(false); // allow uploads before starting consultation
 
   // Reset upload step whenever a new appointment becomes ready
   useEffect(() => {
@@ -433,30 +439,31 @@ export default function AppointmentsPanel({
             messages={doctorMessages}
             thinking={doctorThinking}
             onSend={onSendDoctorMessage}
+            disabled={hasPendingTests}
           />
         </div>
       </div>
     );
   }
 
-  // Doctor ready but upload step not done yet → show pre-consultation screen
-  if (doctorReady && !uploadStepDone) {
-    return (
-      <>
-        <PreConsultationUpload
-          doctorReady={doctorReady}
-          userId={userId}
-          onProceed={(_files) => {
-            setUploadStepDone(true);
-          }}
-        />
-        {renderConsultationChart()}
-      </>
-    );
-  }
+  // Show PreConsultationUpload or Start Consultation when doctor is ready
+  if (doctorReady) {
+    if (!uploadStepDone) {
+      return (
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
+          <PreConsultationUpload
+            doctorReady={doctorReady}
+            userId={userId}
+            onProceed={(files) => {
+              setUploadStepDone(true);
+              onStartConsultation();
+            }}
+          />
+          {renderConsultationChart()}
+        </div>
+      );
+    }
 
-  // Upload step done → show the Start Consultation button
-  if (doctorReady && uploadStepDone) {
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
         <div className="mb-5">

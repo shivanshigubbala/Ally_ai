@@ -15,12 +15,12 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 try:
-    from backend.general_physician.db.pgvector_tracker import (  # noqa: E402
+    from backend.db.pgvector_tracker import (  # noqa: E402
         count_knowledge_chunks,
         init_db,
         insert_knowledge_chunks,
     )
-    from backend.general_physician.llm.embeddings import embed_passages  # noqa: E402
+    from backend.llm.embeddings import embed_passages  # noqa: E402
 except ImportError:
     from general_physician.db.pgvector_tracker import (  # noqa: E402
         count_knowledge_chunks,

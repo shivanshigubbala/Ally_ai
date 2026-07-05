@@ -1,0 +1,61 @@
+Lipid Disorders and Cardiovascular Risk Factors — Clinical Reference
+
+Dyslipidemia (abnormal cholesterol or triglyceride levels) is usually
+asymptomatic and identified through blood testing, but it is one of the
+most important modifiable drivers of atherosclerosis, heart attack, and
+stroke, so a cardiology consultation should assess it as part of overall
+risk even when it is not the chief complaint.
+
+Key lipid measures on a standard panel:
+- LDL cholesterol ("bad" cholesterol): the primary target for
+  cardiovascular risk reduction. Higher levels drive plaque buildup in
+  artery walls.
+- HDL cholesterol ("good" cholesterol): helps remove cholesterol from
+  the bloodstream; higher levels are generally protective.
+- Triglycerides: another type of blood fat; very high levels are also
+  associated with cardiovascular risk and, at extreme levels, with
+  pancreatitis.
+- Total cholesterol: the sum used in some risk calculators, but LDL and
+  HDL individually are usually more clinically informative.
+
+Modifiable cardiovascular risk factors to screen for in any cardiology
+consultation:
+- Smoking (including vaping) — one of the most powerful modifiable risk
+  factors
+- Hypertension
+- Diabetes or prediabetes
+- Dyslipidemia
+- Obesity, particularly central/abdominal obesity
+- Sedentary lifestyle
+- Poor diet (high in saturated fat, sodium, and processed food)
+- Excess alcohol intake
+- Poor sleep and untreated sleep apnea
+- Chronic stress
+
+Non-modifiable risk factors: age, sex (men are generally at higher risk at
+a younger age, though risk in women rises after menopause), and family
+history of premature coronary artery disease (typically defined as a heart
+attack or cardiac death in a first-degree male relative before age 55, or
+a female relative before age 65).
+
+Why this matters even without symptoms: cardiovascular risk factors are
+cumulative and largely silent until they cause an event such as a heart
+attack or stroke. A consultation that surfaces symptoms such as chest pain
+or palpitations should still ask about smoking status, known cholesterol
+or blood sugar levels, family history, and lifestyle, since these change
+both the interpretation of symptoms and the recommended next steps.
+
+Typical workup: a fasting or non-fasting lipid profile (LDL, HDL,
+triglycerides, total cholesterol), blood glucose or HbA1c to screen for
+diabetes, and blood pressure measurement. In patients with multiple risk
+factors or an unclear risk level, a formal cardiovascular risk score may
+be used to estimate 10-year risk of a cardiac event, which helps guide how
+aggressively to treat.
+
+Lifestyle guidance commonly given, alongside any medication a physician
+may prescribe: a diet lower in saturated fat and sodium and higher in
+fiber, fruits, and vegetables; regular aerobic exercise; smoking
+cessation; limiting alcohol; weight management; and improving sleep
+quality. These recommendations are appropriate to mention generally, but
+specific medication choices and dosing are a physician's decision, not
+something a triage conversation should determine.

@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from backend.general_physician.agent import GeneralPhysicianSpecialty
-from backend.general_physician.models.session_state import DoctorState
+from backend.models.session_state import DoctorState
 from backend.specialties.dispatcher import SpecialtyDispatcher
 from backend.specialties.registry import get_specialty_registry
 
@@ -30,7 +30,7 @@ class SpecialtyFrameworkTests(unittest.TestCase):
         dispatcher = SpecialtyDispatcher(registry=get_specialty_registry())
 
         with self.assertRaises(KeyError):
-            dispatcher.dispatch({"selected_department": "Neurology"})
+            dispatcher.dispatch({"selected_department": "Unknown"})
 
     def test_gp_specialty_uses_existing_consultation_runner(self) -> None:
         state = DoctorState(user_id="u1", appointment_id="a1", doctor_id="d1", department="general")

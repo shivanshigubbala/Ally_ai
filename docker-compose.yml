@@ -107,13 +107,37 @@ services:
 
     environment:
       NODE_ENV: development
-      NEXT_PUBLIC_BACKEND_URL: http://backend:8000
-      NEXT_PUBLIC_WS_BASE_URL: ws://backend:8000
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_BASE_URL: ws://localhost:8000
 
     command: npm run dev
 
     depends_on:
       - backend
+
+  tester:
+    build:
+      context: .
+      dockerfile: backend/general_physician/Dockerfile
+    volumes:
+      - ./backend:/app/backend
+      - ./knowledge:/app/knowledge
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: allyai
+      POSTGRES_USER: allyai
+      POSTGRES_PASSWORD: allyai
+    depends_on:
+      postgres:
+        condition: service_healthy
+      appointment:
+        condition: service_started
+      lab:
+        condition: service_started
+    command: pytest -q
 
 volumes:
   pgdata:

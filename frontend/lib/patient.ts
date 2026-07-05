@@ -1,6 +1,8 @@
 // No auth service exists in the backend — the WebSocket opens directly on
 // /ws/{user_id}. This helper stores the patient's profile + health intake
 // client-side and derives a stable user_id from their name.
+
+import { getBackendBase } from "@/lib/backend";
 //
 // Two localStorage keys are used:
 //  - STORAGE_KEY: the "current" profile, i.e. who is logged in right now.
@@ -136,7 +138,7 @@ export async function registerProfile(profile: PatientProfile): Promise<{ ok: bo
   try {
     // Prefer direct backend URL when available (useful in Docker Compose),
     // otherwise fall back to the Next API proxy at `/api/auth/register`.
-    const backendBase = (typeof window !== "undefined" && (window as any).NEXT_PUBLIC_BACKEND_URL) || process.env.NEXT_PUBLIC_BACKEND_URL || "";
+    const backendBase = getBackendBase();
     const target = backendBase ? `${backendBase.replace(/\/+$/,'')}/register` : "/api/auth/register";
 
     const resp = await fetch(target, {

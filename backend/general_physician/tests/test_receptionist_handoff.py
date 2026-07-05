@@ -1,4 +1,4 @@
-﻿"""Regression test: receptionist books appointment, doctor handoff is tab-based.
+"""Regression test: receptionist books appointment, doctor handoff is tab-based.
 
 This captures the expected flow:
   1. Receptionist greets and helps select a doctor
@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from backend.general_physician.graphs import routing_graph
-from backend.general_physician.services import local_store as store
+from backend.services import local_store as store
 
 
 def test_receptionist_parses_new_patient_intake() -> None:
@@ -62,7 +62,7 @@ def test_receptionist_handles_missing_patient_id() -> None:
 def test_receptionist_emits_canonical_intake_contract() -> None:
     routing_graph.reset_state("canonical_intake")
 
-    with patch("backend.general_physician.graphs.routing_graph.nv_chat") as mock_chat:
+    with patch("backend.receptionist.routing_graph.nv_chat") as mock_chat:
         mock_chat.return_value = '{"department": "cardiology", "confidence": 0.94}'
         state, events = routing_graph.run_step(
             "canonical_intake",
@@ -86,7 +86,7 @@ def test_receptionist_full_booking_flow() -> None:
     """Simulate the full receptionist flow and verify DONE state + appointment_id."""
     routing_graph.reset_state("handoff_test")
 
-    # Step 1 — greet and gather a few human-style details before booking
+    # Step 1 � greet and gather a few human-style details before booking
     state, events = routing_graph.run_step("handoff_test", "I have a headache", None)
     assert state.current_node == "HEALTH_STATUS_QUESTIONS"
     assert any(e.type == "text" for e in events)
@@ -101,7 +101,7 @@ def test_receptionist_full_booking_flow() -> None:
     assert state.current_node == "DOCTOR_SELECTION"
     assert any(e.type == "doctor_select" for e in events)
 
-    # Step 2 — select Dr. Shankar → auto-advance to slot selection
+    # Step 2 � select Dr. Shankar ? auto-advance to slot selection
     state, events = routing_graph.run_step(
         "handoff_test",
         None,
@@ -133,7 +133,7 @@ def test_receptionist_full_booking_flow() -> None:
     )
 
     # Step 4 - confirm booking -> DONE with appointment_id
-    with patch("backend.general_physician.graphs.routing_graph.nv_chat") as mock_chat:
+    with patch("backend.receptionist.routing_graph.nv_chat") as mock_chat:
         mock_chat.return_value = (
             "Your appointment is confirmed! Dr. Shankar is ready for you "
             "in the Appointments tab whenever you are."
@@ -155,7 +155,7 @@ def test_receptionist_full_booking_flow() -> None:
 async def test_router_emits_doctor_ready_instead_of_auto_switch() -> None:
     """Verify the WS router sends doctor_ready when routing completes,
     rather than auto-launching the doctor graph."""
-    from backend.general_physician.ws.router import _drive_routing
+    from backend.ws.router import _drive_routing
 
     mock_ws = MagicMock()
     mock_ws.send_text = AsyncMock()
@@ -187,13 +187,13 @@ async def test_router_emits_doctor_ready_instead_of_auto_switch() -> None:
         },
     )
 
-    with patch("backend.general_physician.graphs.routing_graph.nv_chat") as mock_chat:
+    with patch("backend.receptionist.routing_graph.nv_chat") as mock_chat:
         mock_chat.return_value = "Confirmed! Ready in the Appointments tab."
         apt_id = await _drive_routing(mock_ws, "router_test", "yes", None)
 
     # The router should NOT have auto-launched the doctor - it should return
     # the appointment_id but keep the user in ROUTING state.
-    from backend.general_physician.ws.router import _user_state
+    from backend.ws.router import _user_state
 
     assert apt_id != "", "Should return a non-empty appointment_id"
     assert _user_state.get("router_test") == "ROUTING", (

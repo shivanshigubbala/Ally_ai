@@ -1,6 +1,6 @@
-﻿from backend.general_physician.agent import build_patient_context
+from backend.general_physician.agent import build_patient_context
 from backend.general_physician.graphs import routing_graph
-from backend.general_physician.models.session_state import DoctorState
+from backend.models.session_state import DoctorState
 
 
 def test_receptionist_emits_doctor_selection_before_slots():

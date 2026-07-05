@@ -166,6 +166,7 @@ export default function ChatPage() {
               onSendDoctorMessage={sendDoctorMessage}
               consultationChart={consultationChart}
               userId={userId}
+              hasPendingTests={cards.some((card) => card.kind === "lab_notification" && !card.resolved)}
             />
           )}
 

@@ -34,15 +34,22 @@ def get_specialty_registry() -> SpecialtyRegistry:
         GeneralPhysicianSpecialty = None
 
     try:
-        from backend.specialties.cardiology.consultation_controller import CardiologySpecialty
+        from backend.cardiology.agent import CardiologySpecialty
     except Exception:
         CardiologySpecialty = None
+
+    try:
+        from backend.neurology.agent import NeurologySpecialty
+    except Exception:
+        NeurologySpecialty = None
 
     if GeneralPhysicianSpecialty is not None:
         registry.register("general physician", GeneralPhysicianSpecialty)
         registry.register("general", GeneralPhysicianSpecialty)
     if CardiologySpecialty is not None:
         registry.register("cardiology", CardiologySpecialty)
+    if NeurologySpecialty is not None:
+        registry.register("neurology", NeurologySpecialty)
 
     return registry
 

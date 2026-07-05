@@ -1,0 +1,53 @@
+ECG Interpretation Basics — Clinical Reference
+
+The electrocardiogram (ECG/EKG) records the heart's electrical activity
+and is one of the fastest, most widely available tests in cardiology. This
+reference summarizes what an ECG can show at a conceptual level — useful
+for explaining to a patient why a test is being recommended, not for
+generating an actual interpretation of a specific tracing.
+
+What a standard 12-lead ECG can reveal:
+- Heart rate and rhythm: whether the heart is beating too fast
+  (tachycardia, generally over 100 beats per minute at rest), too slow
+  (bradycardia, generally under 60 beats per minute), regular, or
+  irregular (as in atrial fibrillation).
+- Conduction abnormalities: delays or blocks in how the electrical signal
+  travels through the heart (for example, various degrees of heart block,
+  or bundle branch block).
+- Signs of ischemia or prior heart attack: ST-segment elevation can
+  indicate an acute, ongoing heart attack requiring emergency treatment.
+  ST-segment depression or T-wave inversion can suggest reduced blood flow
+  to part of the heart muscle. Q waves can indicate a prior, older heart
+  attack.
+- Chamber enlargement: certain voltage and wave patterns can suggest
+  thickening or enlargement of the heart's chambers, often related to
+  longstanding hypertension or valve disease.
+- Electrolyte and other systemic effects: certain electrolyte
+  abnormalities (such as high or low potassium) and some medications
+  produce characteristic ECG changes.
+
+Why an ECG is often the first test ordered: it is quick, painless,
+noninvasive, and can be performed in almost any clinical setting. For
+symptoms like chest pain, palpitations, or syncope, an ECG is usually the
+first-line investigation because it can immediately identify
+life-threatening findings (such as an evolving heart attack or a
+dangerous arrhythmia) and helps determine whether further urgent workup is
+needed.
+
+Limitations: a single resting ECG only captures a brief snapshot in time.
+Many arrhythmias are intermittent and will not show up unless they happen
+to be occurring at the moment the ECG is recorded — this is why ambulatory
+monitoring (Holter or event monitors) is used when episodic symptoms are
+suspected to be arrhythmic but a resting ECG is normal. Similarly, a normal
+ECG does not fully rule out coronary artery disease, especially between
+episodes of chest pain, which is why troponin blood testing and other
+investigations are often paired with it when acute coronary syndrome is a
+concern.
+
+How this fits into a consultation: when a patient describes chest pain,
+palpitations, syncope, or significant risk factors for heart disease,
+recommending a 12-lead ECG as a baseline test is almost always reasonable
+and low-risk, since it is quick and noninvasive. It should be framed to
+the patient as a first step to look for any electrical or structural
+issues with the heart, not as confirmation that something is definitely
+wrong.

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendBase } from "@/lib/backend";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://backend:8000";
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
     const response = await fetch(`${backendUrl}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

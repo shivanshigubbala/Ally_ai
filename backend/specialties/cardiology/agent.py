@@ -1,5 +1,6 @@
 from typing import List, Dict
 
+from backend.cardiology.specialty import ConsultationController
 from backend.specialties.cardiology.prompt import CARDIOLOGY_SYSTEM_PROMPT
 from backend.specialties.cardiology.llm_adapter import CardiologyLLMAdapter
 

@@ -1,0 +1,1 @@
+Legacy agent scaffolding and ingest helpers have been moved here for reference only. The active runtime packages are backend/cardiology, backend/general_physician, backend/neurology, and backend/receptionist.

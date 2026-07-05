@@ -1,0 +1,13 @@
+from backend.cardiology.llm.prompts import (
+    DOCTOR_NAME,
+    DOCTOR_SYSTEM_PROMPT,
+    EVALUATION_PROMPT,
+    GENERAL_PHYSICIAN_PROMPT,
+)
+
+__all__ = [
+    "DOCTOR_NAME",
+    "DOCTOR_SYSTEM_PROMPT",
+    "EVALUATION_PROMPT",
+    "GENERAL_PHYSICIAN_PROMPT",
+]

@@ -13,8 +13,8 @@ import logging
 from typing import Iterable
 
 try:
-    from backend.general_physician.db.pgvector_tracker import search_knowledge
-    from backend.general_physician.llm.embeddings import embed_query
+    from backend.db.pgvector_tracker import search_knowledge
+    from backend.llm.embeddings import embed_query
 except ImportError:
     from db.pgvector_tracker import search_knowledge
     from llm.embeddings import embed_query

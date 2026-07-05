@@ -1,4 +1,4 @@
-from backend.specialties.cardiology.state import CardiologyState
+from backend.cardiology.specialty.state import CardiologyState
 
 
 class QuestionManager:

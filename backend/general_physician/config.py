@@ -4,7 +4,7 @@ import os
 from typing import Optional
 
 try:
-    from backend.general_physician.services import local_store as store
+    from backend.services import local_store as store
 except Exception:
     from services import local_store as store
 

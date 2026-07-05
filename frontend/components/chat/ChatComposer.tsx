@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type KeyboardEvent, useRef } from "react";
+import { getBackendBase } from "@/lib/backend";
 
 interface ChatComposerProps {
   onSend: (text: string) => void;
@@ -36,8 +37,7 @@ export default function ChatComposer({ onSend, disabled, userId, appointmentId }
     setUploadError(null);
 
     try {
-      const WS_BASE = process.env.NEXT_PUBLIC_WS_BASE_URL?.replace(/\/$/, "") || "ws://backend:8000";
-      const HTTP_BASE = WS_BASE.replace(/^wss?:/, (m) => (m === "wss:" ? "https:" : "http:"));
+      const HTTP_BASE = getBackendBase();
       const uid = userId || "anonymous";
       const aid = appointmentId || "none";
       const url = `${HTTP_BASE}/upload-document/${encodeURIComponent(uid)}/${encodeURIComponent(aid)}`;
@@ -89,14 +89,7 @@ export default function ChatComposer({ onSend, disabled, userId, appointmentId }
               accept=".pdf,.txt,.md,.csv,.png,.jpg,.jpeg"
             />
 
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading || disabled}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {uploading ? "Uploading…" : "Upload"}
-            </button>
+            {/* Upload removed for receptionist flow — kept in chat if needed elsewhere */}
 
             <button
               onClick={submit}
