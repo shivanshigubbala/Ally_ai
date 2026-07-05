@@ -55,3 +55,29 @@ func (a *AppointmentReportService) ProcessAppointment(
 		tests,
 	)
 }
+
+func (a *AppointmentReportService) ProcessCompletedWorkItem(
+	labRequestID string,
+	patientID string,
+	patientName string,
+	age int,
+	gender string,
+	doctor string,
+	department string,
+	appointmentID int,
+	consultationContextID string,
+	testName string,
+) error {
+	return GenerateMockReportForCompletedWorkItem(
+		labRequestID,
+		patientID,
+		patientName,
+		age,
+		gender,
+		doctor,
+		department,
+		appointmentID,
+		consultationContextID,
+		testName,
+	)
+}

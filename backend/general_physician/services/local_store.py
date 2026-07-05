@@ -34,6 +34,10 @@ class Appointment:
     reason: str
     department: str
     booked_at: datetime
+    patient_id: Optional[str] = None
+    session_id: Optional[str] = None
+    consultation_context_id: Optional[str] = None
+    status: str = "booked"
 
 
 class LocalStore:
@@ -65,8 +69,8 @@ class LocalStore:
             self._depts[d.id] = d
 
         docs = [
-            Doctor("d5", "Dr. Shankar", "general"),
-            Doctor("d8", "Dr. Meera Rao", "cardiology"),
+            Doctor("d5", "Dr. Shankar Dada", "general"),
+            Doctor("d8", "Dr. Arjun Reddy", "cardiology"),
             Doctor("d9", "Dr. Ananya Iyer", "neurology"),
         ]
         for d in docs:
@@ -118,7 +122,18 @@ class LocalStore:
                 })
             return sorted(out, key=lambda x: x["start_time"])
 
-    def book_appointment(self, doctor_id: str, slot_id: str, patient: str, reason: str) -> tuple[int, dict]:
+    def book_appointment(
+        self,
+        doctor_id: str,
+        slot_id: str,
+        patient: str,
+        reason: str,
+        patient_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        department: Optional[str] = None,
+        consultation_context_id: Optional[str] = None,
+        status: str = "booked",
+    ) -> tuple[int, dict]:
         """
         Attempt to book an appointment.
 
@@ -144,8 +159,12 @@ class LocalStore:
                 slot_id=slot_id,
                 patient=patient,
                 reason=reason,
-                department=self._doctors[doctor_id].department_id,
+                department=department or self._doctors[doctor_id].department_id,
                 booked_at=datetime.now(),
+                patient_id=patient_id,
+                session_id=session_id,
+                consultation_context_id=consultation_context_id,
+                status=status,
             )
             self._appointments[aid] = apt
             return 200, {"id": aid, "confirmed": True}
@@ -162,6 +181,10 @@ class LocalStore:
                 "patient": apt.patient,
                 "reason": apt.reason,
                 "department": apt.department,
+                "patient_id": apt.patient_id,
+                "session_id": apt.session_id,
+                "consultation_context_id": apt.consultation_context_id,
+                "status": apt.status,
             }
 
 
@@ -181,8 +204,28 @@ def list_slots(doctor_id: Optional[str] = None) -> list[dict]:
     return _store.list_slots(doctor_id)
 
 
-def book_appointment(doctor_id: str, slot_id: str, patient: str, reason: str) -> tuple[int, dict]:
-    return _store.book_appointment(doctor_id, slot_id, patient, reason)
+def book_appointment(
+    doctor_id: str,
+    slot_id: str,
+    patient: str,
+    reason: str,
+    patient_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    department: Optional[str] = None,
+    consultation_context_id: Optional[str] = None,
+    status: str = "booked",
+) -> tuple[int, dict]:
+    return _store.book_appointment(
+        doctor_id,
+        slot_id,
+        patient,
+        reason,
+        patient_id=patient_id,
+        session_id=session_id,
+        department=department,
+        consultation_context_id=consultation_context_id,
+        status=status,
+    )
 
 
 def get_appointment(appointment_id: str) -> Optional[dict]:

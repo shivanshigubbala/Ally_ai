@@ -79,7 +79,7 @@ export default function ChatPage() {
       setReady(true);
 
       if (!nextSession) {
-        router.replace("/login");
+        router.replace("/signup");
       }
     };
 
@@ -98,7 +98,12 @@ export default function ChatPage() {
   const logout = () => {
     clearProfile();
     window.localStorage.removeItem("token");
-    router.replace("/login");
+    // Clear transient session identifiers too
+    try {
+      window.sessionStorage.removeItem("ally_session_id");
+      window.sessionStorage.removeItem("ally_session_patient_id");
+    } catch {}
+    router.replace("/signup");
   };
 
   if (!ready || !profile) return null;
@@ -128,7 +133,7 @@ export default function ChatPage() {
                 onSelectSlot={resolveSlot}
                 onLabDecision={resolveLabDecision}
               />
-              <ChatComposer onSend={sendText} disabled={!connected} />
+              <ChatComposer onSend={sendText} disabled={!connected} userId={userId} appointmentId={doctorReady?.appointmentId ?? null} />
             </div>
           )}
 

@@ -51,6 +51,20 @@ function SlotCard({
         </div>
       </div>
 
+      {card.intakeSummary && (
+        <div className="mb-4 rounded-2xl border border-sky-100 bg-sky-50/70 p-3 text-xs text-slate-600">
+          <p className="font-semibold text-slate-700">Intake summary</p>
+          <p className="mt-1 whitespace-pre-line">{card.intakeSummary}</p>
+        </div>
+      )}
+
+      <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
+        <span>Suggested department</span>
+        <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-700">
+          {card.recommendedDepartment ? card.recommendedDepartment : "General Physician"}
+        </span>
+      </div>
+
       <div className="flex flex-wrap gap-2">
         {(card.slots || []).map((slot) => (
           <button
@@ -178,6 +192,7 @@ function PreConsultationUpload({
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [processingMessage, setProcessingMessage] = useState<string | null>(null);
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -208,6 +223,21 @@ function PreConsultationUpload({
     setUploading(false);
     // Reset input so the same file can be re-uploaded if needed
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const checkAllIndexed = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:8000/uploaded-files/${encodeURIComponent(userId || "")}/${encodeURIComponent(doctorReady.appointmentId)}`
+      );
+      if (!res.ok) return false;
+      const data = await res.json();
+      const files = data.files || [];
+      if (files.length === 0) return true;
+      return files.every((f: any) => (f.status || "") === "indexed");
+    } catch {
+      return false;
+    }
   };
 
   return (
@@ -285,7 +315,16 @@ function PreConsultationUpload({
 
           <button
             disabled={uploading}
-            onClick={() => onProceed(uploadedFiles)}
+            onClick={async () => {
+              // Check indexing status before proceeding
+              setProcessingMessage(null);
+              const ok = await checkAllIndexed();
+              if (ok) {
+                onProceed(uploadedFiles);
+              } else {
+                setProcessingMessage("We are still processing your uploads. Please wait a moment.");
+              }
+            }}
             className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {uploadedFiles.length > 0 ? (
@@ -305,6 +344,10 @@ function PreConsultationUpload({
             )}
           </button>
         </div>
+
+        {processingMessage && (
+          <p className="mt-3 text-sm text-amber-600">{processingMessage}</p>
+        )}
 
         <input
           ref={fileInputRef}
@@ -436,7 +479,7 @@ export default function AppointmentsPanel({
                 {doctorReady.doctorName}
               </p>
               <p className="mt-1 text-sm text-slate-600">
-                Appointment confirmed. Tap below to begin the consultation.
+                Consultation pending for {doctorReady.department || "your selected department"}. Appointment confirmed. Tap below to begin the consultation.
               </p>
               <button
                 onClick={onStartConsultation}

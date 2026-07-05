@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 from typing import Any, Callable
+
+from backend.models.intake import CanonicalIntake, ConsultationContext
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
@@ -101,7 +104,7 @@ def _update_patient_intake(state: RoutingState, text: str | None) -> None:
         state.patient_name = state.patient_name
 
 CARDIOLOGY_DOCTOR_ID = "d8"
-CARDIOLOGY_DOCTOR_NAME = "Dr. Meera Rao"
+CARDIOLOGY_DOCTOR_NAME = "Dr. Arjun Reddy"
 NEUROLOGY_DOCTOR_ID = "d9"
 NEUROLOGY_DOCTOR_NAME = "Dr. Ananya Iyer"
 
@@ -117,7 +120,8 @@ _CARDIAC_KEYWORDS = [
     "skipping beats", "heart attack", "heart racing", "heart keeps racing",
     "fainting", "fainted", "collapse", "high blood pressure",
     "hypertension", "leg swelling", "heart disease", "cardiac",
-    "shortness of breath", "breathless",
+    "shortness of breath", "breathless", "trouble breathing", "difficulty breathing",
+    "can't breathe", "cannot breathe",
 ]
 
 _NEURO_KEYWORDS = [
@@ -142,6 +146,143 @@ def _remember(user_id: str, role: str, content: str, session_id: str | None = No
         save_message(user_id=user_id, role=role, content=content, session_id=session_id)
     except Exception:
         pass  # Postgres down or schema missing - never break the chat.
+
+
+def _format_intake_summary(state: RoutingState) -> dict[str, str]:
+    complaint = state.current_complaint or ""
+    details = []
+    for m in state.message_history:
+        if m.get("role") == "user":
+            text = (m.get("content") or "").strip()
+            if text:
+                details.append(text)
+    summary = {
+        "Chief Complaint": complaint or (details[0] if details else "Not recorded"),
+        "Symptoms": "; ".join(details[1:4]) if len(details) > 1 else (details[0] if details else "Not recorded"),
+        "Duration": "Not recorded",
+        "Severity": "Not recorded",
+        "Relevant Findings": "Not recorded",
+    }
+    for item in details:
+        lowered = item.lower()
+        if any(word in lowered for word in ("day", "days", "week", "weeks", "month", "months", "hours", "minutes")):
+            summary["Duration"] = item
+        if any(word in lowered for word in ("mild", "moderate", "severe", "pain", "fever", "swelling")):
+            summary["Severity"] = item
+        if any(word in lowered for word in ("history", "allergy", "diabetes", "hypertension", "heart", "blood pressure", "surgery")):
+            summary["Relevant Findings"] = item
+    return summary
+
+
+def _recommend_department(summary: dict[str, str], fallback: str) -> tuple[str, float]:
+    text = " ".join(summary.values()).lower()
+    if any(keyword in text for keyword in ["chest", "heart", "palpitations", "arrhythmia", "cardiac", "blood pressure"]):
+        return "cardiology", 0.88
+    if any(keyword in text for keyword in ["headache", "migraine", "seizure", "stroke", "numbness", "tingling"]):
+        return "neurology", 0.84
+    return fallback, 0.72
+
+
+def _build_intake_message(state: RoutingState) -> str:
+    summary = state.intake_summary or {}
+    pieces = [
+        f"Chief Complaint: {summary.get('Chief Complaint', 'Not recorded')}",
+        f"Symptoms: {summary.get('Symptoms', 'Not recorded')}",
+        f"Duration: {summary.get('Duration', 'Not recorded')}",
+        f"Severity: {summary.get('Severity', 'Not recorded')}",
+        f"Relevant Findings: {summary.get('Relevant Findings', 'Not recorded')}",
+    ]
+    return "\n".join(pieces)
+
+
+def _doctor_select_payload(state: RoutingState, doctors: list[dict[str, Any]]) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "options": doctors,
+        "department_id": state.selected_dept or "general",
+        "recommended_department": state.recommended_department or state.selected_dept or "general",
+        "department_confidence": state.department_confidence if state.department_confidence is not None else 0.0,
+        "intake_summary": _build_intake_message(state),
+    }
+    if state.canonical_intake is not None:
+        payload["canonical_intake"] = (
+            state.canonical_intake.model_dump()
+            if hasattr(state.canonical_intake, "model_dump")
+            else state.canonical_intake
+        )
+    return payload
+
+
+def _parse_intent_payload(payload: str | dict | None) -> dict[str, Any] | None:
+    if not payload:
+        return None
+    if isinstance(payload, dict):
+        return payload
+    if not isinstance(payload, str):
+        return None
+    text = payload.strip()
+    if not text:
+        return None
+    if text.startswith("{"):
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict):
+                return parsed
+        except (TypeError, ValueError):
+            return None
+    match = re.search(r"department\s*[:=]\s*([A-Za-z_\-]+)", text, flags=re.IGNORECASE)
+    if not match:
+        return None
+    confidence = None
+    conf_match = re.search(r"confidence\s*[:=]\s*([0-9.]+)", text, flags=re.IGNORECASE)
+    if conf_match:
+        try:
+            confidence = float(conf_match.group(1))
+        except ValueError:
+            confidence = None
+    return {
+        "department": match.group(1).strip(),
+        "confidence": confidence,
+    }
+
+
+def _set_intake_contract(state: RoutingState) -> dict[str, Any] | None:
+    state.intake_summary = _format_intake_summary(state)
+    recommended_department, confidence = _recommend_department(state.intake_summary, state.selected_dept or "general")
+    state.recommended_department = recommended_department
+    state.department_confidence = confidence
+
+    parsed_payload = None
+    try:
+        parsed_payload = _parse_intent_payload(_llm_reply(
+            RECEPTIONIST_PERSONA,
+            f"Patient said: {state.message_history[-1]['content'] if state.message_history else ''}",
+        ))
+    except Exception:
+        parsed_payload = None
+
+    if parsed_payload:
+        department = parsed_payload.get("department")
+        if department:
+            state.recommended_department = str(department)
+        confidence_value = parsed_payload.get("confidence")
+        if confidence_value is not None:
+            try:
+                state.department_confidence = float(confidence_value)
+            except (TypeError, ValueError):
+                pass
+
+    state.canonical_intake = CanonicalIntake(
+        patient_id=state.patient_id,
+        session_id=f"routing:{state.user_id}",
+        chief_complaint=state.current_complaint or state.patient_summary or "",
+        symptoms=[state.current_complaint] if state.current_complaint else [],
+        structured_summary=state.intake_summary or {},
+        recommended_department=state.recommended_department or state.selected_dept or "general",
+        confidence_score=state.department_confidence or 0.0,
+        selected_doctor=state.selected_doctor,
+        selected_slot=state.selected_slot,
+    )
+    return parsed_payload
 
 
 def _llm_reply(system: str, user: str) -> str:
@@ -212,6 +353,7 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
             dept_name = "Cardiology"
         elif state.selected_dept == "neurology":
             dept_name = "Neurology"
+        parsed_payload = _set_intake_contract(state)
         reply = _llm_reply(
             RECEPTIONIST_PERSONA + (
                 f"The patient shared their concern clearly. Acknowledge it warmly and let them know "
@@ -226,14 +368,22 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
         # Check if user immediately wants appointment (skip health questions)
         if any(keyword in last_user.lower() for keyword in ["appointment", "book", "doctor", "now", "asap", "urgent"]):
             state.skip_health_questions = True
-            doctors = store.list_doctors(state.selected_dept)
-            if not doctors:
-                doctors = store.list_doctors("general")
+            # Offer all doctors, ordering selected department first
+            doctors = store.list_doctors(None)
+            if state.selected_dept:
+                doctors = sorted(doctors, key=lambda d: 0 if d.get("department_id") == state.selected_dept else 1)
             if doctors:
-                emit(WSEvent(type="doctor_select", payload={
-                    "options": doctors,
-                    "department_id": state.selected_dept,
-                }))
+                emit(WSEvent(type="doctor_select", payload=_doctor_select_payload(state, doctors)))
+                state.current_node = "DOCTOR_SELECTION"
+            else:
+                emit(WSEvent(type="text", payload={"content": "I'm sorry, there are no doctors available right now. Please try again later."}))
+                state.current_node = "DONE"
+        elif parsed_payload and (parsed_payload.get("department") or parsed_payload.get("confidence") is not None):
+            doctors = store.list_doctors(None)
+            if state.selected_dept:
+                doctors = sorted(doctors, key=lambda d: 0 if d.get("department_id") == state.selected_dept else 1)
+            if doctors:
+                emit(WSEvent(type="doctor_select", payload=_doctor_select_payload(state, doctors)))
                 state.current_node = "DOCTOR_SELECTION"
             else:
                 emit(WSEvent(type="text", payload={"content": "I'm sorry, there are no doctors available right now. Please try again later."}))
@@ -257,6 +407,7 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
         return state
 
     if state.symptom_round == 2:
+        _set_intake_contract(state)
         reply = _llm_reply(
             RECEPTIONIST_PERSONA + (
                 "You've got a few follow-up details now. Acknowledge what they said warmly, then ask one more "
@@ -276,11 +427,12 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
     elif state.selected_dept == "neurology":
         dept_name = "Neurology"
 
+    _set_intake_contract(state)
     reply = _llm_reply(
         RECEPTIONIST_PERSONA + (
             f"The patient has now shared several follow-up details. Acknowledge that warmly. "
             f"Mention that based on their symptoms, they might benefit from a consultation with the {dept_name} department. "
-            f"Explain that only our General Physician (Dr. Shankar) is open for booking today, so we will show available options. "
+            f"Explain that only our General Physician (Dr. Shankar Dada) is open for booking today, so we will show available options. "
             f"Say you're going to help them choose a doctor and a time. No bullet points, no lists."
         ),
         f"Patient said: {last_user}",
@@ -288,15 +440,13 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
     emit(WSEvent(type="text", payload={"content": reply}))
     state.message_history.append({"role": "assistant", "content": reply})
 
-    doctors = store.list_doctors(state.selected_dept)
-    if not doctors:
-        doctors = store.list_doctors("general")
+    # Offer all doctors, with doctors from the selected department shown first
+    doctors = store.list_doctors(None)
+    if state.selected_dept:
+        doctors = sorted(doctors, key=lambda d: 0 if d.get("department_id") == state.selected_dept else 1)
 
     if doctors:
-        emit(WSEvent(type="doctor_select", payload={
-            "options": doctors,
-            "department_id": state.selected_dept,
-        }))
+        emit(WSEvent(type="doctor_select", payload=_doctor_select_payload(state, doctors)))
         state.current_node = "DOCTOR_SELECTION"
     else:
         emit(WSEvent(type="text", payload={"content": "I'm sorry, there are no doctors available right now. Please try again later."}))
@@ -363,27 +513,26 @@ def health_status_questions_node(state: RoutingState, emit: Emitter) -> RoutingS
         state.message_history.append({"role": "assistant", "content": reply})
         state.health_question_round = 3
 
-        doctors = store.list_doctors(state.selected_dept)
-        if not doctors:
-            doctors = store.list_doctors("general")
+        # Offer all doctors, ordering selected department first
+        doctors = store.list_doctors(None)
+        if state.selected_dept:
+            doctors = sorted(doctors, key=lambda d: 0 if d.get("department_id") == state.selected_dept else 1)
 
         if doctors:
-            emit(WSEvent(type="doctor_select", payload={
-                "options": doctors,
-                "department_id": state.selected_dept,
-            }))
+            emit(WSEvent(type="doctor_select", payload=_doctor_select_payload(state, doctors)))
             state.current_node = "DOCTOR_SELECTION"
         else:
             emit(WSEvent(type="text", payload={"content": "I'm sorry, there are no doctors available right now. Please try again later."}))
             state.current_node = "DONE"
         return state
 
-    doctors = store.list_doctors(state.selected_dept)
+    # Offer all doctors, ordering selected department first
+    doctors = store.list_doctors(None)
+    if state.selected_dept:
+        doctors = sorted(doctors, key=lambda d: 0 if d.get("department_id") == state.selected_dept else 1)
+
     if doctors:
-        emit(WSEvent(type="doctor_select", payload={
-            "options": doctors,
-            "department_id": state.selected_dept,
-        }))
+        emit(WSEvent(type="doctor_select", payload=_doctor_select_payload(state, doctors)))
         state.current_node = "DOCTOR_SELECTION"
     else:
         emit(WSEvent(type="text", payload={"content": "I'm sorry, there are no doctors available right now. Please try again later."}))
@@ -452,6 +601,9 @@ def doctor_selection_node(state: RoutingState, emit: Emitter) -> RoutingState:
             "options": slots,
             "doctor_id": state.selected_doctor or default_doctor,
             "doctor_name": doc_name,
+            "recommended_department": state.recommended_department,
+            "department_confidence": state.department_confidence,
+            "intake_summary": _build_intake_message(state),
         }))
         state.current_node = "SLOT_SELECTION"
     else:
@@ -514,6 +666,48 @@ def slot_node(state: RoutingState, emit: Emitter) -> RoutingState:
     state.current_node = "BOOKING_CONFIRMATION"
     return state
 
+def _persist_consultation_context(state: RoutingState, appointment_id: str | None, doctor_name: str | None, department: str | None) -> None:
+    try:
+        from backend.general_physician.db.pgvector_tracker import upsert_consultation_context
+    except ImportError:
+        from db.pgvector_tracker import upsert_consultation_context  # type: ignore
+
+    intake = CanonicalIntake(
+        patient_id=state.patient_id,
+        session_id=f"routing:{state.user_id}",
+        chief_complaint=state.current_complaint or state.patient_summary or "",
+        symptoms=[state.current_complaint] if state.current_complaint else [],
+        structured_summary=state.intake_summary or {},
+        recommended_department=state.recommended_department or state.selected_dept or "general",
+        confidence_score=state.department_confidence or 0.0,
+        selected_doctor=state.selected_doctor,
+        selected_slot=state.selected_slot,
+    )
+    context = ConsultationContext(
+        patient_reference=state.patient_name or state.patient_id or state.user_id,
+        patient_id=state.patient_id,
+        session_id=f"routing:{state.user_id}",
+        clinical_intake_record=intake,
+        selected_department=department or state.recommended_department or state.selected_dept or "general",
+        selected_doctor=state.selected_doctor,
+        appointment_id=appointment_id,
+        appointment_status="booked",
+        consultation_status="CREATED",
+        metadata={
+            "doctor_name": doctor_name or "",
+            "patient_name": state.patient_name or "",
+            "appointment_reason": "booked via Ally receptionist",
+        },
+    )
+    try:
+        saved = upsert_consultation_context(context.model_dump())
+        if saved:
+            state.consultation_context_id = saved.get("internal_uuid")
+            state.consultation_status = "CREATED"
+    except Exception:
+        pass
+
+
 def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
     state.pending_event = None
     last_user = _last_user_message(state).lower().strip()
@@ -560,6 +754,10 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
         slot_id=state.selected_slot or "",
         patient=state.patient_name or state.user_id,
         reason="booked via Ally receptionist",
+        patient_id=state.patient_id,
+        session_id=f"routing:{state.user_id}",
+        department=state.recommended_department or state.selected_dept or "general",
+        status="booked",
     )
 
     if status == 409:
@@ -582,10 +780,11 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
         return state
 
     state.appointment_id = body.get("id") if isinstance(body, dict) else None
-    doctors = store.list_doctors(state.selected_dept)
-    chosen = next((d for d in doctors if d["id"] == state.selected_doctor), None)
+    # Find the chosen doctor across all departments
+    all_doctors = store.list_doctors(None)
+    chosen = next((d for d in all_doctors if d["id"] == state.selected_doctor), None)
     if not chosen:
-        chosen = next((d for d in store.list_doctors("general") if d["id"] == state.selected_doctor), None)
+        chosen = next((d for d in all_doctors if d["id"] == state.selected_doctor), None)
     doctor_name = chosen["name"] if chosen else GP_DOCTOR_NAME
 
     reply = _llm_reply(
@@ -599,11 +798,22 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
     emit(WSEvent(type="text", payload={"content": reply}))
     state.message_history.append({"role": "assistant", "content": f"Appointment {state.appointment_id} confirmed."})
 
+    _persist_consultation_context(
+        state,
+        state.appointment_id,
+        doctor_name,
+        state.recommended_department or state.selected_dept or "general",
+    )
+
     emit(WSEvent(type="doctor_ready", payload={
         "appointment_id": state.appointment_id,
         "doctor_id": state.selected_doctor or GP_DOCTOR_ID,
         "doctor_name": doctor_name,
-        "department": state.selected_dept or "general",
+        "department": state.recommended_department or state.selected_dept or "general",
+        "recommended_department": state.recommended_department,
+        "department_confidence": state.department_confidence,
+        "intake_summary": _build_intake_message(state),
+        "consultation_status": "CREATED",
     }))
     state.current_node = "DONE"
     return state

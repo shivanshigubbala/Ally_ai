@@ -16,7 +16,7 @@ interface ProfilePanelProps {
   onLogout?: () => void;
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value?: string }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-3">
       <span className="text-sm text-slate-500">{label}</span>

@@ -1,5 +1,9 @@
 {
     "chat.tools.terminal.autoApprove": {
-        ".git": true
+        ".git": true,
+        "/^pytest backend/general_physician/tests/test_receptionist_handoff\\.py -q$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

@@ -77,7 +77,7 @@ func (r *AppointmentRepository) Book(doctorID, userID, timeSlotID int) (models.A
 	}
 
 	var existingUserID int
-	err = tx.QueryRow(`SELECT id FROM users WHERE id = $1`, userID).Scan(&existingUserID)
+	err = tx.QueryRow(`SELECT id FROM appointment_users WHERE id = $1`, userID).Scan(&existingUserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.Appointment{}, ErrUserNotFound

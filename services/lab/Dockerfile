@@ -4,14 +4,14 @@ FROM golang:1.25-alpine AS builder
 WORKDIR /app
 
 # Copy Go module files first
-COPY services/lab/go.mod .
-COPY services/lab/go.sum .
+COPY go.mod ./
+COPY go.sum ./
 
 # Download dependencies
 RUN go mod download
 
 # Copy the source code
-COPY services/lab/ .
+COPY . .
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o lab .

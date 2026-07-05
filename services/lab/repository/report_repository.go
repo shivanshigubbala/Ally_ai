@@ -7,9 +7,9 @@ import (
 	"github.com/shivanshigubbala/Ally_ai/services/lab/models"
 )
 
-func SaveReport(report models.Report) error {
-
-	_, err := database.DB.Exec(
+func SaveReport(report models.Report) (int, error) {
+	var insertedID int
+	err := database.DB.QueryRow(
 		context.Background(),
 		`
 		INSERT INTO lab_reports
@@ -18,7 +18,19 @@ func SaveReport(report models.Report) error {
 			appointment_id,
 			pdf_name,
 			pdf_path,
-			status
+			status,
+			patient_id,
+			patient_name,
+			age,
+			gender,
+			doctor,
+			department,
+			consultation_context_id,
+			lab_request_id,
+			test_name,
+			test_values,
+			reference_range,
+			observation
 		)
 		VALUES
 		(
@@ -26,17 +38,84 @@ func SaveReport(report models.Report) error {
 			$2,
 			$3,
 			$4,
-			$5
+			$5,
+			$6,
+			$7,
+			$8,
+			$9,
+			$10,
+			$11,
+			$12,
+			$13,
+			$14,
+			$15,
+			$16,
+			$17
 		)
+		RETURNING id
 		`,
 		report.UserID,
 		report.AppointmentID,
 		report.PDFName,
 		report.PDFPath,
 		report.Status,
-	)
+		report.PatientID,
+		report.PatientName,
+		report.Age,
+		report.Gender,
+		report.Doctor,
+		report.Department,
+		report.ConsultationContextID,
+		report.LabRequestID,
+		report.TestName,
+		report.TestValues,
+		report.ReferenceRange,
+		report.Observation,
+	).Scan(&insertedID)
+	if err == nil {
+		return insertedID, nil
+	}
 
-	return err
+	if err.Error() != "" && (contains(err.Error(), "does not exist") || contains(err.Error(), "undefined column") || contains(err.Error(), "relation \"lab_reports\" does not exist")) {
+		var fallbackID int
+		err2 := database.DB.QueryRow(
+			context.Background(),
+			`
+			INSERT INTO lab_reports
+			(
+				user_id,
+				appointment_id,
+				pdf_name,
+				pdf_path,
+				status
+			)
+			VALUES
+			(
+				$1,
+				$2,
+				$3,
+				$4,
+				$5
+			)
+			RETURNING id
+			`,
+			report.UserID,
+			report.AppointmentID,
+			report.PDFName,
+			report.PDFPath,
+			report.Status,
+		).Scan(&fallbackID)
+		if err2 == nil {
+			return fallbackID, nil
+		}
+		return 0, err2
+	}
+
+	return 0, err
+}
+
+func contains(s, substr string) bool {
+	return len(substr) == 0 || (len(s) >= len(substr) && (s == substr || contains(s[1:], substr) || (len(s) >= len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr))))
 }
 
 func AreAllTestsCompleted(appointmentID int) (bool, error) {

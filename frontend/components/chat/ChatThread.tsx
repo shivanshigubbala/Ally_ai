@@ -72,9 +72,24 @@ function DoctorCard({
         </div>
       </div>
 
+      {card.intakeSummary && (
+        <div className="mb-4 rounded-2xl border border-sky-100 bg-sky-50/70 p-3 text-xs text-slate-600">
+          <p className="font-semibold text-slate-700">Intake summary</p>
+          <p className="mt-1 whitespace-pre-line">{card.intakeSummary}</p>
+        </div>
+      )}
+
+      <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
+        <span>Suggested department</span>
+        <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-700">
+          {card.recommendedDepartment ? card.recommendedDepartment : "General Physician"}
+        </span>
+      </div>
+
       <div className="grid gap-2 sm:grid-cols-2">
         {(card.doctors || []).map((doctor) => {
           const available = doctor.available !== false;
+          const recommended = card.recommendedDepartment && doctor.department_id === card.recommendedDepartment;
           return (
             <button
               key={doctor.id}
@@ -82,11 +97,16 @@ function DoctorCard({
               onClick={() => onSelectDoctor(card.id, doctor.id)}
               className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
                 available
-                  ? "border-sky-200 bg-sky-50 text-slate-900 hover:-translate-y-0.5 hover:border-sky-300 hover:bg-white"
+                  ? recommended
+                    ? "border-emerald-300 bg-emerald-50 text-slate-900 shadow-sm"
+                    : "border-sky-200 bg-sky-50 text-slate-900 hover:-translate-y-0.5 hover:border-sky-300 hover:bg-white"
                   : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
               }`}
             >
-              <div className="font-medium">{doctor.name}</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-medium">{doctor.name}</div>
+                {recommended && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">Suggested</span>}
+              </div>
               <div className="mt-0.5 text-xs text-slate-500">
                 {doctor.department_id || "Cardiology"}
                 {!available ? " - unavailable" : " - available"}
@@ -227,9 +247,9 @@ function Bubble({
         />
       )}
 
-      <div className={`max-w-[min(100%,36rem)] ${isUser ? "items-end" : "items-start"} flex flex-col`}>
+      <div className={`max-w-[min(100%,36rem)] min-w-0 ${isUser ? "items-end" : "items-start"} flex flex-col`}>
         <div
-          className={`rounded-3xl px-4 py-3 text-sm leading-6 shadow-sm ${
+          className={`rounded-3xl px-4 py-3 text-sm leading-6 shadow-sm break-words whitespace-pre-wrap ${
             isUser
               ? "bg-gradient-to-r from-sky-600 to-blue-600 text-white"
               : "border border-slate-200 bg-white text-slate-800"

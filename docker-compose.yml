@@ -39,6 +39,7 @@ services:
       POSTGRES_USER: allyai
       POSTGRES_PASSWORD: allyai
       APPOINTMENT_SERVICE_URL: http://appointment:8081
+      LAB_SERVICE_URL: http://lab:8082
 
     ports:
       - "8000:8000"
@@ -47,6 +48,8 @@ services:
       postgres:
         condition: service_healthy
       appointment:
+        condition: service_started
+      lab:
         condition: service_started
 
   appointment:
@@ -68,6 +71,26 @@ services:
     ports:
       - "8081:8081"
 
+  lab:
+    build:
+      context: ./services/lab
+      dockerfile: Dockerfile
+
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: allyai
+      POSTGRES_USER: allyai
+      POSTGRES_PASSWORD: allyai
+      DATABASE_URL: postgres://allyai:allyai@postgres:5432/allyai
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    ports:
+      - "8082:8082"
+
   frontend:
     build:
       context: ./frontend
@@ -80,7 +103,7 @@ services:
 
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - frontend_node_modules:/app/node_modules
 
     environment:
       NODE_ENV: development
@@ -92,3 +115,4 @@ services:
 
 volumes:
   pgdata:
+  frontend_node_modules:

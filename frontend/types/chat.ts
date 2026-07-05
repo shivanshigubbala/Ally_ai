@@ -11,6 +11,8 @@ export type WSEventType =
   | "lab_notification"
   | "report_ready"
   | "doctor_ready"
+  | "upload_received"
+  | "upload_indexed"
   | "emergency_alert"
   | "consultation_chart";
 
@@ -32,6 +34,8 @@ export interface DoctorReadyInfo {
   appointmentId: string;
   doctorName: string;
   doctorId: string;
+  department?: string;
+  consultationStatus?: string;
 }
 
 export interface Slot {
@@ -68,9 +72,12 @@ export interface ChatCard {
   tests?: LabTest[];
   sessionId?: string;
   resolved?: boolean;
+  recommendedDepartment?: string;
+  departmentConfidence?: number;
+  intakeSummary?: string;
 }
 
-export type InboxKind = "appointment_booked" | "lab_notification" | "report_ready" | "lab_suggested";
+export type InboxKind = "appointment_booked" | "lab_notification" | "report_ready" | "lab_suggested" | "upload_received" | "upload_indexed";
 
 export interface InboxNotification {
   id: string;
