@@ -36,7 +36,7 @@ export default function ChatComposer({ onSend, disabled, userId, appointmentId }
     setUploadError(null);
 
     try {
-      const WS_BASE = process.env.NEXT_PUBLIC_WS_BASE_URL?.replace(/\/$/, "") || "ws://localhost:8000";
+      const WS_BASE = process.env.NEXT_PUBLIC_WS_BASE_URL?.replace(/\/$/, "") || "ws://backend:8000";
       const HTTP_BASE = WS_BASE.replace(/^wss?:/, (m) => (m === "wss:" ? "https:" : "http:"));
       const uid = userId || "anonymous";
       const aid = appointmentId || "none";

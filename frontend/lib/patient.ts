@@ -156,10 +156,10 @@ export async function registerProfile(profile: PatientProfile): Promise<{ ok: bo
     });
 
     let data;
+    const text = await resp.text();
     try {
-      data = await resp.json();
+      data = text ? JSON.parse(text) : null;
     } catch {
-      const text = await resp.text();
       return {
         ok: false,
         error: text || `Auth response was not valid JSON (status ${resp.status})`,

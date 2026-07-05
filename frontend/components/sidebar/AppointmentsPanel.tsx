@@ -206,7 +206,7 @@ function PreConsultationUpload({
         const formData = new FormData();
         formData.append("file", file);
         const res = await fetch(
-          `http://localhost:8000/upload-document/${encodeURIComponent(userId || "")}/${encodeURIComponent(doctorReady.appointmentId)}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://backend:8000"}/upload-document/${encodeURIComponent(userId || "")}/${encodeURIComponent(doctorReady.appointmentId)}`,
           { method: "POST", body: formData }
         );
         if (!res.ok) {
