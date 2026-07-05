@@ -1047,8 +1047,9 @@ def user_decision(state: DoctorState, emit: Emitter) -> DoctorState:
         except Exception:
             logger.exception("Failed to persist notification for lab request=%s", lab_request_id)
 
+        lab_response = None
         try:
-            create_lab_tests(
+            lab_response = create_lab_tests(
                 appointment_id=state.appointment_id or "0",
                 user_id=state.patient_id or state.user_id or "0",
                 doctor_id=state.doctor_id or state.doctor_name or DOCTOR_NAME,
@@ -1058,6 +1059,28 @@ def user_decision(state: DoctorState, emit: Emitter) -> DoctorState:
             )
         except Exception:
             logger.exception("Failed to trigger lab service for appointment=%s", state.appointment_id)
+
+        # If the lab client returned a mocked reports payload (when the lab
+        # service is unavailable), emit a `report_ready` event for each
+        # generated report so the frontend can show and download them.
+        try:
+            if isinstance(lab_response, dict) and lab_response.get("reports"):
+                for r in lab_response.get("reports"):
+                    pdf_name = r.get("pdf_name") or r.get("test") or None
+                    path = r.get("path") or r.get("pdf_name") or None
+                    report_id = pdf_name or f"report-{state.appointment_id}-{len(str(r))}"
+                    # Emit a report_ready event; frontend will resolve relative
+                    # `report_url` paths against the backend base URL.
+                    emit(WSEvent(type="report_ready", payload={
+                        "report_id": report_id,
+                        "report_url": path,
+                        "download_url": path,
+                        "tests": state.tests_list,
+                        "doctor": state.doctor_name or DOCTOR_NAME,
+                        "user_id": state.patient_id or state.user_id,
+                    }))
+        except Exception:
+            logger.exception("Failed to emit mock report_ready events for appointment=%s", state.appointment_id)
 
         state.lab_request_payload = {
             "patient_id": state.patient_id or state.user_id,
