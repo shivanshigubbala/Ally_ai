@@ -14,11 +14,12 @@ export interface PatientProfile {
   age: string;
   phone: string;
   bloodGroup?: string;
-  conditions: string;
-  medications: string;
-  allergies: string;
+  conditions?: string;
+  medications?: string;
+  allergies?: string;
   healthAssessment?: HealthAssessment;
   pastMedicalConditions?: string;
+  patientId?: string;
 }
 
 export interface HealthAssessment {
@@ -33,6 +34,8 @@ export interface HealthAssessment {
 
 const STORAGE_KEY = "ally_patient_profile";
 const REGISTRY_KEY = "ally_patient_registry";
+const SESSION_KEY = "ally_session_id";
+const SESSION_PATIENT_KEY = "ally_session_patient_id";
 
 export function slugifyUserId(name: string): string {
   const slug = name
@@ -107,11 +110,74 @@ export function findProfileByEmail(email: string): PatientProfile | null {
 export function clearProfile(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(STORAGE_KEY);
+  try {
+    window.sessionStorage.removeItem(SESSION_KEY);
+    window.sessionStorage.removeItem(SESSION_PATIENT_KEY);
+  } catch {}
 }
 
 export function getUserId(): string | null {
+  if (typeof window !== "undefined") {
+    const patientId = window.sessionStorage.getItem(SESSION_PATIENT_KEY);
+    if (patientId) return patientId;
+  }
   const profile = getProfile();
-  return profile ? slugifyUserId(profile.name) : null;
+  if (!profile) return null;
+  if (profile.patientId) return profile.patientId;
+  return slugifyUserId(profile.name);
+}
+
+
+export async function registerProfile(profile: PatientProfile): Promise<{ ok: boolean; patient_id?: string; session_id?: string; error?: string }> {
+  if (typeof window === "undefined") return { ok: false, error: "client-only" };
+
+  const client_user_id = getUserId();
+
+  try {
+    // Prefer direct backend URL when available (useful in Docker Compose),
+    // otherwise fall back to the Next API proxy at `/api/auth/register`.
+    const backendBase = (typeof window !== "undefined" && (window as any).NEXT_PUBLIC_BACKEND_URL) || process.env.NEXT_PUBLIC_BACKEND_URL || "";
+    const target = backendBase ? `${backendBase.replace(/\/+$/,'')}/register` : "/api/auth/register";
+
+    const resp = await fetch(target, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: profile.name,
+        age: Number(profile.age) || null,
+        gender: profile.gender,
+        phone: profile.phone,
+        email: profile.email || null,
+        city: undefined,
+        emergency_contact: undefined,
+        consent: true,
+        client_user_id,
+      }),
+    });
+
+    let data;
+    try {
+      data = await resp.json();
+    } catch {
+      const text = await resp.text();
+      return {
+        ok: false,
+        error: text || `Auth response was not valid JSON (status ${resp.status})`,
+      };
+    }
+
+    if (!data || !data.ok) return { ok: false, error: data?.detail || "register failed" };
+    // persist profile (without patientId) and store session identifiers transiently
+    const next = { ...profile, patientId: data.patient_id || profile.patientId };
+    saveProfile(next);
+    try {
+      window.sessionStorage.setItem(SESSION_KEY, data.session_id || "");
+      window.sessionStorage.setItem(SESSION_PATIENT_KEY, data.patient_id || "");
+    } catch {}
+    return { ok: true, patient_id: data.patient_id, session_id: data.session_id };
+  } catch (err: any) {
+    return { ok: false, error: String(err) };
+  }
 }
 
 export function getInitials(name: string): string {

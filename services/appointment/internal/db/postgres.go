@@ -53,7 +53,7 @@ func NewPostgres() (*sql.DB, error) {
 // ensureSchema creates the database tables needed by the appointment service.
 func ensureSchema(db *sql.DB) error {
 	statements := []string{
-		`CREATE TABLE IF NOT EXISTS users (
+		`CREATE TABLE IF NOT EXISTS appointment_users (
 			id SERIAL PRIMARY KEY,
 			name TEXT NOT NULL,
 			age INTEGER,
@@ -84,7 +84,7 @@ func ensureSchema(db *sql.DB) error {
 		`CREATE TABLE IF NOT EXISTS appointments (
 			id SERIAL PRIMARY KEY,
 			doctor_id INTEGER NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
-			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			user_id INTEGER NOT NULL REFERENCES appointment_users(id) ON DELETE CASCADE,
 			time_slot_id INTEGER NOT NULL REFERENCES time_slots(id) ON DELETE CASCADE,
 			status TEXT NOT NULL DEFAULT 'scheduled',
 			booked_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
@@ -92,6 +92,27 @@ func ensureSchema(db *sql.DB) error {
 		`CREATE UNIQUE INDEX IF NOT EXISTS appointments_time_slot_id_key ON appointments(time_slot_id)`,
 	}
 	for _, stmt := range statements {
+		if _, err := db.Exec(stmt); err != nil {
+			return err
+		}
+	}
+
+	for _, stmt := range []string{
+		`ALTER TABLE appointments DROP CONSTRAINT IF EXISTS appointments_user_id_fkey`,
+		`DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1
+				FROM pg_constraint
+				WHERE conrelid = 'public.appointments'::regclass
+				AND conname = 'appointments_user_id_fkey'
+			) THEN
+				ALTER TABLE appointments
+				ADD CONSTRAINT appointments_user_id_fkey
+				FOREIGN KEY (user_id) REFERENCES appointment_users(id) ON DELETE CASCADE;
+			END IF;
+		END $$`,
+	} {
 		if _, err := db.Exec(stmt); err != nil {
 			return err
 		}

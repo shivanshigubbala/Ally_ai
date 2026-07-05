@@ -1,227 +1,273 @@
 # Ally AI
 
-Ally AI is a prototype hospital assistant demonstrating a receptionist and
-doctor consultation flow driven by a routing graph and LLMs. It shows how a
-lightweight virtual receptionist can collect symptoms, book appointments,
-handoff to a focused doctor agent, and optionally recommend lab tests that
-produce downloadable reports.
+Ally AI is a research/prototype repository implementing a lightweight virtual
+receptionist and doctor consultation flow driven by a FastAPI backend, a
+Next.js frontend, and small reference services. The system demonstrates a
+conversation routing graph, RAG-backed doctor agents, and simple lab report
+generation for demonstration and experimentation only.
 
-This repository includes a Next.js frontend, a FastAPI backend that runs the
-routing/doctor graphs, and a small Go appointment service. The backend can
-generate simple PDF lab reports to `backend/reports/` and serves them at
-`/reports/{report_id}` so the frontend can offer downloads.
+This repository is documentation-first for Phase 0. No production guarantees
+are intended and several clinical features are intentionally stubbed.
 
-## What's wired up
+## Project Overview
 
-- **Receptionist** (`backend/graphs/routing_graph.py`)
-  Greets the patient, takes symptoms, books them with **Dr. Shankar** (GP),
-  shows available slots, confirms the booking.
-- **General Physician - Dr. Shankar** (`backend/graphs/general_physician_agent.py`)
-  Asks one focused clinical question per turn for up to 10 turns, grounded in
-  retrieved WHO excerpts. After 10 questions evaluates whether lab tests are
-  warranted. Streams token-by-token so responses appear progressively.
-- **RAG over WHO DCM Vol. 2** (`backend/rag/`, `backend/ingest/`)
-  PDF at `knowledge/general_physician/who_dcm_vol2.pdf` is extracted, chunked
-  (~400 words, 80-word overlap), embedded with NVIDIA `nv-embedqa-e5-v5`, and
-  stored in the `knowledge_chunks` pgvector table. At each doctor turn the
-  retriever pulls the top-5 most similar passages for the patient's chief
-  complaint and injects them into the prompt.
-- **Grounding guardrails** (`backend/llm/prompts.py`)
-  The doctor system prompt includes a strict grounding rule: it may only state
-  clinical facts, ask questions, or make recommendations supported by the
-  retrieved context. If no retrieved excerpt relates to the chief complaint,
-  it asks a general clarifying question instead of inventing.
-- **Conversation memory** (`backend/db/pgvector_tracker.py`)
-  Every user/assistant turn is persisted to the `messages` table; on the next
-  visit the doctor sees prior context.
-- **WebSocket chat** (`backend/ws/router.py`, `chat_cli.py`)
-  FastAPI WebSocket at `/ws/{user_id}` driven by `chat_cli.py`. Supports
-  `text`, `select`, `thinking` heartbeat, `text_delta` (streaming), and
-  domain events (`slot_select`, `lab_notification`, `report_ready`).
-- **Lab tests** (stubbed)
-  On test recommendation the doctor emits `lab_notification`; the user accepts
-  or rejects; a `report_ready` event closes the loop.
-  Common general physician lab services in this project are Complete Blood Count
-  (CBC) and Basic Metabolic Panel (BMP).
+- Receptionist collects symptoms and routes users to a doctor agent.
+- General Physician agent performs focused questioning with retrieval-augmented
+  grounding and can recommend stubbed lab tests that generate downloadable
+  PDF reports.
+- Knowledge is stored as embeddings in Postgres with pgvector and used for RAG.
 
-## Project structure
+## Technology Stack
 
-```
-ally_ai/
-├── chat_cli.py                       # interactive CLI client (WebSocket)
-├── docker-compose.yml                # postgres (pgvector) + backend + appointment (Go)
-├── .env.example                      # copy to .env; fill NVIDIA_API_KEY
-├── backend/
-│   ├── main.py                       # FastAPI app + /ws + /nv-test + /chat
-│   ├── ws/router.py                  # WebSocket dispatcher
-│   ├── graphs/
-│   │   ├── routing_graph.py          # receptionist graph (LangGraph)
-│   │   └── general_physician_agent.py # doctor graph with RAG + streaming
-│   ├── rag/
-│   │   └── retriever.py              # cosine search over knowledge_chunks
-│   ├── ingest/
-│   │   ├── extract_pdf.py            # PyMuPDF page extractor
-│   │   ├── chunker.py                # ~400-word paragraph-aware chunker
-│   │   └── embed_store.py            # nv-embedqa-e5-v5 -> pgvector
-│   ├── llm/
-│   │   ├── nvidia_client.py          # NVIDIA NIM chat + streaming
-│   │   ├── embeddings.py             # NVIDIA NIM embeddings
-│   │   └── prompts.py                # DOCTOR_SYSTEM_PROMPT with grounding rules
-│   ├── db/pgvector_tracker.py        # pgvector: users, messages, knowledge_chunks
-│   ├── services/local_store.py       # in-memory departments/doctors/slots
-│   └── models/session_state.py       # Pydantic state shapes + WS envelope
-├── knowledge/general_physician/
-│   └── who_dcm_vol2.pdf              # WHO IMAI District Clinician Manual Vol. 2
-├── services/                         # Go reference services (appointment, lab)
-├── frontend/                         # Next.js UI (separate)
-└── docs/                             # design + progress notes
-```
+- Backend: Python (FastAPI)
+- Frontend: Next.js (React, TypeScript)
+- Database: PostgreSQL + pgvector
+- Embeddings / LLM: NVIDIA NIM (configurable via env)
+- Messaging: WebSocket-based chat (FastAPI)
+- Orchestration: Docker Compose for dev and service composition
 
-## Quick start
+## Current Folder Structure (top-level)
 
-### 1. Configure environment
+- `backend/` — FastAPI app, graphs, RAG, ingest, models, and utilities
+- `frontend/` — Next.js web UI (separate app inside the repo)
+- `knowledge/` — source PDFs and knowledge for RAG (e.g. WHO manual)
+- `services/` — reference Go services (appointment, lab)
+- `docs/` — design notes and progress logs
+- `docker-compose.yml` — compose for postgres, backend, appointment service
+- `chat_cli.py` — minimal WebSocket CLI client for interactive sessions
 
-```powershell
-cd C:\Users\ChinthalapudiBhargav\Downloads\ally_ai\Ally_ai
-copy .env.example .env
-# Edit .env and paste your NVIDIA_API_KEY (required) and any other overrides
-```
+## Backend Overview
+
+- Entrypoint: `backend/main.py` (FastAPI app, HTTP and WebSocket endpoints)
+- Graphs: `backend/graphs/` contains the receptionist routing graph and the
+  general physician graph used to run agent flows.
+- RAG: `backend/rag/` contains retriever logic; `backend/ingest/` contains PDF
+  extraction, chunking, and embedding upload scripts.
+- LLM integration: `backend/llm/` contains `nvidia_client.py`, `embeddings.py`,
+  and `prompts.py` with grounding system prompts for doctor agents.
+- Persistence: `backend/db/pgvector_tracker.py` tracks `users`, `messages`, and
+  `knowledge_chunks` in Postgres/pgvector.
+- In-memory services: `backend/services/local_store.py` contains demo
+  departments, doctors, and slot data used by the receptionist flow.
+
+## Frontend Overview
+
+- Built with Next.js (app router). UI files live under `frontend/app`,
+  components under `frontend/components`, and client code under `frontend/lib`.
+- The frontend connects to the backend WebSocket at `/ws/{user_id}` to drive
+  conversational flows and reacts to domain events (`slot_select`,
+  `lab_notification`, `report_ready`).
+- Authentication is not implemented; the UI assumes a session `user_id` for
+  demonstration only.
+
+## AI Agents
+
+- Receptionist agent (routing graph) — located in
+  `backend/graphs/routing_graph.py`. Collects symptoms and offers slots.
+- General Physician agent — `backend/graphs/general_physician_agent.py`.
+  Uses a retrieval step to inject relevant passages and applies grounding
+  rules via `backend/llm/prompts.py`.
+- Cardiology agent scaffolding exists under `backend/agents/` but is not the
+  default routing target; specialist routing is not yet wired.
+
+How agents communicate
+
+- Agents run inside the backend process and emit WebSocket domain events to
+  the client. The WebSocket protocol and Pydantic models are defined in
+  `backend/models/session_state.py` and `backend/ws/router.py` implements
+  dispatch.
+
+Data consumed / produced
+
+- Consume: user messages, selected slot decisions, retriever passages (from
+  `knowledge_chunks`), and environment-configured LLMs.
+- Produce: streaming or complete assistant messages, domain events
+  (`slot_select`, `lab_notification`, `report_ready`), and persisted
+  conversation messages.
+
+## Current Departments
+
+- General Physician (default)
+- Cardiology (resolved through the shared specialty dispatcher and registry)
+
+## Specialty Dispatcher and Registry
+
+- The canonical dispatcher lives in `backend/specialties/dispatcher.py`.
+- It accepts a consultation context, reads the selected department, asks the
+  registry for the matching specialty implementation, and returns that
+  specialty instance.
+- The registry in `backend/specialties/registry.py` is now the single routing
+  authority for specialty selection.
+- General Physician and Cardiology are registered today; unknown departments
+  fail gracefully with a registry error instead of auto-fallback.
+- Adding a new department only requires creating an adapter and registering it
+  in the registry; the dispatcher remains unchanged.
+
+## Available APIs
+
+- WebSocket chat: `/ws/{user_id}` — primary conversational interface.
+- Report download: `/reports/{report_id}` — serves generated PDF reports
+  produced by backend report generation to `backend/reports/`.
+- Additional internal HTTP endpoints exist in `backend/main.py` for
+  diagnostics and model testing; consult the file for details.
+
+## Database Overview
+
+- Postgres with `pgvector` extension stores:
+  - `users` (demo user records handled by `pgvector_tracker`)
+  - `messages` (conversation history persisted for session state)
+  - `knowledge_chunks` (embedded RAG passages)
+- See `backend/db/pgvector_tracker.py` for code that interacts with these
+  tables. The repository does not include migration scripts beyond the
+  `migrations/` folder and standard Alembic layout.
+
+## Docker Overview
+
+- `docker-compose.yml` composes the primary services used in local dev:
+  - `postgres` (with pgvector)
+  - `backend` (FastAPI Python service)
+  - `appointment` (Go reference service)
+- `docker-compose.checks.yml` is provided for CI-like checks and runs tests
+  inside a reproducible image.
+- Volumes: Postgres data volume is defined in the compose file for persistence
+  between runs (see the compose file for exact names).
+
+## Environment Variables
 
 Required:
-```env
-NVIDIA_API_KEY=nvapi-...
-```
+- `NVIDIA_API_KEY` — NVIDIA NIM API key used for LLM and embedding calls.
 
-Optional (defaults shown):
-```env
-NVIDIA_MODEL=meta/llama-3.1-8b-instruct   # swap to 70b for richer replies
-NVIDIA_EMBED_MODEL=nvidia/nv-embedqa-e5-v5
-NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=allyai
-POSTGRES_USER=allyai
-POSTGRES_PASSWORD=allyai
-```
+Common optional overrides (have defaults in code or `.env.example`):
+- `NVIDIA_MODEL`, `NVIDIA_EMBED_MODEL`, `NVIDIA_BASE_URL`,
+- `POSTGRES_*` connection variables
 
-### 2. Install Python deps
+## Current Features
 
-```powershell
-pip install -r backend\requirements.txt
-```
+  responses, and grounding rules.
 
-### 3. Start Postgres (pgvector)
+## Patient Registration (Phase 1B)
+- A backend-backed patient registration endpoint `/register` was added. The
+  endpoint validates required fields, generates a permanent `patient_id`,
+  persists the patient profile in Postgres (`users` table), creates an
+  initial session, and returns the `patient_id` and `session_id` to the
+- Patient ID format: `PAT-<YEAR>-XXXXXX` (example: `PAT-2026-000001`). IDs are
+- Frontend signup (`frontend/app/signup/page.tsx`) now calls the backend
+## Patient Registration (Phase 1B Revision)
 
-```powershell
-docker compose up -d postgres
-```
+- The registration flow has been revised to make `Patient` the root identity
+  and to remove any login or authentication steps. The intended flow is:
 
-### 4. (One-time) Build the RAG knowledge base
+  Landing Page
 
-The PDF is already at `knowledge/general_physician/who_dcm_vol2.pdf`. To
-populate `knowledge_chunks` in pgvector:
+  ↓
 
-```powershell
-python -m backend.ingest.extract_pdf "knowledge/general_physician/who_dcm_vol2.pdf" "knowledge\_pages.jsonl"
-python -m backend.ingest.chunker "knowledge\_pages.jsonl" "knowledge\_chunks.jsonl"
-python -m backend.ingest.embed_store "knowledge\_chunks.jsonl" "general"
-Remove-Item "knowledge\_pages.jsonl","knowledge\_chunks.jsonl"
-```
+  Patient Registration
 
-Expected: `inserted 1027 chunks for 'general'` (a few outliers exceed the
-512-token embed limit and are skipped - typically TOC/index pages).
+  ↓
 
-Verify:
-```powershell
-docker exec ally_ai-postgres-1 psql -U allyai -d allyai -c "SELECT COUNT(*) FROM knowledge_chunks;"
-```
+  Patient Created
 
-### 5. Start the backend
+  ↓
 
-Two options - choose one:
+  Session Initialized
 
-**Option A - Full docker compose** (mirrors production):
-```powershell
-docker compose up -d --build
-docker compose logs -f backend
-```
+  ↓
 
-**Option B - Local Python backend + Docker Postgres** (faster iteration):
-```powershell
-# terminal 1
-docker compose up -d postgres
-$env:PYTHONPATH = "."
-python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+  Ally (Receptionist)
 
-# terminal 2
-$env:PYTHONPATH = "."
-python chat_cli.py
-```
+  ↓
 
-### 6. Chat
+  Doctor Selection
 
-```powershell
-$env:PYTHONPATH = "."
-python chat_cli.py
-```
+- No login, authentication, or dashboard is used. Registration is the only
+  entry point.
 
-Suggested test symptoms:
-- *"fever, cough and difficulty breathing for 3 days, severe headache"*
-- *"sharp chest pain on the left side when I breathe in, started yesterday"*
-- *"watery diarrhea for 2 days with mild stomach cramps"*
+- The backend `/register` endpoint now:
+  - Accepts only identity fields (name, age, gender, phone, city, consent).
+  - Generates an internal UUID-backed session id (distinct from the patient id).
+  - Generates a human-readable `patient_id` of the form `PAT-<YEAR>-XXXXXX`.
+  - Persists the patient record in Postgres (`users` table) and creates an
+    initial `sessions` row linking the session to the patient.
 
-## Configuration knobs
+- Frontend `signup` now posts only identity info, initializes the session,
+  and opens the Ally conversation directly (no login). Session identifiers
+  are stored transiently in `sessionStorage` (not permanent `localStorage`).
+  registration API and stores the returned `patientId` in local storage.
 
-| Env var | Default | Purpose |
-|---|---|---|
-| `NVIDIA_API_KEY` | - | Required. NVIDIA NIM auth. |
-| `NVIDIA_MODEL` | `meta/llama-3.1-8b-instruct` | Chat model. Use `meta/llama-3.1-70b-instruct` for richer replies (slower). |
-| `NVIDIA_EMBED_MODEL` | `nvidia/nv-embedqa-e5-v5` | Embedding model. Asymmetric - requires `input_type` per request. |
-| `NVIDIA_BASE_URL` | `https://integrate.api.nvidia.com/v1` | NIM endpoint. |
+## Current Limitations
+  routing is to the General Physician.
+- Lab services are stubbed and do not represent real lab integrations.
+- No authentication or user management; sessions are identified by `user_id`
+  for demonstration only.
 
-## WebSocket protocol (summary)
+## Shared Notification Framework
 
-Server -> client `WSEvent` types:
-- `text` - complete message (`{content, from?}`)
-- `text_delta` - streaming token chunk (`{delta, from}`) - doctor turns only
-- `thinking` - heartbeat so client knows the server is working (`{content}`)
-- `doctor_select` / `slot_select` / `lab_notification` - domain events
-- `report_ready` - session complete
+- A canonical internal notification model is available in `backend/models/notification.py`.
+- The model carries `notification_id`, `patient_id`, `internal_uuid`,
+  `appointment_id`, `consultation_context_id`, `department`, `doctor`,
+  `notification_type`, `title`, `message`, `metadata`, `status`,
+  `created_at`, `read_at`, and `version`.
+- Supported statuses are `PENDING`, `DELIVERED`, `READ`, and `FAILED`.
+- Supported types are `APPOINTMENT`, `LAB`, `REPORT`, `CONSULTATION`, and
+  `GENERAL`.
+- Persistence helpers in `backend/general_physician/db/pgvector_tracker.py`
+  add `create_notification()`, `get_notifications()`, and `mark_read()`
+  using the existing Postgres-backed storage layer.
+- The current workflow is accepted lab -> create persisted notification -> stop.
+  No delivery path, WebSocket push, email, SMS, or frontend implementation is
+  included in this phase.
 
-Client -> server `ClientEvent` types:
-- `text` - `{content}` (anything not a structured choice)
-- `select` - `{target, id}` (slot) or `{target, decision}` (lab)
+## Patient Timeline & Longitudinal History
 
-See `backend/models/session_state.py` for the Pydantic shapes.
+- A canonical patient timeline model is available in `backend/models/timeline.py`.
+- The timeline is the permanent longitudinal medical history for the patient,
+  separate from conversation memory, OKF, or RAG retrieval.
+- The top-level timeline carries `timeline_id`, `patient_id`, `internal_uuid`,
+  `version`, `created_at`, `updated_at`, and a `history` array.
+- Each history entry contains `entry_id`, `appointment_id`,
+  `consultation_context_id`, `department`, `doctor`, `visit_date`,
+  `chief_complaint`, `clinical_summary`, `assessment`,
+  `recommended_tests`, and `status`.
+- Persistence helpers in `backend/general_physician/db/pgvector_tracker.py`
+  add `get_patient_timeline()`, `append_timeline_entry()`, and
+  `load_patient_history()` using the existing Postgres-backed storage layer.
+- Ownership follows the patient-first model: the patient owns the timeline,
+  and each consultation-derived entry is appended to that shared history for
+  future departments to reuse.
 
-## Known limitations / TODOs
+## Consultation Orchestration (Phase 3)
 
-- Specialist routing (cardiology / neuro / etc.) is a TODO - default is GP.
-- Lab tests are stubbed - no real lab service integration.
+A lightweight consultation handoff has been introduced between the receptionist booking flow and the doctor-ready state. The backend now creates a canonical consultation context as soon as an appointment is confirmed, persists it with the appointment and session identifiers, and exposes the context state through the existing WebSocket handoff payload.
 
-## Checks and tests (Docker-only for CI-style checks)
+- Canonical object: `backend/models/intake.py` defines `ConsultationContext`.
+- Persistence: `backend/general_physician/db/pgvector_tracker.py` stores consultation contexts in a `consultation_contexts` table.
+- Appointment integration: appointment records now carry a `consultation_context_id` reference when available.
+- Lifecycle: consultation status is prepared as `CREATED` and is surfaced as `consultation_status` in the appointment-ready event.
+- Frontend: the appointment panel now displays the selected department and pending consultation status without starting the doctor chat.
 
-This repo supports running tests locally (fast) and running Docker-based checks (CI-like).
+## Known Issues
 
-- Run tests locally (recommended for development):
+- Some large PDF pages can exceed embedding token limits and are skipped
+  during ingest (documented in README ingest steps).
+- This is a prototype — prompts and guardrails are experimental and should
+  not be used for clinical decision-making.
 
-```powershell
-make test
-```
+## Development Roadmap (high level)
 
-- Run checks inside Docker (reproducible image-based checks):
+- Phase 0 — Documentation and architecture lock (this repository state).
+- Phase 1 — Patient Foundation: add persistent patient records and secure
+  authentication.
+- Phase 2 — Specialist routing: enable cardiology and neurology agents.
+- Phase 3 — Lab integration: connect real lab services and improve report
+  fidelity.
 
-```powershell
-make docker-checks
-# or
-docker compose -f docker-compose.checks.yml up --build --abort-on-container-exit --exit-code-from backend-checks
-```
+## Next Recommended Phase
 
-Notes:
-- `docker-compose.checks.yml` builds the backend image (no host volume mounts) and runs the test suite, then exits with the test exit code.
-- Use Docker only for checks to keep local iteration fast and simple.
+Patient Foundation — establish patient data model, secure auth, and stable
+session handling before adding more clinical features.
 
-- Streaming only on doctor turns; receptionist uses non-streaming `chat()`.
-- No persistent auth - any user_id is accepted.
+---
 
-See `docs/BACKEND_PROGRESS.md` for the running changelog and design notes.
+For design notes and progress, see `docs/BACKEND_PROGRESS.md`.
+
+This README was updated as part of Phase 0 documentation work.

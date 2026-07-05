@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
+import asyncio
 
 try:
     from backend.general_physician.graphs import routing_graph
@@ -17,6 +18,7 @@ try:
     from backend.general_physician.models.session_state import ChatRequest, ChatResponse
     from backend.general_physician.ws.router import router as ws_router
     from backend.general_physician.db.pgvector_tracker import init_db, seed_default_user
+    from pydantic import BaseModel, EmailStr, Field, validator
 except ImportError:
     from graphs import routing_graph
     from llm.nvidia_client import chat as nv_chat, ROUTING_MODEL
@@ -123,6 +125,39 @@ async def upload_document(
         "filename": filename,
         "text": extracted[:8000],  # cap at 8k chars to keep prompt size reasonable
     })
+    logging.info("Stored uploaded document for %s (appointment=%s) filename=%s text_len=%d", user_id, appointment_id, filename, len(extracted))
+    # Ensure a session exists for this appointment so messages and knowledge can be tied to it
+    session_id = appointment_id or None
+    file_id = None
+    try:
+        from backend.general_physician.db.pgvector_tracker import (
+            create_session,
+            insert_uploaded_file,
+            mark_uploaded_file_status,
+        )
+        if session_id:
+            create_session(session_id, user_id, current_state="ROUTING")
+        # persist upload metadata
+        snippet = extracted[:1000]
+        file_id = insert_uploaded_file(session_id, user_id, filename, snippet)
+    except Exception:
+        pass
+
+    # Notify connected client that upload was received
+    try:
+        try:
+            from backend.general_physician.ws.router import notify_user_event
+            from backend.general_physician.models.session_state import WSEvent
+        except ImportError:
+            from ws.router import notify_user_event  # type: ignore
+            from models.session_state import WSEvent  # type: ignore
+
+        ev = WSEvent(type="upload_received", payload={"filename": filename, "session_id": session_id, "file_id": file_id})
+        # fire-and-forget: don't block upload
+        import asyncio
+        asyncio.create_task(notify_user_event(user_id, ev))
+    except Exception:
+        pass
 
     # Chunk, embed, and store in pgvector knowledge base
     chunks: list[tuple[int, str]] = []
@@ -166,8 +201,28 @@ async def upload_document(
                     patient_id=user_id,
                 )
             logging.info("Successfully chunked and embedded document %s for user %s (%d chunks)", filename, user_id, len(chunks))
+            # mark uploaded file as indexed
+            try:
+                if file_id is not None:
+                    mark_uploaded_file_status(file_id, "indexed")
+                    try:
+                        from backend.general_physician.ws.router import notify_user_event
+                        from backend.general_physician.models.session_state import WSEvent
+                    except ImportError:
+                        from ws.router import notify_user_event  # type: ignore
+                        from models.session_state import WSEvent  # type: ignore
+                    ev2 = WSEvent(type="upload_indexed", payload={"filename": filename, "session_id": session_id, "file_id": file_id, "chunks": len(chunks)})
+                    import asyncio
+                    asyncio.create_task(notify_user_event(user_id, ev2))
+            except Exception:
+                pass
         except Exception as exc:
             logging.error("RAG pipeline failed for uploaded document: %s", exc, exc_info=True)
+            try:
+                if file_id is not None:
+                    mark_uploaded_file_status(file_id, "failed")
+            except Exception:
+                pass
 
     return {"ok": True, "filename": filename, "text_length": len(extracted)}
 
@@ -187,6 +242,20 @@ def download_report(report_id: str) -> FileResponse:
     )
 
 
+@app.get("/uploaded-files/{user_id}/{appointment_id}")
+def list_uploaded_files(user_id: str, appointment_id: str):
+    try:
+        from backend.general_physician.db.pgvector_tracker import get_uploaded_files_for_session
+    except ImportError:
+        from db.pgvector_tracker import get_uploaded_files_for_session  # type: ignore
+
+    try:
+        files = get_uploaded_files_for_session(appointment_id)
+        return {"ok": True, "files": files}
+    except Exception:
+        return {"ok": False, "files": []}
+
+
 @app.get("/nv-test")
 def nv_test() -> dict:
     try:
@@ -197,6 +266,58 @@ def nv_test() -> dict:
         return {"status": "ok", "model": ROUTING_MODEL, "response": msg}
     except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+
+@app.post("/internal/report_ready")
+async def internal_report_ready(payload: dict = Body(...)) -> dict:
+    """Internal webhook for lab services to notify that a report is ready.
+
+    Expects keys: report_id, appointment_id, user_id, download_url, report_url, doctor, tests
+    """
+    try:
+        # Best-effort persist notification (non-blocking failures should not fail the request)
+        try:
+            from backend.general_physician.db.pgvector_tracker import create_notification
+        except Exception:
+            from db.pgvector_tracker import create_notification  # type: ignore
+
+        notif = {
+            "notification_id": f"report:{payload.get('report_id')}",
+            "patient_id": payload.get("user_id") or payload.get("patient_id"),
+            "appointment_id": payload.get("appointment_id"),
+            "notification_type": "REPORT",
+            "title": "Lab report ready",
+            "message": "Your lab report is ready to view.",
+            "metadata": {"report_id": payload.get("report_id"), "download_url": payload.get("download_url"), "report_url": payload.get("report_url")},
+            "status": "PENDING",
+        }
+        try:
+            create_notification(notif)
+        except Exception:
+            pass
+
+        # notify user over websocket if connected
+        try:
+            from backend.general_physician.ws.router import notify_user_event
+            from backend.general_physician.models.session_state import WSEvent
+        except Exception:
+            from ws.router import notify_user_event  # type: ignore
+            from models.session_state import WSEvent  # type: ignore
+
+        user = payload.get("user_id") or payload.get("patient_id")
+        if user:
+            ev = WSEvent(type="report_ready", payload={
+                "report_id": payload.get("report_id"),
+                "report_url": payload.get("report_url"),
+                "download_url": payload.get("download_url"),
+                "tests": payload.get("tests"),
+                "doctor": payload.get("doctor"),
+            })
+            asyncio.create_task(notify_user_event(str(user), ev))
+    except Exception:
+        pass
+    return {"ok": True}
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -228,4 +349,66 @@ def chat_endpoint(req: ChatRequest = Body(...)) -> ChatResponse:
         slots=slots,
         routing={"doctor_id": state.selected_doctor} if state.selected_doctor else None,
     )
+
+
+
+class RegistrationRequest(BaseModel):
+    name: str = Field(..., min_length=2)
+    age: int | None = None
+    gender: str | None = None
+    phone: str
+    email: EmailStr | None = None
+    city: str | None = None
+    emergency_contact: str | None = None
+    consent: bool = False
+    # client-side migration helpers removed for simplicity
+
+    @validator("phone")
+    def phone_must_look_valid(cls, v: str) -> str:  # simple validation
+        s = v.strip()
+        if len(s) < 7 or len(s) > 30:
+            raise ValueError("phone looks invalid")
+        return s
+
+
+@app.post("/register")
+def register(req: RegistrationRequest = Body(...)) -> dict:
+    """Register a new patient, create a session, and return the permanent Patient ID.
+
+    The endpoint will attempt to migrate any client-side artifacts identified
+    by `client_user_id` into the newly created patient record.
+    """
+    try:
+        from backend.general_physician.db.pgvector_tracker import (
+            create_patient,
+            create_session,
+        )
+    except ImportError:
+        from db.pgvector_tracker import create_patient, create_session  # type: ignore
+
+    # Validate consent
+    if not req.consent:
+        raise HTTPException(status_code=422, detail="Consent is required to register")
+
+    # Create patient
+    patient_id = create_patient(
+        name=req.name.strip(),
+        age=req.age,
+        phone=req.phone.strip(),
+        email=str(req.email) if req.email else None,
+        city=req.city,
+        emergency_contact=req.emergency_contact,
+        consent=req.consent,
+    )
+
+    # Create a distinct session for this patient (session != patient id)
+    import uuid
+    session_id = f"sess-{uuid.uuid4()}"
+    try:
+        create_session(session_id, patient_id, current_state="ROUTING")
+    except Exception:
+        # non-fatal if DB unavailable
+        pass
+
+    return {"ok": True, "patient_id": patient_id, "session_id": session_id}
 

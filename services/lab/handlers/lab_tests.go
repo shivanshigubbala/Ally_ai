@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -261,13 +262,21 @@ func UpdateLabTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ----------------------------------------------------
-	// Auto-generate report when all tests are completed
+	// Auto-generate report when a test is completed
 	// ----------------------------------------------------
 	if strings.EqualFold(test.Status, "completed") {
 		appointmentService := service.AppointmentReportService{}
-		err := appointmentService.ProcessAppointment(
+		err := appointmentService.ProcessCompletedWorkItem(
+			fmt.Sprintf("labreq:%d", test.AppointmentID),
+			"",
+			"",
+			0,
+			"",
+			"",
+			"",
 			test.AppointmentID,
-			test.UserID,
+			"",
+			test.Name,
 		)
 		if err != nil {
 			log.Println("Report Generation Error:", err)

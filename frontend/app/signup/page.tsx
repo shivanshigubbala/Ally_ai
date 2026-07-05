@@ -188,34 +188,40 @@ function YesNoRow({
 export default function SignupPage() {
   const router = useRouter();
   const [form, setForm] = useState<PatientProfile>(EMPTY_PROFILE);
-  const [assessment, setAssessment] = useState<HealthAssessment>(EMPTY_ASSESSMENT);
   const [error, setError] = useState("");
-
-  const selectedCount = useMemo(
-    () => Object.values(assessment).filter(Boolean).length,
-    [assessment]
-  );
+  const [consent, setConsent] = useState(false);
 
   const set = (key: keyof PatientProfile) => (value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  const setAssessmentValue = (key: AssessmentKey, value: boolean) =>
-    setAssessment((prev) => ({ ...prev, [key]: value }));
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!form.name.trim() || !form.email.trim() || !form.gender.trim()) {
-      setError("Please fill in your full name, email, and gender to continue.");
+    if (!form.name.trim() || !form.phone.trim() || !form.gender.trim()) {
+      setError("Please fill in your full name, phone, and gender to continue.");
       return;
     }
 
-    saveProfile({
-      ...form,
-      healthAssessment: assessment,
-    });
+    if (!consent) {
+      setError("Consent for AI consultation is required to register.");
+      return;
+    }
 
-    router.push(`/login?email=${encodeURIComponent(form.email.trim())}`);
+    setError("");
+    // lazy import to avoid server-side issues
+    try {
+      const { registerProfile } = await import("@/lib/patient");
+      const payload = { ...form };
+      const res = await registerProfile(payload as any);
+      if (!res.ok) {
+        setError(res.error || "Registration failed");
+        return;
+      }
+      // After registration, initialize session and open Ally directly (no login)
+      router.push(`/chat`);
+    } catch (err: any) {
+      setError(String(err));
+    }
   };
 
   return (
@@ -237,8 +243,8 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="space-y-6 p-5 sm:p-8">
             <section>
               <SectionTitle
-                title="Additional Information"
-                subtitle="These details help Ally keep your profile consistent across login and chat."
+                title="Register"
+                subtitle="Provide basic identity details to start a consultation with Ally. No login or password required."
               />
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <TextField label="Full Name" value={form.name} onChange={set("name")} placeholder="Rohan Kapoor" />
@@ -251,15 +257,14 @@ export default function SignupPage() {
                   options={["Male", "Female", "Other"]}
                 />
                 <TextField label="Phone Number" value={form.phone} onChange={set("phone")} placeholder="+91 98765 43210" />
-                <SelectField
-                  label="Blood Group"
+                <TextField
+                  label="City"
                   value={form.bloodGroup || ""}
                   onChange={set("bloodGroup")}
-                  placeholder="Select blood group"
-                  options={["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]}
+                  placeholder="City"
                 />
                 <TextField
-                  label="Email"
+                  label="Email (optional)"
                   value={form.email}
                   onChange={set("email")}
                   placeholder="rohan@example.com"
@@ -269,46 +274,12 @@ export default function SignupPage() {
             </section>
 
             <section>
-              <SectionTitle
-                title={`Health Assessment`}
-                subtitle={`Use Yes / No checkboxes for each. ${selectedCount}/7 answered.`}
-              />
-              <div className="grid gap-3 md:grid-cols-2">
-                {ASSESSMENT_QUESTIONS.map((question) => (
-                  <YesNoRow
-                    key={question.key}
-                    label={question.label}
-                    value={assessment[question.key]}
-                    onChange={(next) => setAssessmentValue(question.key, next)}
-                  />
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <SectionTitle
-                title="Medical History"
-                subtitle="Add any extra details Ally should remember."
-              />
-              <div className="grid gap-4 lg:grid-cols-3">
-                <TextAreaField
-                  label="Known Allergies"
-                  value={form.allergies}
-                  onChange={set("allergies")}
-                  placeholder="e.g. penicillin, pollen, peanuts"
-                />
-                <TextAreaField
-                  label="Current Medications"
-                  value={form.medications}
-                  onChange={set("medications")}
-                  placeholder="e.g. metformin 500mg, aspirin"
-                />
-                <TextAreaField
-                  label="Past Medical Conditions"
-                  value={form.conditions}
-                  onChange={set("conditions")}
-                  placeholder="e.g. hypertension, diabetes, asthma"
-                />
+              <SectionTitle title="Consent" subtitle="Required to proceed with AI-powered consultation." />
+              <div className="flex items-start gap-3">
+                <input id="consent" type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                <label htmlFor="consent" className="text-sm text-slate-700">
+                  I consent to using Ally AI for conversational triage and understand this is a prototype.
+                </label>
               </div>
             </section>
 

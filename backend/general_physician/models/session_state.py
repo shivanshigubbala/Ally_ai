@@ -21,6 +21,8 @@ WSEventType = Literal[
     "lab_notification",
     "report_ready",
     "doctor_ready",
+    "upload_received",
+    "upload_indexed",
     "emergency_alert",
     "consultation_chart",
 ]
@@ -100,6 +102,12 @@ class RoutingState(BaseModel):
     visit_summary: str = ""
     uploaded_documents: list[dict[str, Any]] = Field(default_factory=list)
     conversation_summary: str = ""
+    consultation_context_id: str | None = None
+    consultation_status: str = "CREATED"
+    intake_summary: dict[str, str] = Field(default_factory=dict)
+    recommended_department: str | None = None
+    department_confidence: float | None = None
+    canonical_intake: Any | None = None
 
 
 # ---- DoctorGraph state --------------------------------------------------------
@@ -132,6 +140,10 @@ class DoctorState(BaseModel):
     lab_tests_recommended: bool = False
     tests_list: list[dict[str, str]] = Field(default_factory=list)
     user_lab_decision: Literal["accept", "reject", "pending"] = "pending"
+    recommendation_status: str = "PENDING"
+    lab_request_status: str = "NOT_REQUESTED"
+    lab_request_created_at: str | None = None
+    lab_request_payload: dict[str, Any] = Field(default_factory=dict)
     pending_event: dict[str, Any] | None = None
     symptom_summary: str = ""
     consecutive_negatives: int = 0
@@ -143,4 +155,9 @@ class DoctorState(BaseModel):
     visit_summary: str = ""
     uploaded_documents: list[dict[str, Any]] = Field(default_factory=list)
     conversation_summary: str = ""
+    consultation_context_id: str | None = None
+    consultation_status: str = "CREATED"
+    consultation_summary: dict[str, Any] = Field(default_factory=dict)
+    consultation_recommendations: list[dict[str, str]] = Field(default_factory=list)
+    follow_up_allowed: bool = False
 

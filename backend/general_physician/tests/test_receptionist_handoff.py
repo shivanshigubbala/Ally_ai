@@ -59,6 +59,29 @@ def test_receptionist_handles_missing_patient_id() -> None:
     assert state.current_complaint == "chest pain"
 
 
+def test_receptionist_emits_canonical_intake_contract() -> None:
+    routing_graph.reset_state("canonical_intake")
+
+    with patch("backend.general_physician.graphs.routing_graph.nv_chat") as mock_chat:
+        mock_chat.return_value = '{"department": "cardiology", "confidence": 0.94}'
+        state, events = routing_graph.run_step(
+            "canonical_intake",
+            "I have chest pain and palpitations",
+            None,
+        )
+
+    assert state.recommended_department == "cardiology"
+    assert state.department_confidence == 0.94
+    assert state.canonical_intake.recommended_department == "cardiology"
+    assert state.canonical_intake.confidence_score == 0.94
+    assert state.canonical_intake.version == 1
+    assert state.canonical_intake.chief_complaint == "chest pain"
+    assert any(
+        e.type == "doctor_select" and e.payload.get("canonical_intake")
+        for e in events
+    )
+
+
 def test_receptionist_full_booking_flow() -> None:
     """Simulate the full receptionist flow and verify DONE state + appointment_id."""
     routing_graph.reset_state("handoff_test")

@@ -19,6 +19,7 @@ const WS_BASE =
 const HTTP_BASE = WS_BASE.replace(/^wss?:/, (match) =>
   match === "wss:" ? "https:" : "http:"
 );
+const CHAT_STATE_KEY_PREFIX = "ally_chat_state";
 
 function newId(): string {
   return Math.random().toString(36).slice(2, 10);
@@ -110,6 +111,28 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
       setDoctorThinking(null);
 
       switch (evt.type) {
+        case "upload_received": {
+          const filename = (evt.payload.filename as string) || "file";
+          pushInbox({
+            kind: "upload_received",
+            title: "File uploaded",
+            body: `Received ${filename}. Processing for the doctor.`,
+            decision: "pending",
+          });
+          break;
+        }
+
+        case "upload_indexed": {
+          const filename = (evt.payload.filename as string) || "file";
+          pushInbox({
+            kind: "upload_indexed",
+            title: "File ready",
+            body: `${filename} is indexed and ready for the doctor.`,
+            decision: "accepted",
+          });
+          break;
+        }
+
         case "thinking": {
           const content = (evt.payload.content as string) || "";
           if (/doctor|dr\.?\s+/i.test(content) || consultationActiveRef.current) {
@@ -208,6 +231,9 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
 
         case "doctor_select": {
           const options = (evt.payload.options as Array<{id:string;name:string;department_id:string}>) || [];
+          const recommendedDepartment = (evt.payload.recommended_department as string | undefined) || undefined;
+          const departmentConfidence = (evt.payload.department_confidence as number | undefined) || undefined;
+          const intakeSummary = (evt.payload.intake_summary as string | undefined) || undefined;
           setCards((prev) => {
             const existing = prev.find((c) => c.kind === "doctor_select" && !c.resolved);
             if (existing) {
@@ -223,6 +249,9 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
                 id: newId(),
                 kind: "doctor_select",
                 doctors: options,
+                recommendedDepartment,
+                departmentConfidence,
+                intakeSummary,
               },
             ];
           });
@@ -232,6 +261,9 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
         case "slot_select": {
           const options = (evt.payload.options as Slot[]) || [];
           const docName = evt.payload.doctor_name as string | undefined;
+          const recommendedDepartment = (evt.payload.recommended_department as string | undefined) || undefined;
+          const departmentConfidence = (evt.payload.department_confidence as number | undefined) || undefined;
+          const intakeSummary = (evt.payload.intake_summary as string | undefined) || undefined;
           if (docName) {
             doctorNameRef.current = docName;
             setDoctorName(docName);
@@ -254,6 +286,9 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
                 kind: "slot_select",
                 slots: options,
                 doctorName: docName,
+                recommendedDepartment,
+                departmentConfidence,
+                intakeSummary,
               },
             ];
           });
@@ -264,7 +299,9 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
           const appointmentId = evt.payload.appointment_id as string;
           const docName = (evt.payload.doctor_name as string) || doctorNameRef.current || "Dr. Shankar";
           const doctorId = (evt.payload.doctor_id as string) || "";
-          setDoctorReady({ appointmentId, doctorName: docName, doctorId });
+          const department = (evt.payload.department as string) || undefined;
+          const consultationStatus = (evt.payload.consultation_status as string) || "CREATED";
+          setDoctorReady({ appointmentId, doctorName: docName, doctorId, department, consultationStatus });
           setDoctorName(docName);
           setAppointmentBooked(true);
           setAppointmentPending(false);
@@ -371,12 +408,15 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
             doctorNameRef.current ||
             "your doctor";
           const tests = (evt.payload.tests as { name: string; reason: string }[]) || [];
-          const reportUrl =
-            (evt.payload.report_url as string) ||
-            `${HTTP_BASE}/reports/${encodeURIComponent(reportId)}`;
-          const normalizedReportUrl = reportUrl.startsWith("/")
-            ? `${HTTP_BASE}${reportUrl}`
-            : reportUrl;
+
+          // Accept either explicit URLs or the older /reports/download?id= style.
+          let reportUrl = (evt.payload.report_url as string) || (evt.payload.download_url as string) || "";
+          if (!reportUrl) {
+            // fallback: prefer path-style, but also accept numeric/opaque ids
+            reportUrl = `${HTTP_BASE}/reports/${encodeURIComponent(reportId)}`;
+          }
+          const normalizedReportUrl = reportUrl.startsWith("/") ? `${HTTP_BASE}${reportUrl}` : reportUrl;
+
           setReports((prev) => [
             {
               id: reportId,
@@ -408,6 +448,53 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
     },
     [pushInbox]
   );
+
+  useEffect(() => {
+    if (!userId || typeof window === "undefined") return;
+    try {
+      const raw = window.sessionStorage.getItem(`${CHAT_STATE_KEY_PREFIX}:${userId}`);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<{
+        appointmentBooked: boolean;
+        doctorReady: DoctorReadyInfo | null;
+        consultationActive: boolean;
+        consultationChart: string | null;
+      }>;
+      if (saved.appointmentBooked) {
+        setAppointmentBooked(true);
+        appointmentBookedRef.current = true;
+      }
+      if (saved.doctorReady) {
+        setDoctorReady(saved.doctorReady);
+      }
+      if (typeof saved.consultationActive === "boolean") {
+        setConsultationActive(saved.consultationActive);
+        consultationActiveRef.current = saved.consultationActive;
+      }
+      if (typeof saved.consultationChart === "string") {
+        setConsultationChart(saved.consultationChart);
+      }
+    } catch {
+      // ignore malformed persisted state
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(
+        `${CHAT_STATE_KEY_PREFIX}:${userId}`,
+        JSON.stringify({
+          appointmentBooked,
+          doctorReady,
+          consultationActive,
+          consultationChart,
+        })
+      );
+    } catch {
+      // ignore storage failures
+    }
+  }, [appointmentBooked, consultationActive, consultationChart, doctorReady, userId]);
 
   const connectWebSocket = useCallback(() => {
     if (!userId) return;
@@ -450,7 +537,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
         const evt = JSON.parse(event.data) as WSEvent;
         handleEvent(evt);
       } catch {
-        // Ignore malformed frames.
+        // Ignore malformed frames
       }
     };
   }, [handleEvent, userId]);
@@ -483,8 +570,6 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
       if (userId) {
         pendingEventsRef.current.push(evt);
         connectWebSocket();
-      } else {
-        console.warn("WebSocket unavailable, event queued but userId is missing", evt);
       }
     },
     [connectWebSocket, userId]

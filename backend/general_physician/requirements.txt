@@ -4,6 +4,7 @@ uvicorn[standard]
 ollama
 python-dotenv
 pydantic
+email-validator
 langgraph
 websockets
 requests

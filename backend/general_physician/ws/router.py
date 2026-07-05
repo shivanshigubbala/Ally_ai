@@ -9,6 +9,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 try:
     from backend.general_physician.graphs import routing_graph
+    from backend.specialties.dispatcher import resolve_specialty
     from backend.general_physician import (
         DOCTOR_ID,
         step as gp_step,
@@ -17,6 +18,7 @@ try:
     from backend.general_physician.services import local_store as store
 except ImportError:
     from graphs import routing_graph
+    from specialties.dispatcher import resolve_specialty
     from general_physician import (
         DOCTOR_ID,
         step as gp_step,
@@ -25,26 +27,16 @@ except ImportError:
     from services import local_store as store
 
 
-# Department -> doctor-graph step function. Add new specialties here.
-_DOCTOR_STEP_BY_DEPARTMENT = {
-    "general": gp_step,
-}
-_DOCTOR_STEP_BY_ID = {
-    DOCTOR_ID: gp_step,
-}
-
-
 def _resolve_doctor_step(appointment_id: str):
-    """Pick the right doctor graph's step() for this appointment's department/doctor."""
-    apt = store.get_appointment(appointment_id)
-    if apt:
-        fn = _DOCTOR_STEP_BY_DEPARTMENT.get(apt.get("department"))
-        if fn:
-            return fn
-        fn = _DOCTOR_STEP_BY_ID.get(apt.get("doctor_id"))
-        if fn:
-            return fn
-    return gp_step
+    """Resolve the appointment's specialty implementation through the shared dispatcher."""
+    apt = store.get_appointment(appointment_id) or {}
+    department = apt.get("department") or "general"
+    consultation_context = {
+        "selected_department": department,
+        "department": department,
+    }
+    specialty = resolve_specialty(consultation_context)
+    return specialty.run_consultation
 
 
 logger = logging.getLogger(__name__)
@@ -56,10 +48,22 @@ _user_state: dict[str, str] = {}
 _doctor_sessions: dict[str, str] = {}
 # Stores extracted document text per "user_id:appointment_id" key
 _doc_store: dict[str, list[dict]] = {}
+# Active WebSocket connections by user_id
+_connections: dict[str, WebSocket] = {}
 
 
 async def _send(ws: WebSocket, event: WSEvent) -> None:
     await ws.send_text(event.model_dump_json())
+
+
+async def notify_user_event(user_id: str, event: WSEvent) -> None:
+    ws = _connections.get(user_id)
+    if not ws:
+        return
+    try:
+        await _send(ws, event)
+    except Exception:
+        logger.exception("Failed to notify user %s", user_id)
 
 
 async def _generate_and_send_chart_delayed(
@@ -197,17 +201,44 @@ async def _handle_start_consultation(ws: WebSocket, user_id: str,
         return
 
     _doctor_sessions[user_id] = appointment_id
+    logger.info("Start consultation requested: user=%s appointment=%s", user_id, appointment_id)
 
     # Docs stay in _doc_store — agent.py's step() picks them up when creating
     # the initial DoctorState, avoiding Pydantic validation issues.
 
     # Kick off the session init (first doctor message).
+    # If DB is available, check uploaded_files for this session and block
+    # starting the doctor until all files are indexed.
+    try:
+        from backend.general_physician.db.pgvector_tracker import get_uploaded_files_for_session
+    except Exception:
+        try:
+            from db.pgvector_tracker import get_uploaded_files_for_session  # type: ignore
+        except Exception:
+            get_uploaded_files_for_session = None
+
+    if get_uploaded_files_for_session:
+        try:
+            files = get_uploaded_files_for_session(appointment_id)
+            pending = [f for f in files if (f.get("status") or "") != "indexed"]
+            if pending:
+                await _send(ws, WSEvent(type="text", payload={
+                    "content": "We are processing your uploaded documents. Please wait a moment and try starting the consultation again.",
+                }))
+                # leave _doctor_sessions set but do not start doctor graph
+                return
+        except Exception:
+            # if check fails, proceed to start doctor to avoid blocking unnecessarily
+            pass
+
     await _drive_doctor(ws, user_id, appointment_id, None, None)
 
 
 @router.websocket("/ws/{user_id}")
 async def ws_endpoint(ws: WebSocket, user_id: str) -> None:
     await ws.accept()
+    # register connection
+    _connections[user_id] = ws
     if not routing_graph.has_in_progress_booking(user_id):
         routing_graph.reset_state(user_id)
         _user_state[user_id] = "ROUTING"
@@ -293,4 +324,6 @@ async def ws_endpoint(ws: WebSocket, user_id: str) -> None:
     except WebSocketDisconnect:
         if user_id in _doctor_sessions:
             del _doctor_sessions[user_id]
+        if user_id in _connections:
+            del _connections[user_id]
         return
