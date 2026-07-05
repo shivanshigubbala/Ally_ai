@@ -34,6 +34,8 @@ func main() {
 	http.HandleFunc("/lab-tests", handlers.CreateLabTest)
 	http.HandleFunc("/lab-test", handlers.GetLabTest)
 	http.HandleFunc("/lab-test/update", handlers.UpdateLabTest)
+	http.HandleFunc("/lab-history", handlers.GetUserLabHistory)
+	http.HandleFunc("/user-tests", handlers.GetUserTests)
 	http.HandleFunc("/users/history", handlers.GetUserLabHistory)
 	http.HandleFunc("/users/tests", handlers.GetUserTests)
 

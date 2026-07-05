@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/shivanshigubbala/Ally_ai/services/lab/database"
+	"github.com/shivanshigubbala/Ally_ai/services/lab/repository"
 	"github.com/shivanshigubbala/Ally_ai/services/lab/service"
 )
 
@@ -141,6 +141,11 @@ func CreateLabTest(w http.ResponseWriter, r *http.Request) {
 
 func GetLabTest(w http.ResponseWriter, r *http.Request) {
 
+	if r.Method == http.MethodPatch {
+		UpdateLabTest(w, r)
+		return
+	}
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -265,21 +270,15 @@ func UpdateLabTest(w http.ResponseWriter, r *http.Request) {
 	// Auto-generate report when a test is completed
 	// ----------------------------------------------------
 	if strings.EqualFold(test.Status, "completed") {
-		appointmentService := service.AppointmentReportService{}
-		err := appointmentService.ProcessCompletedWorkItem(
-			fmt.Sprintf("labreq:%d", test.AppointmentID),
-			"",
-			"",
-			0,
-			"",
-			"",
-			"",
-			test.AppointmentID,
-			"",
-			test.Name,
-		)
+		completed, err := repository.AreAllTestsCompleted(test.AppointmentID)
 		if err != nil {
-			log.Println("Report Generation Error:", err)
+			log.Println("Report completion check error:", err)
+		} else if completed {
+			appointmentService := service.AppointmentReportService{}
+			err := appointmentService.ProcessAppointment(test.AppointmentID, test.UserID)
+			if err != nil {
+				log.Println("Report Generation Error:", err)
+			}
 		}
 	}
 
