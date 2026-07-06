@@ -23,5 +23,5 @@ def get_department_config(department: str | None = None) -> dict[str, Any]:
         "is_cardiology": True,
         "is_neurology": False,
         "llm_provider": os.getenv("LLM_PROVIDER", "nvidia").strip().lower() or "nvidia",
-        "llm_model": os.getenv("NVIDIA_MODEL", "meta/llama-2-8b").strip() or "meta/llama-2-8b",
+        "llm_model": os.getenv("NVIDIA_MODEL", "meta/llama-3.1-8b-instruct").strip() or "meta/llama-3.1-8b-instruct",
     }

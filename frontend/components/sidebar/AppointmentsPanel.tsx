@@ -393,7 +393,9 @@ export default function AppointmentsPanel({
 
   // Reset upload step whenever a new appointment becomes ready
   useEffect(() => {
-    if (doctorReady) setUploadStepDone(false);
+    if (doctorReady) {
+      setUploadStepDone(false);
+    }
   }, [doctorReady?.appointmentId]);
 
   const renderConsultationChart = () => {
@@ -422,39 +424,15 @@ export default function AppointmentsPanel({
     );
   };
 
-  if (consultationActive) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
-        <div className="mb-5">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-            Consultation with {doctorName || "Dr. Shankar"}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Use the message box below to continue the live doctor conversation.
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          <DoctorChat
-            messages={doctorMessages}
-            thinking={doctorThinking}
-            onSend={onSendDoctorMessage}
-            disabled={hasPendingTests}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Show PreConsultationUpload or Start Consultation when doctor is ready
-  if (doctorReady) {
+  // Show the pre-consultation choice card before the consultation begins.
+  if (doctorReady && !consultationActive) {
     if (!uploadStepDone) {
       return (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
           <PreConsultationUpload
             doctorReady={doctorReady}
             userId={userId}
-            onProceed={(files) => {
+            onProceed={() => {
               setUploadStepDone(true);
               onStartConsultation();
             }}
@@ -489,7 +467,10 @@ export default function AppointmentsPanel({
                 Consultation pending for {doctorReady.department || "your selected department"}. Appointment confirmed. Tap below to begin the consultation.
               </p>
               <button
-                onClick={onStartConsultation}
+                onClick={() => {
+                  setUploadStepDone(true);
+                  onStartConsultation();
+                }}
                 className="mt-4 inline-flex rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5"
               >
                 Start Consultation
@@ -499,6 +480,30 @@ export default function AppointmentsPanel({
         </div>
 
         {renderConsultationChart()}
+      </div>
+    );
+  }
+
+  if (consultationActive) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6 py-6">
+        <div className="mb-5">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+            Consultation with {doctorName || "Dr. Shankar"}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Use the message box below to continue the live doctor conversation.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <DoctorChat
+            messages={doctorMessages}
+            thinking={doctorThinking}
+            onSend={onSendDoctorMessage}
+            disabled={hasPendingTests}
+          />
+        </div>
       </div>
     );
   }

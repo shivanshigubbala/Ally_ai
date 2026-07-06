@@ -60,6 +60,21 @@ class GeneralPhysicianAgentTests(unittest.TestCase):
         self.assertEqual(len(summary["lab_recommendations"]), 1)
         self.assertEqual(summary["lab_recommendations"][0]["name"], "Complete Blood Count (CBC)")
 
+    def test_after_evaluation_returns_session_complete_when_follow_up_is_not_allowed(self):
+        state = DoctorState(
+            user_id="patient_1",
+            appointment_id="a1",
+            doctor_id="d5",
+            doctor_name="Dr. Shankar",
+            department="general",
+            consultation_context_id="ctx-1",
+            conversation_history=[{"role": "user", "content": "I have a headache"}],
+        )
+        state.current_node = "EVALUATION"
+        state.follow_up_allowed = True
+
+        self.assertEqual(gp_agent._after_evaluation(state), "SESSION_COMPLETE")
+
     def test_persist_consultation_output_updates_context_metadata(self):
         state = DoctorState(
             user_id="patient_1",

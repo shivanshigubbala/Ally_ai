@@ -11,6 +11,7 @@ from langgraph.graph import END, StateGraph
 
 from pathlib import Path
 
+from backend.general_physician.agent import GeneralPhysicianSpecialty as _GeneralPhysicianSpecialty
 from backend.specialties.base import BaseSpecialty
 
 logger = logging.getLogger(__name__)
@@ -143,6 +144,43 @@ def build_patient_context(state: DoctorState | Any) -> str:
         sections.append("Conversation Summary\n- No conversation summary available.")
 
     return "\n\n".join(sections)
+
+
+def _resolve_patient_name_from_context(state: DoctorState | Any) -> str | None:
+    for candidate in [
+        getattr(state, "patient_name", None),
+        getattr(state, "patient_reference", None),
+        getattr(state, "patient_id", None),
+    ]:
+        if candidate and str(candidate).strip() and not str(candidate).startswith("PAT-"):
+            return str(candidate).strip()
+
+    try:
+        from backend.shared import appointment_client
+        if appointment_client is not None:
+            appts = appointment_client.get_appointments()
+            for apt in appts:
+                if str(apt.get("patient_id") or apt.get("user_id") or "") == str(getattr(state, "user_id", "")):
+                    patient_name = apt.get("patient") or apt.get("patient_name") or apt.get("name")
+                    if patient_name:
+                        return str(patient_name).strip()
+    except Exception:
+        pass
+
+    try:
+        from backend.db.pgvector_tracker import _conn, HAS_PG
+        if HAS_PG:
+            with _conn() as conn:
+                if conn is not None:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT name FROM users WHERE id=%s", (getattr(state, "user_id", ""),))
+                        row = cur.fetchone()
+                        if row and row[0]:
+                            return str(row[0]).strip()
+    except Exception:
+        pass
+
+    return None
 
 
 def _build_consultation_summary(
@@ -731,6 +769,9 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
     )
     health_data = state.health_data or {}
 
+    if not state.patient_name or state.patient_name.startswith("PAT-") or state.patient_name == state.user_id.replace("_", " ").title():
+        state.patient_name = _resolve_patient_name_from_context(state)
+
     patient_name = state.patient_name or state.user_id.replace("_", " ").title()
     department_context = _get_department_context(state)
     doc_name = state.doctor_name or department_context.get("doctor_name") or "Dr. Octopus"
@@ -960,6 +1001,7 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
             "urgent": urgent,
         }))
         state.current_node = "LAB_NOTIFICATION"
+        state.follow_up_allowed = False
     else:
         closing_message = (
             f"Based on our conversation, {patient_name}, my clinical assessment is that {consultation_summary.get('clinical_assessment', 'the symptoms appear manageable for now')}. "
@@ -970,9 +1012,8 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
             "content": closing_message,
             "from": DOCTOR_ID,
         }))
-        # Allow the patient to ask follow-up questions after the summary
-        # instead of ending the session immediately.
-        state.follow_up_allowed = True
+        state.follow_up_allowed = False
+        state.current_node = "SESSION_COMPLETE"
     return state
 
 
@@ -1140,15 +1181,8 @@ def _after_questioning(state: DoctorState) -> str:
 
 
 def _after_evaluation(state: DoctorState) -> str:
-    # If lab notification was scheduled, transition there.
     if state.current_node == "LAB_NOTIFICATION":
         return "LAB_NOTIFICATION"
-    # If follow-ups are allowed, go back to questioning so the doctor can
-    # continue the consultation; otherwise complete the session.
-    if getattr(state, "follow_up_allowed", False):
-        # reset the flag so follow-up is a single transition window
-        state.follow_up_allowed = False
-        return "QUESTIONING"
     return "SESSION_COMPLETE"
 
 
@@ -1189,6 +1223,15 @@ def build_graph() -> StateGraph:
 
 _checkpointer = MemorySaver()
 _graph = build_graph().compile(checkpointer=_checkpointer)
+
+
+class GeneralPhysicianSpecialty(_GeneralPhysicianSpecialty):
+    """Compatibility adapter for the shared GP workflow inside neurology tests."""
+
+    department = "general"
+
+    def run_consultation(self, user_id: str, appointment_id: str, user_message: str | None = None, pending_event: dict | None = None, **kwargs: Any) -> tuple[DoctorState, list[WSEvent]]:
+        return step(user_id, appointment_id, user_message, pending_event)
 
 
 class NeurologySpecialty(BaseSpecialty):

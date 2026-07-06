@@ -161,3 +161,9 @@ class DoctorState(BaseModel):
     consultation_recommendations: list[dict[str, str]] = Field(default_factory=list)
     follow_up_allowed: bool = False
 
+
+class NeurologyDoctorState(DoctorState):
+    """Compatibility state type for neurology services and tests."""
+
+    pass
+

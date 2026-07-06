@@ -115,30 +115,6 @@ services:
     depends_on:
       - backend
 
-  tester:
-    build:
-      context: .
-      dockerfile: backend/general_physician/Dockerfile
-    volumes:
-      - ./backend:/app/backend
-      - ./knowledge:/app/knowledge
-    env_file:
-      - .env
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: allyai
-      POSTGRES_USER: allyai
-      POSTGRES_PASSWORD: allyai
-    depends_on:
-      postgres:
-        condition: service_healthy
-      appointment:
-        condition: service_started
-      lab:
-        condition: service_started
-    command: pytest -q
-
 volumes:
   pgdata:
   frontend_node_modules:

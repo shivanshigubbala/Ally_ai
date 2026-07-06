@@ -129,6 +129,10 @@ Data consumed / produced
   - `appointment` (Go reference service)
 - `docker-compose.checks.yml` is provided for CI-like checks and runs tests
   inside a reproducible image.
+- Use Docker for tests and service runs unless a specific local-only workflow is
+  explicitly required. The preferred commands are:
+  - `docker compose -f docker-compose.checks.yml up --build --abort-on-container-exit --exit-code-from backend-checks`
+  - `docker compose up --build`
 - Volumes: Postgres data volume is defined in the compose file for persistence
   between runs (see the compose file for exact names).
 

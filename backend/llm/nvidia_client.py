@@ -17,7 +17,7 @@ for env_path in (
         load_dotenv(env_path, override=False)
 
 INVOKE_URL = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1").strip()
-FALLBACK_MODEL = "meta/llama-2-8b"
+FALLBACK_MODEL = "meta/llama-3.1-8b-instruct"
 OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip()
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip()
 

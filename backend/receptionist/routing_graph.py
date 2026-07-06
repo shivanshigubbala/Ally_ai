@@ -1006,7 +1006,7 @@ def run_step(user_id: str, message: str | None, pending_event: dict | None) -> t
     else:
         state = RoutingState(user_id=user_id)
 
-    # Fetch patient's actual name from database if it's currently missing or placeholder
+    # Prefer a real patient name already captured from intake or the appointment flow.
     if not state.patient_name or state.patient_name.startswith("PAT-") or state.patient_name == state.user_id.replace("_", " ").title():
         try:
             from backend.db.pgvector_tracker import _conn, HAS_PG
@@ -1018,6 +1018,20 @@ def run_step(user_id: str, message: str | None, pending_event: dict | None) -> t
                             row = cur.fetchone()
                             if row and row[0]:
                                 state.patient_name = row[0].strip()
+        except Exception:
+            pass
+
+    if not state.patient_name or state.patient_name.startswith("PAT-") or state.patient_name == state.user_id.replace("_", " ").title():
+        try:
+            from backend.shared import appointment_client
+            if appointment_client is not None:
+                appts = appointment_client.get_appointments()
+                for apt in appts:
+                    if str(apt.get("patient_id") or apt.get("user_id") or "") == str(user_id):
+                        patient_name = apt.get("patient") or apt.get("patient_name") or apt.get("name")
+                        if patient_name:
+                            state.patient_name = str(patient_name).strip()
+                            break
         except Exception:
             pass
 
