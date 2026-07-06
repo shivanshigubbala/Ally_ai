@@ -63,12 +63,13 @@ are intended and several clinical features are intentionally stubbed.
 ## AI Agents
 
 - Receptionist agent (routing graph) — located in
-  `backend/graphs/routing_graph.py`. Collects symptoms and offers slots.
-- General Physician agent — `backend/graphs/general_physician_agent.py`.
+  `backend/receptionist/routing_graph.py`. Collects symptoms and offers slots.
+- General Physician agent — `backend/general_physician/agent.py`.
   Uses a retrieval step to inject relevant passages and applies grounding
-  rules via `backend/llm/prompts.py`.
-- Cardiology agent scaffolding exists under `backend/agents/` but is not the
-  default routing target; specialist routing is not yet wired.
+  rules via `backend/general_physician/agent.py` internal prompts.
+- Cardiology agent scaffolding exists under `backend/cardiology/` and
+  `backend/specialties/cardiology/`.
+
 
 How agents communicate
 

@@ -22,7 +22,7 @@ type Test struct {
 type CreateLabTestRequest struct {
 	SessionID     string `json:"session_id"`
 	AppointmentID int    `json:"appointment_id"`
-	UserID        int    `json:"user_id"`
+	UserID        string `json:"user_id"`
 	DoctorID      int    `json:"doctor_id"`
 	Department    string `json:"department"`
 	Tests         []Test `json:"tests"`
@@ -39,7 +39,7 @@ type LabTest struct {
 	LabOrderID    string `json:"lab_order_id"`
 	SessionID     string `json:"session_id"`
 	AppointmentID int    `json:"appointment_id"`
-	UserID        int    `json:"user_id"`
+	UserID        string `json:"user_id"`
 	DoctorID      int    `json:"doctor_id"`
 	Department    string `json:"department"`
 	Name          string `json:"name"`
@@ -77,7 +77,7 @@ func CreateLabTest(w http.ResponseWriter, r *http.Request) {
 
 	if request.SessionID == "" ||
 		request.AppointmentID == 0 ||
-		request.UserID == 0 ||
+		request.UserID == "" ||
 		request.DoctorID == 0 ||
 		request.Department == "" {
 
@@ -107,7 +107,7 @@ func CreateLabTest(w http.ResponseWriter, r *http.Request) {
 				$2,
 				$3,
 				$4,
-				'pending'
+				'completed'
 			)`,
 			request.AppointmentID,
 			request.UserID,
@@ -119,6 +119,12 @@ func CreateLabTest(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+
+	appointmentService := service.AppointmentReportService{}
+	err = appointmentService.ProcessAppointment(request.AppointmentID, request.UserID)
+	if err != nil {
+		log.Println("Auto Report Generation Error:", err)
 	}
 
 	var tests []string
@@ -298,12 +304,6 @@ func GetUserLabHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	numericUserID, err := strconv.Atoi(userID)
-	if err != nil {
-		http.Error(w, "invalid user_id", http.StatusBadRequest)
-		return
-	}
-
 	historyMap := make(map[int]*ConsultationHistory)
 	rows, err := database.DB.Query(
 		context.Background(),
@@ -311,7 +311,7 @@ func GetUserLabHistory(w http.ResponseWriter, r *http.Request) {
 		FROM lab_tests
 		WHERE user_id = $1
 		ORDER BY created_at DESC`,
-		numericUserID,
+		userID,
 	)
 	if err != nil {
 		log.Println("Query Error:", err)
@@ -373,12 +373,6 @@ func GetUserTests(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	numericUserID, err := strconv.Atoi(userID)
-	if err != nil {
-		http.Error(w, "invalid user_id", http.StatusBadRequest)
-		return
-	}
-
 	tests := []LabTest{}
 	rows, err := database.DB.Query(
 		context.Background(),
@@ -386,7 +380,7 @@ func GetUserTests(w http.ResponseWriter, r *http.Request) {
 		FROM lab_tests
 		WHERE user_id = $1
 		ORDER BY created_at DESC`,
-		numericUserID,
+		userID,
 	)
 	if err != nil {
 		log.Println("Query Error:", err)

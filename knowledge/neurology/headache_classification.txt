@@ -1,0 +1,153 @@
+Headache Classification — Clinical Reference
+
+OVERVIEW
+Headache is one of the most common neurological complaints. The International Headache Society (IHS) classifies headaches in the International Classification of Headache Disorders (ICHD-3) into primary headaches (no underlying cause) and secondary headaches (due to underlying condition). Accurate classification guides appropriate treatment.
+
+PRIMARY HEADACHES
+
+1. TENSION-TYPE HEADACHE (TTH) — Most Common Headache
+Subtypes: Episodic (<15 days/month) and Chronic (≥15 days/month for >3 months)
+
+Features:
+- Bilateral, pressing/squeezing quality ("tight band around head")
+- Mild to moderate intensity
+- Not aggravated by physical activity
+- No nausea/vomiting (or at most one)
+- May have phonophobia OR photophobia but not both
+
+Treatment (episodic):
+- Simple analgesics: paracetamol 1g, ibuprofen 400mg, aspirin 900mg
+- Combination analgesics with caffeine
+- Avoid opioids and codeine (medication overuse risk)
+
+Prevention (chronic):
+- Amitriptyline 25-75mg at night (first-line)
+- Mirtazapine, venlafaxine
+- Non-pharmacological: stress management, physiotherapy, CBT, biofeedback
+
+2. MIGRAINE — See Dedicated Migraine Document
+
+3. TRIGEMINAL AUTONOMIC CEPHALALGIAS (TACs)
+
+Cluster Headache:
+- Predominantly male (3:1)
+- Circadian pattern (attacks at same time daily, often nocturnal)
+- Unilateral, periorbital/temporal, severe ("suicide headache")
+- Duration: 15-180 minutes
+- Frequency: 1-8 per day during cluster period (weeks to months)
+- Ipsilateral autonomic features: lacrimation, conjunctival injection, rhinorrhea, ptosis, miosis, facial flushing
+- Cluster periods separated by remission months/years
+
+Acute treatment:
+- 100% oxygen via non-rebreather mask 12-15L/min for 15 min (most effective)
+- Subcutaneous sumatriptan 6mg (fastest acting)
+- Intranasal zolmitriptan, sumatriptan nasal spray
+
+Prevention (during cluster period):
+- Verapamil 240-480mg (drug of choice for prevention)
+- Lithium carbonate (chronic cluster)
+- Prednisolone (short course to break cluster)
+- Greater occipital nerve blocks
+- CGRP monoclonal antibodies (galcanezumab)
+
+Paroxysmal Hemicrania:
+- Similar to cluster but shorter (2-30 min), more frequent (>5/day)
+- Female predominance
+- ABSOLUTE RESPONSE to indomethacin 75-225mg/day (diagnostic)
+
+Hemicrania Continua:
+- Continuous unilateral headache with exacerbations + autonomic features
+- ABSOLUTE RESPONSE to indomethacin (diagnostic)
+
+SUNCT/SUNA (Short-lasting Unilateral Neuralgiform headache attacks):
+- Very brief (5-240 sec), many attacks per day
+- Stabbing or electric shock
+- Trigeminal neuralgia territory
+- Treatment: lamotrigine
+
+4. MEDICATION OVERUSE HEADACHE (MOH)
+- Also called "rebound headache"
+- Most important complication of primary headache treatment
+- Develops after overuse of:
+  - Triptans, ergotamines: >10 days/month
+  - Simple analgesics (paracetamol, NSAIDs, aspirin): >15 days/month
+  - Opioids, combination analgesics: >10 days/month
+- Paradoxically increases headache frequency
+- Treatment: withdrawal of overused medication
+  - Often worsens initially (2-10 days withdrawal headache)
+  - Prednisolone bridge therapy: 60mg → taper over 6 days
+  - Inpatient withdrawal for severe cases
+  - Preventive medication started during withdrawal
+
+SECONDARY HEADACHES — DANGEROUS CAUSES
+
+RED FLAGS (SNOOP4):
+- Systemic symptoms (fever, weight loss, rash)
+- Neurological deficits (focal weakness, vision loss, confusion)
+- Onset sudden (thunderclap headache)
+- Older age (>50 first headache)
+- Previous headache history change (new pattern)
+- Positional component (worse lying flat or upright)
+- Papilledema, pregnancy
+
+1. SUBARACHNOID HEMORRHAGE (SAH)
+- Thunderclap headache: sudden severe headache, maximal intensity at onset ("worst headache of life")
+- May follow exertion, sexual activity, Valsalva
+- Neck stiffness, photophobia, vomiting
+- LOC in severe cases
+- Investigation: non-contrast CT head (90% sensitive in 6 hours) → LP if CT negative (xanthochromia after 12h)
+- Treatment: neurosurgical emergency, coil/clip aneurysm
+
+2. MENINGITIS
+- Gradual severe headache with fever, neck stiffness, photophobia
+- Classic triad (fever + neck stiffness + altered consciousness) only in 44%
+- Kernig's sign, Brudzinski's sign
+- Bacterial meningitis: medical emergency — IV antibiotics immediately (dexamethasone before first dose)
+- LP: opening pressure, WBC, protein, glucose, culture, PCR
+
+3. GIANT CELL ARTERITIS (TEMPORAL ARTERITIS)
+- Age >50 (usually >70), female predominance
+- Temporal headache, scalp tenderness (brush hair pain), jaw claudication
+- Visual disturbances → irreversible blindness if untreated
+- Elevated ESR (>50), CRP
+- Treatment: HIGH DOSE prednisolone IMMEDIATELY (do not wait for biopsy)
+- Temporal artery biopsy to confirm
+
+4. IDIOPATHIC INTRACRANIAL HYPERTENSION (IIH) / PSEUDOTUMOR CEREBRI
+- Young overweight women, oral contraceptive pill use
+- Raised intracranial pressure without mass lesion
+- Daily headache, pulsatile tinnitus, visual obscurations
+- Papilledema on fundoscopy
+- LP: elevated opening pressure (>25 cmH2O), normal CSF
+- MRI: empty sella, optic nerve sheath distension, flattening of posterior globes
+- Treatment: weight loss (most effective), acetazolamide, serial LP, ventriculoperitoneal shunt for vision threatening
+
+5. CERVICOGENIC HEADACHE
+- Headache originating from cervical spine structures
+- Unilateral, occipital/cervical origin, referred to forehead
+- Restricted neck movement, tender cervical muscles
+- Diagnostic: nerve blocks
+- Treatment: physiotherapy, nerve blocks, surgery if necessary
+
+6. POST-TRAUMATIC HEADACHE
+- Develops within 7 days of head trauma
+- Can persist >3 months (persistent post-traumatic headache)
+- Often migraine-like or tension-type features
+- Treat like primary headache type it resembles
+
+ASSESSMENT APPROACH
+History:
+- Site, onset (sudden vs. gradual), character, severity, radiation
+- Duration, frequency, pattern (episodic vs. constant)
+- Associated symptoms (nausea, visual aura, autonomic features)
+- Triggers, relieving factors
+- Medication use
+- Family history, previous headaches
+
+Examination:
+- Neurological examination (focal signs)
+- Fundoscopy (papilledema)
+- Blood pressure
+- Neck stiffness
+- Temporal artery tenderness
+- Cervical spine examination

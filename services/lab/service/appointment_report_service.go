@@ -9,7 +9,7 @@ type AppointmentReportService struct{}
 
 func (a *AppointmentReportService) ProcessAppointment(
 	appointmentID int,
-	userID int,
+	userID string,
 ) error {
 
 	// Check whether all tests for this appointment are completed.

@@ -1,0 +1,111 @@
+Epilepsy — Clinical Reference
+
+DEFINITION
+Epilepsy is a chronic neurological disorder characterized by recurrent (≥2) unprovoked seizures more than 24 hours apart, or one unprovoked seizure with a high (>60%) risk of recurrence, or diagnosis of an epilepsy syndrome. A seizure is a transient occurrence of signs/symptoms due to abnormal excessive or synchronous neuronal activity in the brain.
+
+SEIZURE CLASSIFICATION (ILAE 2017)
+Focal onset (originates in one hemisphere):
+- Focal aware (formerly simple partial)
+- Focal impaired awareness (formerly complex partial)
+- Focal to bilateral tonic-clonic
+
+Generalized onset (involves both hemispheres from start):
+- Tonic-clonic (grand mal): loss of consciousness, tonic phase then rhythmic clonic jerks, post-ictal confusion
+- Absence (petit mal): brief staring spells 5-30 seconds, no post-ictal state
+- Myoclonic: brief sudden muscle jerks, often morning
+- Tonic: sudden stiffening
+- Atonic (drop attacks): sudden loss of muscle tone
+
+Unknown onset:
+- When onset cannot be determined
+
+COMMON EPILEPSY SYNDROMES
+Childhood syndromes:
+- Childhood absence epilepsy (CAE): 4-10 years, frequent absences, remits in adolescence
+- Juvenile myoclonic epilepsy (JME): adolescence onset, morning myoclonus + GTCS, lifelong condition
+- Benign epilepsy with centrotemporal spikes (BECTS): focal facial/hand seizures, remits by 16
+
+Adult syndromes:
+- Temporal lobe epilepsy (TLE): most common adult focal epilepsy, aura (deja vu, epigastric rise), automatisms
+- Frontal lobe epilepsy: nocturnal, brief, complex motor behavior
+
+Progressive myoclonic epilepsies:
+- Unverricht-Lundborg, Lafora disease, neuronal ceroid lipofuscinoses
+
+CAUSES
+Structural: cortical dysplasia, hippocampal sclerosis, tumors, stroke, trauma, AVM
+Genetic: ion channel mutations, single-gene disorders
+Infectious: neurocysticercosis (most common worldwide), HSV encephalitis, bacterial meningitis
+Metabolic: hypoglycemia, hyponatremia, hypocalcemia, uremia
+Immune: autoimmune encephalitis (anti-NMDAR, LGI1, CASPR2)
+Unknown (idiopathic)
+
+DIAGNOSTIC WORKUP
+History:
+- Detailed seizure description from witness
+- Preceding aura, trigger factors
+- Post-ictal state (confusion, Todd's paresis)
+- Family history, birth history, developmental milestones
+- History of febrile seizures, head trauma, CNS infections
+
+Investigations:
+- EEG (interictal and if possible ictal): key investigation
+- MRI brain (protocol: coronal T1, FLAIR, DWI) — preferred over CT
+- Blood tests: glucose, electrolytes, calcium, magnesium, CBC, LFTs, TFTs
+- If relevant: metabolic screen, genetic testing, autoimmune antibodies, LP for CSF
+
+DIFFERENTIAL DIAGNOSIS
+- Syncope (vasovagal, cardiac) — most common mimic
+- Psychogenic non-epileptic attacks (PNEA/PNES)
+- Transient ischemic attacks
+- Hemiplegic migraine
+- Hypoglycemia
+- Sleep disorders (parasomnia, REM behavior disorder)
+- Hyperventilation, panic attacks
+
+ANTI-SEIZURE MEDICATIONS (ASMs)
+Broad spectrum (generalized + focal):
+- Levetiracetam (Keppra): first-line, well tolerated, IV available
+- Lamotrigine: effective, mood-stabilizing, slow titration required
+- Valproate: highly effective for generalized, avoid in women of childbearing age (teratogenic), weight gain
+- Topiramate: cognitive side effects
+- Zonisamide
+
+Focal seizures:
+- Carbamazepine/Oxcarbazepine: first-line for focal, hyponatremia risk
+- Lacosamide: good for focal, IV available
+- Brivaracetam
+
+Absence epilepsy:
+- Ethosuximide (first-line for pure absence)
+- Valproate (if GTCS also present)
+
+TREATMENT PRINCIPLES
+- Start with monotherapy
+- Titrate gradually to effective dose
+- If first drug fails at adequate dose, try alternative monotherapy before polytherapy
+- ~70% of patients achieve seizure freedom with medication
+- Drug-resistant epilepsy (DRE): failure of 2 adequate trials of appropriate ASMs
+
+DRUG-RESISTANT EPILEPSY OPTIONS
+- Surgical resection (best outcomes for temporal lobe epilepsy with hippocampal sclerosis)
+- Vagus nerve stimulation (VNS)
+- Responsive neurostimulation (RNS)
+- Deep brain stimulation (DBS)
+- Ketogenic diet (especially children)
+- Laser interstitial thermal therapy (LITT)
+
+STATUS EPILEPTICUS
+- Defined as seizure lasting >5 minutes or two seizures without recovery in between
+- Medical emergency with ~20% mortality if untreated
+- Treatment protocol:
+  1. Benzodiazepine (lorazepam IV, diazepam IV/PR, midazolam IM)
+  2. Second-line: levetiracetam IV, valproate IV, or fosphenytoin
+  3. Third-line (refractory): phenobarbital, propofol, midazolam infusion, ketamine
+
+DRIVING AND LIFESTYLE
+- Most countries require seizure-free period (typically 6-12 months) before driving
+- Avoid heights, water activities alone, operating heavy machinery
+- Seizure action plan for patient and caregivers
+- Women of childbearing age: folic acid supplementation, medication teratogenicity counseling
+- SUDEP (Sudden Unexpected Death in Epilepsy): risk highest with uncontrolled nocturnal GTCS

@@ -1,29 +1,27 @@
-"""Complete Neurology Knowledge Ingestion Pipeline.
+"""General Physician Knowledge Ingestion Pipeline.
 
-Reads .txt files from knowledge/neurology/, chunks them,
+Reads .txt files from knowledge/general_physician/, chunks them,
 embeds with NVIDIA NIM (nv-embedqa-e5-v5), and stores in
 the shared knowledge_chunks PostgreSQL table under
-department='neurology'.
+department='general physician'.
 """
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Ensure environment variables are loaded (look up 3 levels to repo root)
 load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
-from backend.neurology.db.pgvector_tracker import (
+from backend.db.pgvector_tracker import (
     init_db,
     insert_knowledge_chunks,
     count_knowledge_chunks,
 )
-from backend.neurology.llm.embeddings import embed_passages
+from backend.llm.embeddings import embed_passages
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -32,7 +30,7 @@ BATCH_SIZE = 16
 CHUNK_SIZE = 1600
 CHUNK_OVERLAP = 320
 MAX_CHARS_PER_CHUNK = 1200
-DEPARTMENT = "neurology"
+DEPARTMENT = "general physician"
 
 
 def _truncate(text: str, limit: int) -> str:
@@ -46,7 +44,6 @@ def _truncate(text: str, limit: int) -> str:
 
 
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, chunk_overlap: int = CHUNK_OVERLAP) -> list[str]:
-    """Split text into overlapping chunks using pure Python."""
     if not text:
         return []
     chunks = []
@@ -72,15 +69,12 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, chunk_overlap: int = CHU
     return [c.strip() for c in chunks if c.strip()]
 
 
-def ingest_all_neurology():
-    # The knowledge folder with .txt files
-    knowledge_dir = Path(__file__).resolve().parents[3] / "knowledge" / "neurology"
+def ingest_all_general_physician():
+    knowledge_dir = Path(__file__).resolve().parents[3] / "knowledge" / "general_physician"
     if not knowledge_dir.exists():
         raise FileNotFoundError(f"Knowledge directory not found: {knowledge_dir}")
 
-    txt_files = sorted(knowledge_dir.glob("*.txt"))
-    # Also accept pdf-sourced text extracted files
-    txt_files = [f for f in txt_files if f.name != ".gitkeep"]
+    txt_files = [f for f in sorted(knowledge_dir.glob("*.txt")) if f.name != ".gitkeep"]
 
     if not txt_files:
         logger.warning("No .txt files found in %s", knowledge_dir)
@@ -132,7 +126,7 @@ def ingest_all_neurology():
     total_rows = count_knowledge_chunks(DEPARTMENT)
     logger.info("=" * 60)
     logger.info(
-        "Done. Ingested %d total chunks. Neurology table now has %d rows. Time: %.1fs",
+        "Done. Ingested %d total chunks. General physician table now has %d rows. Time: %.1fs",
         total_inserted,
         total_rows,
         time.time() - t_start,
@@ -140,4 +134,4 @@ def ingest_all_neurology():
 
 
 if __name__ == "__main__":
-    ingest_all_neurology()
+    ingest_all_general_physician()

@@ -1,0 +1,113 @@
+Parkinson's Disease — Clinical Reference
+
+DEFINITION
+Parkinson's disease (PD) is a progressive neurodegenerative disorder caused by loss of dopaminergic neurons in the substantia nigra pars compacta, leading to dopamine deficiency in the striatum. It is characterized by the cardinal motor features (tremor, rigidity, bradykinesia, postural instability) and a wide range of non-motor symptoms. It is the second most common neurodegenerative disease after Alzheimer's.
+
+EPIDEMIOLOGY
+- Prevalence: ~1% of population >60 years; ~4% >80 years
+- Male:female ratio ~1.5:1
+- Mean age of onset: ~60 years
+- Young-onset PD: diagnosis before 50 years
+
+PATHOPHYSIOLOGY
+- Loss of dopaminergic neurons in substantia nigra pars compacta
+- Lewy body formation (alpha-synuclein aggregates) — pathological hallmark
+- Symptoms appear when ~50-80% of dopaminergic neurons lost
+- Braak staging: pathology begins in olfactory bulb and dorsal vagal nucleus, ascends to substantia nigra, then neocortex
+
+CARDINAL MOTOR FEATURES
+1. Resting tremor (3-5 Hz): "pill-rolling" tremor, most apparent at rest, suppressed with action, usually asymmetric onset
+2. Rigidity: cogwheel or lead-pipe rigidity (jerky or uniform resistance throughout passive range of motion)
+3. Bradykinesia: slowness of movement; hypokinesia (reduced amplitude); start hesitation; micrographia; hypophonia; hypomimia (masked face)
+4. Postural instability: impaired balance reflexes (late feature); pull test positive; freezing of gait; festination
+
+CLINICAL DIAGNOSIS CRITERIA (MDS 2015)
+Parkinsonism (required):
+- Bradykinesia PLUS at least one of: rigidity, resting tremor
+
+Red flags against PD diagnosis:
+- Early severe autonomic failure
+- Early cognitive decline or dementia
+- Cerebellar signs
+- Downward gaze palsy (suggests PSP)
+- Rapid progression
+- No response to levodopa
+
+NON-MOTOR SYMPTOMS (often precede motor symptoms by years)
+Prodromal:
+- REM sleep behavior disorder (RBD): acting out dreams, highly predictive of PD
+- Hyposmia/anosmia (loss of smell)
+- Constipation
+- Depression and anxiety
+
+Late features:
+- Cognitive impairment and dementia (Parkinson's disease dementia, PDD)
+- Hallucinations (visual, often drug-induced)
+- Orthostatic hypotension, urinary dysfunction (autonomic)
+- Pain, fatigue
+- Impulse control disorders (ICD) — linked to dopamine agonists
+
+DIFFERENTIAL DIAGNOSIS
+- Essential tremor: postural/action tremor, no bradykinesia, family history
+- Drug-induced parkinsonism: antipsychotics, metoclopramide (reversible)
+- Dementia with Lewy bodies (DLB): dementia precedes or concurrent with parkinsonism
+- Multiple system atrophy (MSA): autonomic failure, cerebellar signs, parkinsonism
+- Progressive supranuclear palsy (PSP): vertical gaze palsy, axial rigidity, early falls
+- Corticobasal syndrome (CBS): alien limb, apraxia, cortical sensory loss, asymmetric
+
+INVESTIGATIONS
+- Diagnosis is clinical (no definitive biomarker currently)
+- MRI brain: normal (rules out structural causes)
+- DAT-SPECT scan: reduced striatal dopamine transporter binding (distinguishes PD from essential tremor, not from atypical parkinsonism)
+- Autonomic tests if MSA suspected
+- Genetic testing (LRRK2, PARK genes) for young-onset or familial PD
+
+DOPAMINERGIC TREATMENT
+Levodopa (most effective):
+- Combined with carbidopa or benserazide (prevents peripheral conversion)
+- Gold standard for symptom control
+- Complications: motor fluctuations (wearing off, on-off), dyskinesias (peak-dose)
+- Immediate release and controlled release formulations
+- Duopa (intestinal gel infusion) for advanced disease
+
+Dopamine agonists (first-line for younger patients):
+- Pramipexole, ropinirole (oral)
+- Rotigotine (patch)
+- Side effects: impulse control disorders, somnolence, orthostatic hypotension, hallucinations
+
+MAO-B inhibitors:
+- Selegiline, rasagiline, safinamide
+- Mild effect, potential neuroprotective, used as adjunct
+
+COMT inhibitors (reduce levodopa metabolism):
+- Entacapone (with each levodopa dose)
+- Tolcapone (more effective, hepatotoxicity risk)
+- Opicapone (once daily)
+
+Anticholinergics (for tremor in young patients):
+- Trihexyphenidyl, benztropine
+- Avoid in elderly (cognitive side effects)
+
+Amantadine:
+- Useful for dyskinesias
+- Also antiviral
+
+ADVANCED THERAPIES
+- Deep brain stimulation (DBS): subthalamic nucleus (STN) or globus pallidus internus (GPi)
+  - Best for patients with motor fluctuations/dyskinesias, good cognitive function
+  - Reduces medication requirements, improves quality of life
+- Focused ultrasound thalamotomy: for tremor-predominant PD
+- Duopa (continuous levodopa-carbidopa intestinal gel infusion)
+
+NON-PHARMACOLOGICAL MANAGEMENT
+- Physiotherapy: gait training, balance, falls prevention (LSVT BIG)
+- Speech therapy: hypophonia, dysphagia (LSVT LOUD)
+- Occupational therapy: ADL adaptations
+- Exercise (high evidence): aerobic exercise, dance, tai chi, boxing
+- Psychological support for depression/anxiety
+- Dietitian for weight management, constipation, dysphagia
+
+DISEASE PROGRESSION
+- Hoehn and Yahr scale stages 1-5
+- Variable progression — most survive 10-20 years
+- Leading causes of death: aspiration pneumonia, falls, infections

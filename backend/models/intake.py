@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class CanonicalIntake(BaseModel):
@@ -38,6 +38,13 @@ class ConsultationContext(BaseModel):
     selected_department: str | None = None
     selected_doctor: str | None = None
     appointment_id: str | None = None
+
+    @field_validator("appointment_id", mode="before")
+    @classmethod
+    def coerce_appointment_id(cls, v: Any) -> str | None:
+        if v is None:
+            return None
+        return str(v)
     appointment_status: str = "booked"
     consultation_status: str = "CREATED"
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())

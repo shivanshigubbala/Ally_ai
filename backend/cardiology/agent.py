@@ -37,9 +37,9 @@ try:
         stream_chat as nv_stream_chat,
     )
     from backend.cardiology.llm.prompts import (
-        DOCTOR_NAME,
-        DOCTOR_SYSTEM_PROMPT,
-        EVALUATION_PROMPT,
+        CARDIOLOGY_DOCTOR_NAME as DOCTOR_NAME,
+        CARDIOLOGY_DOCTOR_SYSTEM_PROMPT as DOCTOR_SYSTEM_PROMPT,
+        CARDIOLOGY_EVALUATION_PROMPT as EVALUATION_PROMPT,
     )
     from backend.models.session_state import DoctorState, WSEvent
     from backend.cardiology.rag.retriever import retrieve as rag_retrieve
@@ -66,9 +66,9 @@ except ImportError:
         stream_chat as nv_stream_chat,
     )
     from llm.prompts import (
-        DOCTOR_NAME,
-        DOCTOR_SYSTEM_PROMPT,
-        EVALUATION_PROMPT,
+        CARDIOLOGY_DOCTOR_NAME as DOCTOR_NAME,
+        CARDIOLOGY_DOCTOR_SYSTEM_PROMPT as DOCTOR_SYSTEM_PROMPT,
+        CARDIOLOGY_EVALUATION_PROMPT as EVALUATION_PROMPT,
     )
     from models.session_state import DoctorState, WSEvent
     from rag.retriever import retrieve as rag_retrieve
@@ -210,20 +210,35 @@ def _build_consultation_summary(
         lab_recommendations.append({"name": name, "reason": reason})
 
     parsed = parsed or {}
+    val_assess = parsed.get("clinical_assessment") or parsed.get("assessment") or ""
+    if isinstance(val_assess, dict):
+        val_assess = val_assess.get("reasoning") or val_assess.get("clinical_assessment") or val_assess.get("risk_level") or str(val_assess)
     clinical_assessment = (
-        str(parsed.get("clinical_assessment") or parsed.get("assessment") or "").strip()
+        str(val_assess).strip()
         or "The symptoms were reviewed and the patient was assessed for possible urgent causes."
     )
+
+    val_diag = parsed.get("possible_diagnosis") or parsed.get("diagnosis") or ""
+    if isinstance(val_diag, dict):
+        val_diag = val_diag.get("name") or val_diag.get("diagnosis") or str(val_diag)
     possible_diagnosis = (
-        str(parsed.get("possible_diagnosis") or parsed.get("diagnosis") or "").strip()
+        str(val_diag).strip()
         or "No specific diagnosis was confirmed from the available information."
     )
+
+    val_reason = parsed.get("doctor_reasoning") or parsed.get("reasoning") or ""
+    if isinstance(val_reason, dict):
+        val_reason = val_reason.get("reasoning") or val_reason.get("doctor_reasoning") or str(val_reason)
     doctor_reasoning = (
-        str(parsed.get("doctor_reasoning") or parsed.get("reasoning") or "").strip()
+        str(val_reason).strip()
         or "The clinical interview, available history, and uploaded documents were reviewed to determine the most appropriate next step."
     )
+
+    val_next = parsed.get("next_steps") or ""
+    if isinstance(val_next, dict):
+        val_next = val_next.get("recommendation") or val_next.get("steps") or str(val_next)
     next_steps = (
-        str(parsed.get("next_steps") or "").strip()
+        str(val_next).strip()
         or "Continue monitoring symptoms, follow up if they worsen, and seek urgent care for red-flag symptoms."
     )
     relevant_history = ""
@@ -446,10 +461,6 @@ def _build_initial_doctor_message(chief_complaint: str | None, patient_name: str
 
 
 def _sanitize_tests(tests: list[dict] | None) -> list[dict]:
-    mapping = {
-        "CBC": {"name": "Complete Blood Count (CBC)", "reason": "Routine blood count check."},
-        "BMP": {"name": "Basic Metabolic Panel (BMP)", "reason": "Routine metabolic and kidney function check."},
-    }
     if not tests:
         return []
     sanitized: list[dict] = []
@@ -457,23 +468,24 @@ def _sanitize_tests(tests: list[dict] | None) -> list[dict]:
     for test in tests:
         if not isinstance(test, dict):
             continue
-        name = str(test.get("name", "")).strip()
-        key = name.upper()
-        if key not in mapping:
-            continue
-        item = mapping[key].copy()
+        name = str(test.get("name", "")).strip().lower()
         reason = str(test.get("reason") or "").strip()
-        if reason:
-            item["reason"] = reason
-        if item["name"] not in seen:
-            sanitized.append(item)
-            seen.add(item["name"])
+        
+        matched = None
+        if "cbc" in name or "complete blood count" in name:
+            matched = {"name": "Complete Blood Count (CBC)", "reason": reason or "Routine blood count check."}
+        elif "ecg" in name or "electrocardiogram" in name or "ekg" in name:
+            matched = {"name": "Electrocardiogram (ECG)", "reason": reason or "Measures the electrical activity of the heart."}
+            
+        if matched and matched["name"] not in seen:
+            sanitized.append(matched)
+            seen.add(matched["name"])
     return sanitized
 
 
 def _should_recommend_tests(parsed: dict | None, conversation: list[dict], chief_complaint: str | None) -> bool:
     parsed = parsed or {}
-    if not parsed.get("tests"):
+    if not parsed.get("tests") and not parsed.get("recommended_tests"):
         return False
 
     conversation_text = " ".join(
@@ -844,7 +856,7 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
         state.current_node = "EVALUATION"
         return state
 
-    if state.questions_asked >= MAX_QUESTIONS:
+    if state.questions_asked > MAX_QUESTIONS:
         emit(WSEvent(type="text", payload={
             "content": "Thanks for sharing all that - I have a good picture now. "
                        "Let me review everything and see if any tests are needed.",
@@ -865,7 +877,9 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
         exclude_session_id=f"doctor:{state.user_id}:{state.appointment_id}",
     )
     health_data = state.health_data or {}
-    patient_name = state.user_id.replace("_", " ").title()
+    if not state.patient_name or state.patient_name.startswith("PAT-") or state.patient_name == state.user_id.replace("_", " ").title():
+        state.patient_name = _resolve_patient_name_from_context(state)
+    patient_name = state.patient_name or state.user_id.replace("_", " ").title()
 
     state.symptom_summary = _update_symptom_summary(state, last_user_msg, "")
 
@@ -932,7 +946,7 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
         f"Patient Context:\n{patient_context}\n\n"
         f"Relevant Medical History:\n{json.dumps(state.health_data or {}, default=str)}\n\n"
         "Return a JSON object with keys: clinical_assessment, possible_diagnosis, doctor_reasoning, next_steps, recommended_tests. "
-        "recommended_tests must be a list of supported tests from the existing catalog only: Complete Blood Count (CBC) and Basic Metabolic Panel (BMP). "
+        "recommended_tests must be a list of supported tests from the existing catalog only: Complete Blood Count (CBC) and Electrocardiogram (ECG). "
         "Recommend at most 2 tests."
     )
     raw = _call_llm([{"role": "user", "content": prompt}], model=ROUTING_MODEL)
@@ -1088,10 +1102,17 @@ def user_decision(state: DoctorState, emit: Emitter) -> DoctorState:
         except Exception:
             logger.exception("Failed to persist notification for lab request=%s", lab_request_id)
 
+        go_user_id = None
+        try:
+            from backend.db.pgvector_tracker import sync_go_user_id
+            go_user_id = sync_go_user_id(state.patient_id or state.user_id)
+        except Exception:
+            pass
+
         try:
             create_lab_tests(
                 appointment_id=state.appointment_id or "0",
-                user_id=state.patient_id or state.user_id or "0",
+                user_id=str(go_user_id) if go_user_id else (state.patient_id or state.user_id or "0"),
                 doctor_id=state.doctor_id or state.doctor_name or DOCTOR_NAME,
                 department=state.department,
                 tests=state.tests_list,
@@ -1381,5 +1402,6 @@ def step(
                 session_id=f"doctor:{user_id}:{appointment_id}",
             )
 
+    _persist_consultation_output(state)
     _graph.update_state(cfg, state.model_dump())
     return state, events

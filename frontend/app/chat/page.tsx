@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Sidebar, { type SidebarTab } from "@/components/sidebar/Sidebar";
 import AppointmentsPanel from "@/components/sidebar/AppointmentsPanel";
 import ProfilePanel from "@/components/sidebar/ProfilePanel";
+import SettingsPanel from "@/components/sidebar/SettingsPanel";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatThread from "@/components/chat/ChatThread";
 import ChatComposer from "@/components/chat/ChatComposer";
@@ -131,7 +132,12 @@ export default function ChatPage() {
                 connected={connected}
                 onSelectDoctor={selectDoctor}
                 onSelectSlot={resolveSlot}
-                onLabDecision={resolveLabDecision}
+                onLabDecision={(cardId, sessionId, decision) => {
+                  resolveLabDecision(cardId, sessionId, decision);
+                  if (decision === "accept") {
+                    setTab("reports");
+                  }
+                }}
               />
               <ChatComposer onSend={sendText} disabled={!connected} userId={userId} appointmentId={doctorReady?.appointmentId ?? null} />
             </div>
@@ -144,7 +150,12 @@ export default function ChatPage() {
               onMarkRead={markInboxRead}
               onViewReports={() => setTab("reports")}
               onViewAppointments={() => setTab("appointments")}
-              onLabDecision={resolveLabDecision}
+              onLabDecision={(cardId, sessionId, decision) => {
+                resolveLabDecision(cardId, sessionId, decision);
+                if (decision === "accept") {
+                  setTab("reports");
+                }
+              }}
             />
           )}
 
@@ -172,6 +183,10 @@ export default function ChatPage() {
 
           {activeTab === "profile" && (
             <ProfilePanel profile={profile} reports={reports} onLogout={logout} />
+          )}
+
+          {activeTab === "settings" && (
+            <SettingsPanel />
           )}
         </main>
       </div>

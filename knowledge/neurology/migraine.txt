@@ -1,0 +1,92 @@
+Migraine — Clinical Reference
+
+DEFINITION
+Migraine is a primary headache disorder characterized by recurrent attacks of moderate to severe headache, often unilateral and pulsating, lasting 4–72 hours, associated with nausea, vomiting, and sensitivity to light and sound. It affects approximately 15% of the population and is the second leading cause of global disability.
+
+CLASSIFICATION
+1. Migraine without aura (most common, ~75%)
+2. Migraine with aura (~25%) — transient neurological symptoms preceding headache
+3. Chronic migraine: ≥15 headache days/month for >3 months, with ≥8 migraine days/month
+4. Hemiplegic migraine: motor aura (rare, genetic)
+5. Vestibular migraine: vertigo as primary symptom
+6. Menstrual migraine: attacks linked to menstrual cycle
+
+DIAGNOSTIC CRITERIA (ICHD-3)
+A. At least 5 attacks fulfilling B–D
+B. Lasting 4–72 hours (untreated)
+C. At least 2 of: unilateral location, pulsating quality, moderate/severe pain, worsened by activity
+D. At least 1 of: nausea/vomiting, photophobia AND phonophobia
+E. Not better accounted for by another diagnosis
+
+AURA FEATURES
+- Visual aura (most common): scintillating scotoma, fortification spectra, homonymous visual disturbance
+- Sensory aura: unilateral paresthesias (typically spreading slowly)
+- Speech aura: dysphasia
+- Motor aura: hemiplegic migraine only
+- Duration: typically 20-60 minutes, fully reversible
+- Aura typically precedes headache by 0-60 minutes
+
+PHASES OF MIGRAINE
+1. Prodrome (hours to days before): yawning, food cravings, mood changes, fatigue, neck stiffness
+2. Aura (if present): 5-60 minutes
+3. Headache phase: 4-72 hours
+4. Postdrome: fatigue, difficulty concentrating, "migraine hangover" lasting hours to a day
+
+TRIGGER FACTORS
+- Hormonal changes (estrogen fluctuations — menstruation, OCP, perimenopause)
+- Sleep disruption (too much or too little)
+- Stress and anxiety
+- Dietary: alcohol (especially red wine), caffeine, chocolate, aged cheese, MSG, skipping meals, dehydration
+- Environmental: bright/flickering lights, strong smells, weather changes, altitude
+- Medications: nitroglycerin, oral contraceptives
+
+RED FLAGS (require further investigation)
+- Thunderclap headache (sudden, severe, maximal intensity at onset)
+- Progressive worsening headache over days to weeks
+- New headache in patients >50 years
+- Headache with fever, neck stiffness, photophobia (meningitis)
+- Neurological deficits persisting after headache
+- Headache worsened by Valsalva or postural change
+- First headache or worst headache of life
+
+ACUTE (ABORTIVE) TREATMENT
+First line:
+- NSAIDs: ibuprofen 400-800mg, naproxen 500mg, diclofenac
+- Triptans: sumatriptan (oral, nasal, SC), rizatriptan, eletriptan, zolmitriptan (best evidence for moderate-severe migraine)
+- Combination: sumatriptan + naproxen
+
+Second line:
+- Gepants (CGRP receptor antagonists): ubrogepant, rimegepant
+- Lasmiditan (5-HT1F agonist)
+- Antiemetics: metoclopramide, prochlorperazine, domperidone
+- Dihydroergotamine (DHE) IV/nasal
+
+PREVENTIVE TREATMENT (indicated if ≥4 migraine days/month)
+Beta-blockers (first line):
+- Propranolol 80-240mg/day
+- Metoprolol 100-200mg/day
+
+Antidepressants:
+- Amitriptyline 10-75mg at night
+
+Anticonvulsants:
+- Topiramate 50-100mg/day (also aids weight loss)
+- Valproate 500-1500mg/day (avoid in women of childbearing age)
+
+CGRP monoclonal antibodies (most effective):
+- Erenumab (Aimovig), fremanezumab (Ajovy), galcanezumab (Emgality)
+- Eptinezumab (IV quarterly)
+
+Calcium channel blockers:
+- Flunarizine 5-10mg/day (where available)
+
+Non-pharmacological:
+- Biofeedback, cognitive behavioral therapy
+- Regular sleep, exercise, meal schedule
+- Trigger diary and avoidance
+- Acupuncture (evidence-based)
+
+MEDICATION OVERUSE HEADACHE (MOH)
+- Critical complication: occurs when acute medications used >10 days/month (triptans/opioids) or >15 days/month (NSAIDs/paracetamol)
+- Causes paradoxical increase in headache frequency
+- Treatment: withdrawal of overused medication (often requires specialist support)

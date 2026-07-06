@@ -307,6 +307,18 @@ async def internal_report_ready(payload: dict = Body(...)) -> dict:
 
         user = payload.get("user_id") or payload.get("patient_id")
         if user:
+            user_str = str(user)
+            if user_str.isdigit():
+                try:
+                    from backend.db.pgvector_tracker import _conn
+                    with _conn() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT id FROM users WHERE go_user_id = %s", (int(user_str),))
+                            row = cur.fetchone()
+                            if row:
+                                user = row[0]
+                except Exception:
+                    pass
             ev = WSEvent(type="report_ready", payload={
                 "report_id": payload.get("report_id"),
                 "report_url": payload.get("report_url"),
@@ -411,4 +423,85 @@ def register(req: RegistrationRequest = Body(...)) -> dict:
         pass
 
     return {"ok": True, "patient_id": patient_id, "session_id": session_id}
+
+
+class LoginRequest(BaseModel):
+    email: str
+
+
+@app.post("/login")
+def login(req: LoginRequest = Body(...)) -> dict:
+    try:
+        from backend.cardiology.db.pgvector_tracker import get_patient_by_email, create_session
+    except ImportError:
+        from db.pgvector_tracker import get_patient_by_email, create_session  # type: ignore
+
+    patient = get_patient_by_email(req.email.strip())
+    if not patient:
+        raise HTTPException(status_code=404, detail="No account found for that email.")
+
+    patient_id = patient["id"]
+    import uuid
+    session_id = f"sess-{uuid.uuid4()}"
+    try:
+        create_session(session_id, patient_id, current_state="ROUTING")
+    except Exception:
+        pass
+
+    health_data = patient.get("health_data", {})
+    return {
+        "ok": True,
+        "patient_id": patient_id,
+        "session_id": session_id,
+        "profile": {
+            "id": patient_id,
+            "name": patient["name"],
+            "email": health_data.get("email") if isinstance(health_data, dict) else None,
+            "phone": health_data.get("phone") if isinstance(health_data, dict) else None,
+            "age": patient.get("age"),
+            "city": health_data.get("city") if isinstance(health_data, dict) else None,
+            "emergency_contact": health_data.get("emergency_contact") if isinstance(health_data, dict) else None,
+            "consent": health_data.get("consent", False) if isinstance(health_data, dict) else False,
+        },
+    }
+
+
+@app.get("/patient/{patient_id}")
+def get_patient(patient_id: str) -> dict:
+    try:
+        from backend.cardiology.db.pgvector_tracker import get_patient_by_id
+    except ImportError:
+        from db.pgvector_tracker import get_patient_by_id  # type: ignore
+
+    patient = get_patient_by_id(patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    health_data = patient.get("health_data", {})
+    return {
+        "ok": True,
+        "patient_id": patient["id"],
+        "profile": {
+            "id": patient["id"],
+            "name": patient.get("name"),
+            "email": health_data.get("email") if isinstance(health_data, dict) else None,
+            "phone": health_data.get("phone") if isinstance(health_data, dict) else None,
+            "age": patient.get("age"),
+            "city": health_data.get("city") if isinstance(health_data, dict) else None,
+            "emergency_contact": health_data.get("emergency_contact") if isinstance(health_data, dict) else None,
+            "consent": health_data.get("consent", False) if isinstance(health_data, dict) else False,
+        },
+    }
+
+
+@app.get("/patient/validate/{patient_id}")
+def validate_patient(patient_id: str) -> dict:
+    try:
+        from backend.cardiology.db.pgvector_tracker import get_patient_by_id
+    except ImportError:
+        from db.pgvector_tracker import get_patient_by_id  # type: ignore
+
+    if not get_patient_by_id(patient_id):
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return {"ok": True, "patient_id": patient_id}
 

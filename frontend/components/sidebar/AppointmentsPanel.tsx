@@ -199,6 +199,29 @@ function PreConsultationUpload({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [processingMessage, setProcessingMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    let active = true;
+    const fetchExistingFiles = async () => {
+      if (!userId || !doctorReady?.appointmentId) return;
+      try {
+        const res = await fetch(
+          `${getBackendBase()}/uploaded-files/${encodeURIComponent(userId)}/${encodeURIComponent(doctorReady.appointmentId)}`
+        );
+        if (res.ok && active) {
+          const data = await res.json();
+          const files = data.files || [];
+          setUploadedFiles(files.map((f: any) => f.filename));
+        }
+      } catch (err) {
+        console.error("Failed to fetch existing files", err);
+      }
+    };
+    fetchExistingFiles();
+    return () => {
+      active = false;
+    };
+  }, [userId, doctorReady?.appointmentId]);
+
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -233,7 +256,7 @@ function PreConsultationUpload({
   const checkAllIndexed = async () => {
     try {
       const res = await fetch(
-        `http://localhost:8000/uploaded-files/${encodeURIComponent(userId || "")}/${encodeURIComponent(doctorReady.appointmentId)}`
+        `${getBackendBase()}/uploaded-files/${encodeURIComponent(userId || "")}/${encodeURIComponent(doctorReady.appointmentId)}`
       );
       if (!res.ok) return false;
       const data = await res.json();

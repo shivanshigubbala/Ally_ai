@@ -128,7 +128,11 @@ export function getUserId(): string | null {
   if (profile.patientId) return profile.patientId;
   return slugifyUserId(profile.name);
 }
-
+function formatErrorDetail(detail: any, fallback: string): string {
+  if (!detail) return fallback;
+  if (typeof detail === "string") return detail;
+  return JSON.stringify(detail);
+}
 
 export async function registerProfile(profile: PatientProfile): Promise<{ ok: boolean; patient_id?: string; session_id?: string; error?: string }> {
   if (typeof window === "undefined") return { ok: false, error: "client-only" };
@@ -154,6 +158,11 @@ export async function registerProfile(profile: PatientProfile): Promise<{ ok: bo
         emergency_contact: undefined,
         consent: true,
         client_user_id,
+        // Medical history fields
+        conditions: profile.conditions || null,
+        medications: profile.medications || null,
+        allergies: profile.allergies || null,
+        health_assessment: profile.healthAssessment || null,
       }),
     });
 
@@ -168,7 +177,7 @@ export async function registerProfile(profile: PatientProfile): Promise<{ ok: bo
       };
     }
 
-    if (!data || !data.ok) return { ok: false, error: data?.detail || "register failed" };
+    if (!data || !data.ok) return { ok: false, error: formatErrorDetail(data?.detail, "register failed") };
     // persist profile (without patientId) and store session identifiers transiently
     const next = { ...profile, patientId: data.patient_id || profile.patientId };
     saveProfile(next);
@@ -187,4 +196,99 @@ export function getInitials(name: string): string {
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+export async function loginProfile(
+  email: string
+): Promise<{ ok: boolean; patient_id?: string; session_id?: string; profile?: PatientProfile; error?: string }> {
+  if (typeof window === "undefined") return { ok: false, error: "client-only" };
+
+  try {
+    const backendBase = getBackendBase();
+    const target = backendBase ? `${backendBase.replace(/\/+$/, "")}/login` : "/api/auth/login";
+
+    const resp = await fetch(target, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    let data;
+    const text = await resp.text();
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      return { ok: false, error: text || `Auth response was not valid JSON (status ${resp.status})` };
+    }
+
+    if (!resp.ok || !data || !data.ok) return { ok: false, error: formatErrorDetail(data?.detail, "Login failed") };
+
+    const next: PatientProfile = {
+      name: data.profile?.name || "",
+      email: data.profile?.email || email,
+      gender: data.profile?.gender || "",
+      age: data.profile?.age ? String(data.profile.age) : "",
+      phone: data.profile?.phone || "",
+      bloodGroup: "",
+      conditions: "",
+      medications: "",
+      allergies: "",
+      patientId: data.patient_id,
+    };
+    saveProfile(next);
+    try {
+      window.sessionStorage.setItem(SESSION_KEY, data.session_id || "");
+      window.sessionStorage.setItem(SESSION_PATIENT_KEY, data.patient_id || "");
+    } catch {}
+
+    return { ok: true, patient_id: data.patient_id, session_id: data.session_id, profile: next };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function updateProfile(
+  profile: PatientProfile
+): Promise<{ ok: boolean; error?: string }> {
+  if (typeof window === "undefined") return { ok: false, error: "client-only" };
+
+  try {
+    const backendBase = getBackendBase();
+    const target = backendBase ? `${backendBase.replace(/\/+$/, "")}/profile` : "/api/profile";
+
+    const resp = await fetch(target, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        patient_id: profile.patientId,
+        name: profile.name,
+        phone: profile.phone,
+        city: undefined,
+        emergency_contact: undefined,
+        age: Number(profile.age) || null,
+        bloodGroup: profile.bloodGroup || null,
+        // Medical history fields -- now persisted to DB
+        conditions: profile.conditions || null,
+        medications: profile.medications || null,
+        allergies: profile.allergies || null,
+        healthAssessment: profile.healthAssessment || null,
+      }),
+    });
+
+    let data;
+    const text = await resp.text();
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      return { ok: false, error: text || `Auth response was not valid JSON (status ${resp.status})` };
+    }
+
+    if (!resp.ok || !data || !data.ok)
+      return { ok: false, error: formatErrorDetail(data?.detail, "Profile update failed") };
+
+    saveProfile(profile);
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }

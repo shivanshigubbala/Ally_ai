@@ -1,0 +1,127 @@
+Multiple Sclerosis — Clinical Reference
+
+DEFINITION
+Multiple sclerosis (MS) is a chronic inflammatory demyelinating disease of the central nervous system (CNS) characterized by episodes of immune-mediated destruction of the myelin sheath and underlying axons in the brain and spinal cord. It is the leading non-traumatic cause of neurological disability in young adults.
+
+EPIDEMIOLOGY
+- Affects ~2.8 million people worldwide
+- Most common diagnosis: 20-40 years, female predominance (3:1)
+- Higher prevalence in temperate climates (latitude gradient)
+- Higher risk: Northern European ancestry, family history, Epstein-Barr virus infection, vitamin D deficiency, smoking
+
+PATHOPHYSIOLOGY
+- Autoreactive T cells (CD4+) cross blood-brain barrier
+- Target myelin antigens: MBP, PLP, MOG
+- Demyelination → impaired nerve conduction → neurological symptoms
+- Partial or complete remyelination → recovery
+- Progressive axonal loss → permanent disability
+- Plaques (lesions) in white matter: periventricular, juxtacortical, infratentorial, spinal cord
+
+CLINICAL COURSES
+1. Relapsing-Remitting MS (RRMS): 85% at onset
+   - Episodes (relapses) of neurological dysfunction lasting >24h
+   - Followed by partial or complete recovery
+   - Most will convert to SPMS
+
+2. Secondary Progressive MS (SPMS):
+   - Gradual neurological decline after initial relapsing course
+   - With or without superimposed relapses
+
+3. Primary Progressive MS (PPMS): 15% at onset
+   - Gradual neurological decline from onset without relapses
+   - Older age onset, equal sex distribution
+
+4. Clinically Isolated Syndrome (CIS):
+   - First demyelinating episode not yet meeting MS criteria
+   - MRI findings determine risk of conversion to MS
+
+COMMON PRESENTATIONS
+Optic neuritis (most common first symptom):
+- Painful vision loss, color desaturation, afferent pupillary defect
+- 50% recover completely
+
+Spinal cord syndrome:
+- Motor weakness, sensory level, bladder/bowel dysfunction
+- Lhermitte's sign: electric shock sensation down spine on neck flexion
+
+Brainstem/cerebellar syndromes:
+- Internuclear ophthalmoplegia (INO): impaired horizontal gaze (MLF lesion)
+- Nystagmus, diplopia
+- Ataxia, tremor, dysarthria
+- Vertigo, facial sensory loss
+
+Other:
+- Fatigue (most common symptom overall, ~80%)
+- Cognitive impairment (information processing speed, memory)
+- Depression, anxiety
+- Uhthoff's phenomenon: worsening with heat
+- Neuropathic pain
+
+DIAGNOSTIC CRITERIA (McDonald 2017)
+Requires demonstration of dissemination in time (DIT) and space (DIS) in the CNS:
+- DIS: ≥1 T2 lesion in ≥2 of 4 typical locations (periventricular, cortical/juxtacortical, infratentorial, spinal cord)
+- DIT: simultaneous Gd-enhancing and non-enhancing lesions, or new T2/Gd+ lesion on follow-up MRI, or positive CSF (OCBs)
+
+INVESTIGATIONS
+MRI brain and spine:
+- FLAIR: periventricular lesions ("Dawson fingers" perpendicular to ventricles)
+- T2: white matter hyperintensities
+- Gadolinium-enhancing: active inflammation (blood-brain barrier disruption)
+- Black holes (T1 hypointense): axonal loss
+
+CSF:
+- Oligoclonal bands (OCBs): present in 90-95% of MS, absent in serum
+- IgG index elevated
+- Mildly elevated white cells in active disease
+
+Visual evoked potentials (VEPs):
+- Prolonged P100 latency in optic neuritis
+
+Blood tests (to exclude mimics):
+- ANA, ANCA, antiphospholipid antibodies (SLE, vasculitis)
+- AQP4-IgG (Neuromyelitis optica spectrum disorder, NMOSD)
+- MOG-IgG (MOGAD)
+- B12, folate, syphilis, HIV, Lyme
+
+DISEASE-MODIFYING THERAPIES (DMTs)
+Moderate efficacy (first-line):
+- Interferon beta (IFN-beta 1a, 1b): injectable, reduce relapse rate ~30%
+- Glatiramer acetate: injectable, similar efficacy to interferons
+- Dimethyl fumarate (Tecfidera): oral, GI side effects, lymphopenia
+- Teriflunomide (Aubagio): oral, teratogenic, monitor LFTs
+
+High efficacy (second-line/highly active MS):
+- Natalizumab (Tysabri): IV monthly, anti-VLA-4, risk of PML (JC virus)
+- Alemtuzumab (Lemtrada): IV 2 courses, profound immune reconstitution, secondary autoimmunity
+- Ocrelizumab (Ocrevus): IV biannual, anti-CD20 B-cell depletion, approved for RRMS and PPMS
+- Ofatumumab (Kesimpta): SC monthly, anti-CD20
+- Cladribine (Mavenclad): oral, 2 annual courses
+- Siponimod (Mayzent): approved for active SPMS
+
+ACUTE RELAPSE MANAGEMENT
+- IV methylprednisolone 1g/day for 3-5 days
+- Shortens duration but doesn't change long-term outcome
+- Severe relapses: plasma exchange (PLEX)
+
+SYMPTOM MANAGEMENT
+Fatigue: amantadine, modafinil, energy conservation techniques
+Spasticity: baclofen, tizanidine, physiotherapy, intrathecal baclofen
+Bladder dysfunction: oxybutynin (overactive), intermittent self-catheterization (retention)
+Neuropathic pain: gabapentin, pregabalin, amitriptyline, duloxetine
+Depression: SSRIs, SNRIs, CBT
+Tremor: clonazepam, propranolol, physiotherapy
+Cognitive rehabilitation: structured programs, occupational therapy
+Walking difficulty: fampridine (dalfampridine) — K+ channel blocker
+
+PREGNANCY AND MS
+- Relapses reduced during pregnancy (especially 3rd trimester)
+- Increased relapse risk post-partum (3-6 months)
+- Most DMTs contraindicated (natalizumab sometimes continued in pregnancy under specialist guidance)
+- Breastfeeding generally compatible with interferons and glatiramer
+
+MONITORING AND FOLLOW-UP
+- Annual MRI to assess disease activity
+- Regular neurological assessments (EDSS scoring)
+- Safety monitoring for DMTs (CBC, LFTs, JC antibody index for natalizumab)
+- Physiotherapy, occupational therapy involvement
+- Multidisciplinary team approach

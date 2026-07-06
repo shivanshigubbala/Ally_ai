@@ -52,7 +52,7 @@ interface UseChatSocketResult {
   consultationChart: string | null;
 }
 
-export function useChatSocket(userId: string | null): UseChatSocketResult {
+export function useChatSocket(userId: string | null, patientId?: string | null): UseChatSocketResult {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [cards, setCards] = useState<ChatCard[]>([]);
   const [inbox, setInbox] = useState<InboxNotification[]>([]);
@@ -75,6 +75,11 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
   const appointmentBookedRef = useRef(false);
   const doctorNameRef = useRef<string | null>(null);
   const consultationActiveRef = useRef(false);
+  const isLoadedRef = useRef(false);
+
+  useEffect(() => {
+    isLoadedRef.current = false;
+  }, [patientId]);
 
   useEffect(() => {
     consultationActiveRef.current = consultationActive;
@@ -101,6 +106,34 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
     },
     []
   );
+
+  // Load persisted notifications from backend on mount
+  useEffect(() => {
+    if (!patientId || typeof window === "undefined") return;
+    const backendBase = HTTP_BASE;
+    if (!backendBase) return;
+    fetch(`${backendBase}/notifications/${encodeURIComponent(patientId)}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data?.notifications?.length) return;
+        setInbox((prev) => {
+          const existingIds = new Set(prev.map((n) => n.id));
+          const loaded: InboxNotification[] = (data.notifications as any[]).map((n: any) => ({
+            id: n.notification_id || n.id || Math.random().toString(36).slice(2),
+            kind: (n.notification_type || "lab_notification").toLowerCase() as InboxNotification["kind"],
+            title: n.title || "Notification",
+            body: n.message || "",
+            createdAt: n.created_at ? new Date(n.created_at).getTime() : Date.now(),
+            read: n.status === "READ",
+            decision: (n.status === "READ" ? "accepted" : "pending") as InboxNotification["decision"],
+          }));
+          const fresh = loaded.filter((n) => !existingIds.has(n.id));
+          return [...prev, ...fresh].sort((a, b) => b.createdAt - a.createdAt);
+        });
+      })
+      .catch(() => { /* silently ignore if backend unreachable */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientId]);
 
   const handleEvent = useCallback(
     (evt: WSEvent) => {
@@ -412,18 +445,32 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
             // fallback: prefer path-style, but also accept numeric/opaque ids
             reportUrl = `${HTTP_BASE}/reports/${encodeURIComponent(reportId)}`;
           }
+          if (reportUrl) {
+            reportUrl = reportUrl
+              .replace("://backend:8000", "://localhost:8000")
+              .replace("://lab:8082", "://localhost:8082");
+          }
           const normalizedReportUrl = reportUrl.startsWith("/") ? `${HTTP_BASE}${reportUrl}` : reportUrl;
 
-          setReports((prev) => [
-            {
-              id: reportId,
-              doctorName: doctor,
-              tests,
-              createdAt: Date.now(),
-              url: normalizedReportUrl,
-            },
-            ...prev,
-          ]);
+          const aptId = (evt.payload.appointment_id as string) || (evt.payload.session_id as string) || "";
+          setReports((prev) => {
+            const filtered = prev.filter(
+              (r) =>
+                r.id !== `pending-${aptId}` &&
+                r.id !== `pending-${reportId}` &&
+                r.id !== reportId
+            );
+            return [
+              {
+                id: reportId,
+                doctorName: doctor,
+                tests,
+                createdAt: Date.now(),
+                url: normalizedReportUrl,
+              },
+              ...filtered,
+            ];
+          });
           pushInbox({
             kind: "report_ready",
             title: "Lab report ready",
@@ -449,49 +496,71 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
   useEffect(() => {
     if (!userId || typeof window === "undefined") return;
     try {
-      const raw = window.sessionStorage.getItem(`${CHAT_STATE_KEY_PREFIX}:${userId}`);
-      if (!raw) return;
+      const key = patientId ? `${CHAT_STATE_KEY_PREFIX}:${userId}:${patientId}` : `${CHAT_STATE_KEY_PREFIX}:${userId}`;
+      const raw = window.localStorage.getItem(key);
+      if (!raw) {
+        setAppointmentBooked(false);
+        appointmentBookedRef.current = false;
+        setDoctorReady(null);
+        setConsultationActive(false);
+        consultationActiveRef.current = false;
+        setConsultationChart("");
+        setReports([]);
+        setInbox([]);
+        isLoadedRef.current = true;
+        return;
+      }
       const saved = JSON.parse(raw) as Partial<{
         appointmentBooked: boolean;
         doctorReady: DoctorReadyInfo | null;
         consultationActive: boolean;
         consultationChart: string | null;
+        reports: any[];
+        inbox: any[];
       }>;
       if (saved.appointmentBooked) {
         setAppointmentBooked(true);
         appointmentBookedRef.current = true;
+      } else {
+        setAppointmentBooked(false);
+        appointmentBookedRef.current = false;
       }
-      if (saved.doctorReady) {
-        setDoctorReady(saved.doctorReady);
-      }
+      setDoctorReady(saved.doctorReady || null);
       if (typeof saved.consultationActive === "boolean") {
         setConsultationActive(saved.consultationActive);
         consultationActiveRef.current = saved.consultationActive;
+      } else {
+        setConsultationActive(false);
+        consultationActiveRef.current = false;
       }
-      if (typeof saved.consultationChart === "string") {
-        setConsultationChart(saved.consultationChart);
-      }
+      setConsultationChart(saved.consultationChart || "");
+      setReports(Array.isArray(saved.reports) ? saved.reports : []);
+      setInbox(Array.isArray(saved.inbox) ? saved.inbox : []);
+      isLoadedRef.current = true;
     } catch {
       // ignore malformed persisted state
     }
-  }, [userId]);
+  }, [userId, patientId]);
 
   useEffect(() => {
-    if (!userId || typeof window === "undefined") return;
+    if (!userId || typeof window === "undefined" || !isLoadedRef.current) return;
     try {
-      window.sessionStorage.setItem(
-        `${CHAT_STATE_KEY_PREFIX}:${userId}`,
+      const key = patientId ? `${CHAT_STATE_KEY_PREFIX}:${userId}:${patientId}` : `${CHAT_STATE_KEY_PREFIX}:${userId}`;
+      window.localStorage.setItem(
+        key,
         JSON.stringify({
           appointmentBooked,
           doctorReady,
           consultationActive,
           consultationChart,
+          reports,
+          inbox,
         })
       );
     } catch {
       // ignore storage failures
     }
-  }, [appointmentBooked, consultationActive, consultationChart, doctorReady, userId]);
+  }, [appointmentBooked, consultationActive, consultationChart, doctorReady, userId, patientId, reports, inbox]);
 
   const connectWebSocket = useCallback(() => {
     if (!userId) return;
@@ -503,7 +572,14 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
       return;
     }
 
-    const ws = new WebSocket(`${WS_BASE}/ws/${encodeURIComponent(userId)}`);
+    const params = new URLSearchParams();
+    if (patientId) {
+      params.set("patient_id", patientId);
+    }
+    const qs = params.toString();
+    const ws = new WebSocket(
+      `${WS_BASE}/ws/${encodeURIComponent(userId)}${qs ? `?${qs}` : ""}`
+    );
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -537,7 +613,7 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
         // Ignore malformed frames
       }
     };
-  }, [handleEvent, userId]);
+  }, [handleEvent, patientId, userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -621,6 +697,11 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
 
   const selectDoctor = useCallback(
     (cardId: string, doctorId: string) => {
+      setConsultationActive(false);
+      setDoctorReady(null);
+      setAppointmentBooked(false);
+      setConsultationChart("");
+      setDoctorMessages([]);
       setCards((prev) =>
         prev.map((c) => (c.id === cardId ? { ...c, resolved: true } : c))
       );
@@ -667,6 +748,25 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
             : n
         )
       );
+
+      if (decision === "accept") {
+        setReports((prev) => {
+          // Prevent duplicates
+          if (prev.some((r) => r.id === `pending-${sessionId}`)) return prev;
+          return [
+            {
+              id: `pending-${sessionId}`,
+              doctorName: "your doctor",
+              tests: [],
+              createdAt: Date.now(),
+              url: "",
+              status: "generating",
+            },
+            ...prev,
+          ];
+        });
+      }
+
       setDoctorMessages((prev) => [
         ...prev,
         {
@@ -684,11 +784,20 @@ export function useChatSocket(userId: string | null): UseChatSocketResult {
     [sendRaw]
   );
 
-  const markInboxRead = useCallback((id: string) => {
-    setInbox((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  }, []);
+  const markInboxRead = useCallback(
+    (id: string) => {
+      setInbox((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      );
+      // Persist mark-read to backend (non-critical)
+      if (HTTP_BASE) {
+        fetch(`${HTTP_BASE}/notifications/${encodeURIComponent(id)}/read`, {
+          method: "POST",
+        }).catch(() => {});
+      }
+    },
+    []
+  );
 
   const addSampleReport = useCallback(() => {
     const id = `sample-${Math.random().toString(36).slice(2, 8)}`;

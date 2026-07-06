@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ---- IC-13 WebSocket envelope -------------------------------------------------
@@ -88,6 +88,11 @@ class RoutingState(BaseModel):
     selected_doctor: str | None = None
     selected_slot: str | None = None
     appointment_id: str | None = None
+
+    @field_validator("appointment_id", mode="before")
+    @classmethod
+    def _coerce_appointment_id(cls, v: Any) -> str | None:
+        return str(v) if v is not None else None
     health_data: dict[str, Any] = Field(default_factory=dict)
     message_history: list[dict[str, str]] = Field(default_factory=list)
     pending_event: dict[str, Any] | None = None
@@ -127,6 +132,11 @@ DoctorNode = Literal[
 class DoctorState(BaseModel):
     user_id: str
     appointment_id: str
+
+    @field_validator("appointment_id", mode="before")
+    @classmethod
+    def _coerce_doctor_appointment_id(cls, v: Any) -> str:
+        return str(v) if v is not None else ""
     doctor_id: str
     doctor_name: str | None = None
     department: str

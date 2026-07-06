@@ -194,6 +194,8 @@ For non-red-flag cases, consider:
 - Are there signs of infection or systemic illness?
 
 Guidelines:
+- Allowed tests: "Complete Blood Count (CBC)" and "Electrocardiogram (ECG)".
+- Suggest 0, 1, or 2 of these tests based on the conversation. If suggesting 0, set recommend_tests to false.
 - For a simple cold / mild viral illness with NO red flags: recommend_tests = false.
 - For persistent symptoms (>7 days) or worsening: recommend basic tests.
 - For ANY red flags detected: recommend_tests = true immediately.

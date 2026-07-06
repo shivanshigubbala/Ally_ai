@@ -5,7 +5,7 @@ import "encoding/json"
 type LabTest struct {
 	ID            int    `json:"id"`
 	AppointmentID int    `json:"appointment_id"`
-	UserID        int    `json:"user_id"`
+	UserID        string `json:"user_id"`
 	TestName      string `json:"test_name"`
 	Reason        string `json:"reason"`
 	Status        string `json:"status"`

@@ -1,126 +1,123 @@
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Any
+
+try:
+    from backend.db.pgvector_tracker import _conn, HAS_PG
+    import psycopg2.extras
+except ImportError:
+    try:
+        from db.pgvector_tracker import _conn, HAS_PG
+        import psycopg2.extras
+    except ImportError:
+        HAS_PG = False
+        _conn = None
 
 
-@dataclass
-class Department:
-    id: str
-    name: str
+def coerce_doctor_id(doctor_id: str | int | None) -> int | None:
+    if doctor_id is None:
+        return None
+    doc_str = str(doctor_id).lower()
+    if "d5" in doc_str or "d7" in doc_str or doc_str == "1":
+        return 1
+    elif "d8" in doc_str or doc_str == "2":
+        return 2
+    elif "d9" in doc_str or doc_str == "3":
+        return 3
+    else:
+        digits = "".join(c for c in doc_str if c.isdigit())
+        return int(digits) if digits else 1
 
 
-@dataclass
-class Doctor:
-    id: str
-    name: str
-    department_id: str
+def map_db_doctor_id_to_d_id(db_id: int | str) -> str:
+    val = str(db_id)
+    if val == "1":
+        return "d5"
+    elif val == "2":
+        return "d8"
+    elif val == "3":
+        return "d9"
+    return f"d{val}"
 
 
-@dataclass
-class Slot:
-    id: str
-    doctor_id: str
-    start_time: datetime
-    booked: bool = False
+def coerce_slot_id(slot_id: str | int | None) -> int | None:
+    if slot_id is None:
+        return None
+    slot_str = str(slot_id).lower()
+    digits = "".join(c for c in slot_str if c.isdigit())
+    return int(digits) if digits else 1
 
 
-@dataclass
-class Appointment:
-    id: str
-    doctor_id: str
-    slot_id: str
-    patient: str
-    reason: str
-    department: str
-    booked_at: datetime
-    patient_id: Optional[str] = None
-    session_id: Optional[str] = None
-    consultation_context_id: Optional[str] = None
-    status: str = "booked"
+def coerce_dept_id(dept: str | int | None) -> int | None:
+    if dept is None:
+        return None
+    dept_str = str(dept).lower()
+    if "general" in dept_str or dept_str == "1":
+        return 1
+    elif "cardiology" in dept_str or dept_str == "2":
+        return 2
+    elif "neurology" in dept_str or dept_str == "3":
+        return 3
+    else:
+        digits = "".join(c for c in dept_str if c.isdigit())
+        return int(digits) if digits else 1
 
 
 class LocalStore:
     def __init__(self):
         self._lock = threading.Lock()
-        self._depts: dict[str, Department] = {}
-        self._doctors: dict[str, Doctor] = {}
-        self._slots: dict[str, Slot] = {}
-        self._appointments: dict[str, Appointment] = {}
-        self._seed()
-
-    def _next_id(self, prefix: str, existing: dict) -> str:
-        n = 0
-        for k in existing:
-            if k.startswith(prefix):
-                try:
-                    n = max(n, int(k[len(prefix):]))
-                except ValueError:
-                    pass
-        return f"{prefix}{n + 1}"
-
-    def _seed(self):
-        depts = [
-            Department("general", "General Physician"),
-            Department("cardiology", "Cardiology"),
-            Department("neurology", "Neurology"),
-        ]
-        for d in depts:
-            self._depts[d.id] = d
-
-        docs = [
-            Doctor("d5", "Dr. Shankar Dada", "general"),
-            Doctor("d8", "Dr. Arjun Reddy", "cardiology"),
-            Doctor("d9", "Dr. Octopus", "neurology"),
-        ]
-        for d in docs:
-            self._doctors[d.id] = d
-
-        now = datetime.now().replace(microsecond=0, second=0, minute=0) + timedelta(hours=1)
-        slot_idx = 0
-        for doc in docs:
-            for h in range(4):
-                slot_idx += 1
-                sid = f"s{slot_idx}"
-                self._slots[sid] = Slot(sid, doc.id, now + timedelta(hours=h * 2))
-
-    # --- public API (mirrors appointment_client) ---
 
     def list_departments(self) -> list[dict]:
-        with self._lock:
-            return sorted(
-                [{"id": d.id, "name": d.name} for d in self._depts.values()],
-                key=lambda x: x["id"],
-            )
+        if not HAS_PG:
+            return []
+        with _conn() as conn:
+            if conn is None: return []
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute("SELECT id::text, name FROM departments ORDER BY id")
+            rows = cur.fetchall()
+            return [dict(r) for r in rows]
 
     def list_doctors(self, department: Optional[str] = None) -> list[dict]:
-        with self._lock:
+        if not HAS_PG:
+            return []
+        with _conn() as conn:
+            if conn is None: return []
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            if department:
+                dept_id = coerce_dept_id(department)
+                cur.execute("SELECT id::text, name, department_id::text FROM doctors WHERE department_id = %s ORDER BY id", (dept_id,))
+            else:
+                cur.execute("SELECT id::text, name, department_id::text FROM doctors ORDER BY id")
+            rows = cur.fetchall()
             out = []
-            for d in self._doctors.values():
-                if department and d.department_id != department:
-                    continue
-                out.append({
-                    "id": d.id,
-                    "name": d.name,
-                    "department_id": d.department_id,
-                })
-            return sorted(out, key=lambda x: x["id"])
+            for r in rows:
+                r_dict = dict(r)
+                r_dict["id"] = map_db_doctor_id_to_d_id(r_dict["id"])
+                r_dict["department_id"] = str(r_dict["department_id"])
+                out.append(r_dict)
+            return out
 
     def list_slots(self, doctor_id: Optional[str] = None) -> list[dict]:
-        with self._lock:
-            booked_ids = {a.slot_id for a in self._appointments.values()}
+        if not HAS_PG:
+            return []
+        with _conn() as conn:
+            if conn is None: return []
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            if doctor_id:
+                doc_id = coerce_doctor_id(doctor_id)
+                cur.execute("SELECT id::text, doctor_id::text, start_time FROM time_slots WHERE is_available = true AND doctor_id = %s ORDER BY start_time", (doc_id,))
+            else:
+                cur.execute("SELECT id::text, doctor_id::text, start_time FROM time_slots WHERE is_available = true ORDER BY start_time")
+            rows = cur.fetchall()
             out = []
-            for s in self._slots.values():
-                if doctor_id and s.doctor_id != doctor_id:
-                    continue
-                if s.id in booked_ids:
-                    continue
-                out.append({
-                    "id": s.id,
-                    "doctor_id": s.doctor_id,
-                    "start_time": s.start_time.isoformat(),
-                })
-            return sorted(out, key=lambda x: x["start_time"])
+            for r in rows:
+                r_dict = dict(r)
+                r_dict["doctor_id"] = map_db_doctor_id_to_d_id(r_dict["doctor_id"])
+                if isinstance(r_dict["start_time"], datetime):
+                    r_dict["start_time"] = r_dict["start_time"].isoformat()
+                out.append(r_dict)
+            return out
 
     def book_appointment(
         self,
@@ -134,75 +131,88 @@ class LocalStore:
         consultation_context_id: Optional[str] = None,
         status: str = "booked",
     ) -> tuple[int, dict]:
-        """
-        Attempt to book an appointment.
-
-        Returns a tuple `(status_code, body)` where `status_code` is an HTTP-style
-        numeric code (200 on success, 404 if doctor/slot not found, 409 if slot
-        already taken, 500 for server error) and `body` is a dict with details on
-        success or an error description. Callers should rely on the numeric status
-        code, and treat non-2xx as failure.
-        """
+        if not patient_id:
+            return 422, {"error": "patient_id required"}
+        if not HAS_PG:
+            return 500, {"error": "DB unavailable"}
+        
+        doc_id = coerce_doctor_id(doctor_id)
+        s_id = coerce_slot_id(slot_id)
+        
         with self._lock:
-            if doctor_id not in self._doctors:
-                return 404, {"error": "doctor not found"}
-            slot = self._slots.get(slot_id)
-            if not slot or slot.doctor_id != doctor_id:
-                return 404, {"error": "slot not found"}
-            for a in self._appointments.values():
-                if a.slot_id == slot_id:
+            with _conn() as conn:
+                if conn is None: return 500, {"error": "DB unavailable"}
+                cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                
+                # Check doctor
+                cur.execute("SELECT * FROM doctors WHERE id = %s", (doc_id,))
+                doc = cur.fetchone()
+                if not doc:
+                    return 404, {"error": "doctor not found"}
+                
+                # Check slot
+                cur.execute("SELECT * FROM time_slots WHERE id = %s AND doctor_id = %s", (s_id, doc_id))
+                slot = cur.fetchone()
+                if not slot:
+                    return 404, {"error": "slot not found"}
+                if not slot.get('is_available', True):
                     return 409, {"error": "slot_taken"}
-            aid = self._next_id("a", self._appointments)
-            apt = Appointment(
-                id=aid,
-                doctor_id=doctor_id,
-                slot_id=slot_id,
-                patient=patient,
-                reason=reason,
-                department=department or self._doctors[doctor_id].department_id,
-                booked_at=datetime.now(),
-                patient_id=patient_id,
-                session_id=session_id,
-                consultation_context_id=consultation_context_id,
-                status=status,
-            )
-            self._appointments[aid] = apt
-            return 200, {"id": aid, "confirmed": True}
+                
+                dept = coerce_dept_id(department) or doc['department_id']
+                
+                # Book
+                cur.execute("""
+                    INSERT INTO appointments (user_id, doctor_id, time_slot_id, department_id, reason, status)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (patient_id, doc_id, s_id, dept, reason, status))
+                aid = cur.fetchone()['id']
+                
+                # Mark slot unavailable
+                cur.execute("UPDATE time_slots SET is_available = false WHERE id = %s", (s_id,))
+                
+                return 200, {"id": str(aid), "confirmed": True}
 
     def get_appointment(self, appointment_id: str) -> Optional[dict]:
-        with self._lock:
-            apt = self._appointments.get(appointment_id)
-            if not apt:
-                return None
-            return {
-                "id": apt.id,
-                "doctor_id": apt.doctor_id,
-                "slot_id": apt.slot_id,
-                "patient": apt.patient,
-                "reason": apt.reason,
-                "department": apt.department,
-                "patient_id": apt.patient_id,
-                "session_id": apt.session_id,
-                "consultation_context_id": apt.consultation_context_id,
-                "status": apt.status,
-            }
+        if not HAS_PG: return None
+        try:
+            apt_id = int(appointment_id)
+        except ValueError:
+            return None
+            
+        with _conn() as conn:
+            if conn is None: return None
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute("""
+                SELECT a.id, a.doctor_id, a.time_slot_id as slot_id, a.user_id as patient_id, 
+                       a.reason, a.department_id as department, a.status,
+                       u.name as patient
+                FROM appointments a
+                LEFT JOIN users u ON u.id = a.user_id
+                WHERE a.id = %s
+            """, (apt_id,))
+            row = cur.fetchone()
+            if not row: return None
+            
+            res = dict(row)
+            res["id"] = str(res["id"])
+            res["doctor_id"] = map_db_doctor_id_to_d_id(res["doctor_id"])
+            res["slot_id"] = str(res["slot_id"])
+            res["department"] = str(res["department"])
+            res["session_id"] = None
+            res["consultation_context_id"] = None
+            return res
 
-
-# Singleton
 _store = LocalStore()
-
 
 def list_departments() -> list[dict]:
     return _store.list_departments()
 
-
 def list_doctors(department: Optional[str] = None) -> list[dict]:
     return _store.list_doctors(department)
 
-
 def list_slots(doctor_id: Optional[str] = None) -> list[dict]:
     return _store.list_slots(doctor_id)
-
 
 def book_appointment(
     doctor_id: str,
@@ -226,7 +236,6 @@ def book_appointment(
         consultation_context_id=consultation_context_id,
         status=status,
     )
-
 
 def get_appointment(appointment_id: str) -> Optional[dict]:
     return _store.get_appointment(appointment_id)

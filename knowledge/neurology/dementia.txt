@@ -1,0 +1,117 @@
+Dementia — Clinical Reference
+
+DEFINITION
+Dementia is a clinical syndrome of progressive cognitive decline severe enough to interfere with daily function. It encompasses multiple domains of cognition including memory, language, executive function, visuospatial ability, and personality/behavior. It is not a single disease but a group of symptoms caused by various brain disorders.
+
+EPIDEMIOLOGY
+- ~55 million people worldwide have dementia (2023)
+- Alzheimer's disease accounts for 60-70% of cases
+- Second most common: vascular dementia (~15-20%)
+- Doubling every 20 years with aging population
+- 70% of risk attributable to modifiable factors
+
+MILD COGNITIVE IMPAIRMENT (MCI)
+- Cognitive decline greater than expected for age but not meeting dementia criteria
+- Daily function preserved
+- Amnestic MCI: memory predominantly affected (high risk of Alzheimer's conversion ~10-15%/year)
+- Non-amnestic MCI: other domains affected
+
+ALZHEIMER'S DISEASE
+Pathophysiology:
+- Amyloid-beta plaques (extracellular) and neurofibrillary tau tangles (intracellular)
+- Cholinergic neuron loss
+- Hippocampal and entorhinal cortex affected first
+- APOE4 allele: major genetic risk factor
+
+Clinical features:
+- Insidious onset, gradual progression
+- Early: episodic memory impairment (forgetting recent events), word-finding difficulty
+- Middle: spatial disorientation, behavioral changes, ADL impairment
+- Late: severe memory loss, incontinence, dysphagia, bed-bound
+- Behavioral symptoms: depression, anxiety, agitation, psychosis, wandering
+
+Diagnostic workup:
+- Clinical history (collateral history essential)
+- Neuropsychological testing (MMSE, MoCA, ADAS-Cog)
+- MRI brain: medial temporal lobe atrophy, hippocampal volume loss
+- PET scan: amyloid PET (amyloid deposition), FDG-PET (hypometabolism pattern)
+- CSF biomarkers: reduced Abeta42, elevated tau and phospho-tau
+- Blood biomarkers (emerging): plasma p-tau217, p-tau181
+
+VASCULAR DEMENTIA
+- Caused by cerebrovascular disease: large artery strokes, small vessel disease (lacunar), white matter disease
+- More stepwise progression, focal neurological signs
+- Risk factors same as stroke
+- MRI: white matter hyperintensities, lacunar infarcts
+- Treatment: vascular risk factor management
+
+LEWY BODY DEMENTIA (DLB)
+Core features:
+- Fluctuating cognition (variable attention and alertness)
+- Recurrent visual hallucinations (vivid, detailed, typically animals or people)
+- Parkinsonism (motor features)
+- REM sleep behavior disorder
+
+Supportive features:
+- Severe neuroleptic sensitivity (avoid typical antipsychotics — risk of crisis)
+- Low dopamine transporter uptake on DAT-SPECT
+
+FRONTOTEMPORAL DEMENTIA (FTD)
+- Younger onset (often 50-65 years)
+- Behavioral variant FTD (bvFTD): disinhibition, apathy, compulsive behaviors, dietary changes, executive dysfunction
+- Primary progressive aphasia (PPA): language variant
+- TDP-43, FUS, tau pathology
+- Genetic: C9orf72, GRN, MAPT mutations
+
+PARKINSON'S DISEASE DEMENTIA (PDD)
+- Dementia occurring >1 year after established PD
+- Distinct from DLB (dementia concurrent with or before parkinsonism)
+- Predominantly executive and visuospatial impairment
+
+OTHER CAUSES
+- Normal pressure hydrocephalus (NPH): triad of gait disorder, dementia, urinary incontinence; treatable with shunt
+- Creutzfeldt-Jakob disease (CJD): rapid progression, myoclonus, periodic EEG, prion disease
+- Autoimmune encephalitis: anti-NMDAR, LGI1, CASPR2 — treatable, younger patients
+- Reversible causes: hypothyroidism, B12 deficiency, neurosyphilis, depression (pseudodementia)
+
+ASSESSMENT TOOLS
+- MMSE (Mini-Mental State Examination): 0-30, <24 suggests dementia
+- MoCA (Montreal Cognitive Assessment): 0-30, <26 suggests MCI/dementia; more sensitive
+- Clock Drawing Test, Trail Making Test (executive function)
+- NPI (Neuropsychiatric Inventory) for behavioral symptoms
+
+MANAGEMENT — PHARMACOLOGICAL
+Cholinesterase inhibitors (Alzheimer's, DLB, PDD):
+- Donepezil 5-10mg daily (best tolerated, once daily)
+- Rivastigmine (oral or patch) — preferred in PDD/DLB
+- Galantamine
+- Side effects: nausea, diarrhea, bradycardia, nightmares
+
+NMDA receptor antagonist:
+- Memantine 10-20mg daily — for moderate-severe AD, mild benefit
+- Can combine with donepezil in moderate-severe
+
+Disease-modifying therapy (Alzheimer's):
+- Lecanemab (Leqembi): anti-amyloid antibody, slows progression in early AD (2023 approval)
+- Donanemab: similar mechanism
+- Significant side effects: amyloid-related imaging abnormalities (ARIA)
+
+Behavioral symptoms:
+- Non-pharmacological first: behavioral interventions, environment modification
+- Depression: SSRIs (sertraline, citalopram preferred)
+- Psychosis/agitation: low-dose quetiapine, risperidone (avoid in DLB)
+- Sleep: melatonin, low-dose trazodone
+
+NON-PHARMACOLOGICAL
+- Cognitive stimulation therapy
+- Exercise programs
+- Caregiver support and education (crucial)
+- Advanced care planning (while capacity retained)
+- Occupational therapy: home safety assessment
+- Social services: day care, respite care
+
+DRIVING AND LEGAL
+- All patients with dementia should be assessed for driving fitness
+- Early stage may still drive (with regular reassessment)
+- Enduring power of attorney, advance directives — early planning essential
+- Capacity assessment for medical decisions

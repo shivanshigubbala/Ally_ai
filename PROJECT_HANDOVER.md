@@ -53,7 +53,7 @@ The system is split into:
 - Backend to Postgres: direct psycopg2 connections.
 - Backend to appointment service: HTTP client in [backend/shared/appointment_client.py](backend/shared/appointment_client.py).
 - Backend to lab service: HTTP client in [backend/shared/lab_client.py](backend/shared/lab_client.py).
-- Backend to LLM providers: OpenAI-compatible client in [backend/general_physician/llm/nvidia_client.py](backend/general_physician/llm/nvidia_client.py) and [backend/general_physician/llm/embeddings.py](backend/general_physician/llm/embeddings.py).
+- Backend to LLM providers: OpenAI-compatible client in [backend/llm/nvidia_client.py](backend/llm/nvidia_client.py) and [backend/llm/embeddings.py](backend/llm/embeddings.py).
 
 ---
 
@@ -63,11 +63,11 @@ The system is split into:
 Purpose: application backend, models, AI graphs, persistence, and service helpers.
 
 Important files:
-- [backend/general_physician/main.py](backend/general_physician/main.py) — FastAPI entrypoint and REST routes.
-- [backend/general_physician/ws/router.py](backend/general_physician/ws/router.py) — WebSocket router and event dispatch.
+- [backend/main.py](backend/main.py) — FastAPI entrypoint and REST routes.
+- [backend/ws/router.py](backend/ws/router.py) — WebSocket router and event dispatch.
 - [backend/general_physician/agent.py](backend/general_physician/agent.py) — doctor consultation orchestration.
 - [backend/general_physician/graphs/routing_graph.py](backend/general_physician/graphs/routing_graph.py) — receptionist booking flow.
-- [backend/general_physician/db/pgvector_tracker.py](backend/general_physician/db/pgvector_tracker.py) — persistence helpers over Postgres.
+- [backend/db/pgvector_tracker.py](backend/db/pgvector_tracker.py) — persistence helpers over Postgres.
 - [backend/specialties/dispatcher.py](backend/specialties/dispatcher.py) and [backend/specialties/registry.py](backend/specialties/registry.py) — specialty resolution.
 
 Responsibilities:
@@ -152,8 +152,8 @@ Important files:
 
 ### Startup flow
 1. Docker Compose starts Postgres, then backend, then appointment and lab services (if used).
-2. Backend initializes the database schema via [backend/general_physician/db/pgvector_tracker.py](backend/general_physician/db/pgvector_tracker.py).
-3. The FastAPI app in [backend/general_physician/main.py](backend/general_physician/main.py) starts and includes the WebSocket router.
+2. Backend initializes the database schema via [backend/db/pgvector_tracker.py](backend/db/pgvector_tracker.py).
+3. The FastAPI app in [backend/main.py](backend/main.py) starts and includes the WebSocket router.
 4. The frontend connects to the backend WebSocket on startup with the current user id.
 
 ### Request flow
@@ -169,7 +169,7 @@ B --> G[Frontend WebSocket events]
 
 ### WebSocket flow
 - The frontend opens [frontend/hooks/useChatSocket.ts](frontend/hooks/useChatSocket.ts) to connect to the backend WebSocket endpoint.
-- The backend accepts connections at [backend/general_physician/ws/router.py](backend/general_physician/ws/router.py).
+- The backend accepts connections at [backend/ws/router.py](backend/ws/router.py).
 - Incoming events are parsed into a client event envelope and dispatched to either the routing graph or the doctor graph.
 - Outgoing events are emitted as typed WebSocket events such as text, text_delta, doctor_select, slot_select, doctor_ready, lab_notification, report_ready, and consultation_chart.
 
@@ -178,7 +178,7 @@ There is no real authentication implementation. The current flow uses a client-s
 
 ### Persistence
 - Postgres stores users, sessions, messages, knowledge_chunks, uploaded_files, notifications, consultation_contexts, and patient_timelines.
-- In-memory demo data is used for appointment/doctor/slot state through [backend/general_physician/services/local_store.py](backend/general_physician/services/local_store.py).
+- In-memory demo data is used for appointment/doctor/slot state through [backend/services/local_store.py](backend/services/local_store.py).
 
 ### Routing
 - Receptionist routing is handled by [backend/general_physician/graphs/routing_graph.py](backend/general_physician/graphs/routing_graph.py).
@@ -230,25 +230,25 @@ The backend container receives Postgres connection values and service URLs from 
 ## 5. Backend Flow
 
 ### Request lifecycle from API entry to response
-1. The FastAPI app in [backend/general_physician/main.py](backend/general_physician/main.py) starts.
-2. The WebSocket router in [backend/general_physician/ws/router.py](backend/general_physician/ws/router.py) accepts events.
+1. The FastAPI app in [backend/main.py](backend/main.py) starts.
+2. The WebSocket router in [backend/ws/router.py](backend/ws/router.py) accepts events.
 3. For receptionist events, the router invokes [backend/general_physician/graphs/routing_graph.py](backend/general_physician/graphs/routing_graph.py).
 4. When the booking flow reaches completion, the router emits a doctor-ready event and returns the appointment id.
 5. When the patient starts the consultation, the router resolves the specialty implementation and invokes the doctor graph.
 6. The doctor graph uses:
    - retrieval context from [backend/general_physician/rag/retriever.py](backend/general_physician/rag/retriever.py),
    - patient context from [backend/general_physician/agent.py](backend/general_physician/agent.py),
-   - persistence helpers from [backend/general_physician/db/pgvector_tracker.py](backend/general_physician/db/pgvector_tracker.py).
+   - persistence helpers from [backend/db/pgvector_tracker.py](backend/db/pgvector_tracker.py).
 7. The flow can emit lab notifications and create persisted lab work items and notifications.
 8. The frontend consumes these events and updates chat, inbox, reports, and appointment panels.
 
 ### Router / controller / service / model / repository split
-- Router: [backend/general_physician/ws/router.py](backend/general_physician/ws/router.py), [backend/general_physician/main.py](backend/general_physician/main.py)
-- Controller-style handlers: REST route handlers in [backend/general_physician/main.py](backend/general_physician/main.py)
-- Service layer: [backend/general_physician/services/local_store.py](backend/general_physician/services/local_store.py), [backend/shared/appointment_client.py](backend/shared/appointment_client.py), [backend/shared/lab_client.py](backend/shared/lab_client.py)
-- Models: [backend/general_physician/models/session_state.py](backend/general_physician/models/session_state.py), [backend/models/intake.py](backend/models/intake.py), [backend/models/notification.py](backend/models/notification.py), [backend/models/timeline.py](backend/models/timeline.py)
-- Persistence layer: [backend/general_physician/db/pgvector_tracker.py](backend/general_physician/db/pgvector_tracker.py)
-- Middleware: CORS middleware in [backend/general_physician/main.py](backend/general_physician/main.py)
+- Router: [backend/ws/router.py](backend/ws/router.py), [backend/main.py](backend/main.py)
+- Controller-style handlers: REST route handlers in [backend/main.py](backend/main.py)
+- Service layer: [backend/services/local_store.py](backend/services/local_store.py), [backend/shared/appointment_client.py](backend/shared/appointment_client.py), [backend/shared/lab_client.py](backend/shared/lab_client.py)
+- Models: [backend/models/session_state.py](backend/models/session_state.py), [backend/models/intake.py](backend/models/intake.py), [backend/models/notification.py](backend/models/notification.py), [backend/models/timeline.py](backend/models/timeline.py)
+- Persistence layer: [backend/db/pgvector_tracker.py](backend/db/pgvector_tracker.py)
+- Middleware: CORS middleware in [backend/main.py](backend/main.py)
 
 ---
 
@@ -263,7 +263,7 @@ The core runtime uses LangGraph state graphs with a MemorySaver checkpointer. Th
 The routing graph collects intake details and selects a doctor or department. The doctor graph then drives the consultation loop, questions the patient, decides whether to recommend labs, and persists the consultation state.
 
 ### Prompts
-Prompt templates are centralized in [backend/general_physician/prompts.py](backend/general_physician/prompts.py) and department-specific prompts are loaded via [backend/general_physician/department_config.py](backend/general_physician/department_config.py).
+Prompt templates are centralized in [backend/general_physician/agent.py](backend/general_physician/agent.py) and department-specific prompts are loaded via [backend/general_physician/agent.py](backend/general_physician/agent.py).
 
 ### Memory
 Conversation memory is stored in the messages table and reused by the doctor agent for context. The agent also builds a compact patient context block before prompting the LLM.
@@ -280,13 +280,13 @@ The doctor context is assembled from:
 The retriever in [backend/general_physician/rag/retriever.py](backend/general_physician/rag/retriever.py) builds a query from recent user turns and the chief complaint, embeds it, then searches pgvector for similar passages.
 
 ### Embeddings
-Embedding calls are made by [backend/general_physician/llm/embeddings.py](backend/general_physician/llm/embeddings.py). The default embedding model is NVIDIA's embed model with 1024-dim vectors.
+Embedding calls are made by [backend/llm/embeddings.py](backend/llm/embeddings.py). The default embedding model is NVIDIA's embed model with 1024-dim vectors.
 
 ### RAG
 The repository implements a document upload -> chunk -> embed -> store -> retrieve pipeline. Uploaded documents are chunked and inserted into the knowledge_chunks table for similarity search.
 
 ### Model providers
-Model calls are routed through [backend/general_physician/llm/nvidia_client.py](backend/general_physician/llm/nvidia_client.py). The client supports:
+Model calls are routed through [backend/llm/nvidia_client.py](backend/llm/nvidia_client.py). The client supports:
 - NVIDIA NIM,
 - OpenRouter,
 - Ollama.
@@ -311,20 +311,20 @@ State is managed through LangGraph state objects and the WebSocket router's in-m
 
 | Feature | Location | Status | Dependencies |
 |---|---|---|---|
-| Registration | [backend/general_physician/main.py](backend/general_physician/main.py), [frontend/app/signup/page.tsx](frontend/app/signup/page.tsx) | Implemented | Postgres persistence, frontend fetch call |
+| Registration | [backend/main.py](backend/main.py), [frontend/app/signup/page.tsx](frontend/app/signup/page.tsx) | Implemented | Postgres persistence, frontend fetch call |
 | Receptionist intake | [backend/general_physician/graphs/routing_graph.py](backend/general_physician/graphs/routing_graph.py) | Implemented | LLM provider, local store |
 | Doctor selection | [backend/general_physician/graphs/routing_graph.py](backend/general_physician/graphs/routing_graph.py) | Implemented | local store |
-| Appointment booking | [backend/general_physician/services/local_store.py](backend/general_physician/services/local_store.py) | Implemented in demo/local mode | local store or appointment service |
-| Consultation handoff | [backend/general_physician/ws/router.py](backend/general_physician/ws/router.py) | Implemented | WebSocket + routing graph |
+| Appointment booking | [backend/services/local_store.py](backend/services/local_store.py) | Implemented in demo/local mode | local store or appointment service |
+| Consultation handoff | [backend/ws/router.py](backend/ws/router.py) | Implemented | WebSocket + routing graph |
 | Doctor consultation | [backend/general_physician/agent.py](backend/general_physician/agent.py) | Implemented | LLM provider, RAG, Postgres |
-| Document upload | [backend/general_physician/main.py](backend/general_physician/main.py) | Implemented | pymupdf, embeddings, Postgres |
+| Document upload | [backend/main.py](backend/main.py) | Implemented | pymupdf, embeddings, Postgres |
 | RAG / knowledge retrieval | [backend/general_physician/rag/retriever.py](backend/general_physician/rag/retriever.py) | Implemented | pgvector, embeddings |
-| Conversation memory | [backend/general_physician/db/pgvector_tracker.py](backend/general_physician/db/pgvector_tracker.py) | Implemented | messages table |
+| Conversation memory | [backend/db/pgvector_tracker.py](backend/db/pgvector_tracker.py) | Implemented | messages table |
 | Timeline / longitudinal history | [backend/models/timeline.py](backend/models/timeline.py) | Implemented as model + persistence helper | Postgres |
 | Notifications model + persistence | [backend/models/notification.py](backend/models/notification.py) | Implemented | notifications table |
 | Consultation context persistence | [backend/models/intake.py](backend/models/intake.py) | Implemented | consultation_contexts table |
 | Lab recommendation flow | [backend/general_physician/agent.py](backend/general_physician/agent.py) | Implemented | lab service client |
-| Report route | [backend/general_physician/main.py](backend/general_physician/main.py) | Implemented | PDF files under reports |
+| Report route | [backend/main.py](backend/main.py) | Implemented | PDF files under reports |
 | Specialty abstraction | [backend/specialties/base.py](backend/specialties/base.py) | Implemented | registry/dispatcher |
 | Cardiology specialty scaffold | [backend/specialties/cardiology/consultation_controller.py](backend/specialties/cardiology/consultation_controller.py) | Partial | specialty registry |
 | WebSocket-based UI conversation | [frontend/hooks/useChatSocket.ts](frontend/hooks/useChatSocket.ts) | Implemented | backend WS |
@@ -437,10 +437,10 @@ Important fields:
 - created_at
 
 Source:
-- [backend/general_physician/db/pgvector_tracker.py](backend/general_physician/db/pgvector_tracker.py)
+- [backend/db/pgvector_tracker.py](backend/db/pgvector_tracker.py)
 
 ### Appointment
-The in-process appointment model is defined in [backend/general_physician/services/local_store.py](backend/general_physician/services/local_store.py). The Go service has its own schematized appointment model.
+The in-process appointment model is defined in [backend/services/local_store.py](backend/services/local_store.py). The Go service has its own schematized appointment model.
 
 Important fields:
 - id
@@ -580,7 +580,7 @@ Important fields:
 
 ### LLMs
 Default LLM provider is configurable through the environment. The code supports:
-- NVIDIA NIM via [backend/general_physician/llm/nvidia_client.py](backend/general_physician/llm/nvidia_client.py)
+- NVIDIA NIM via [backend/llm/nvidia_client.py](backend/llm/nvidia_client.py)
 - OpenRouter
 - Ollama
 
@@ -717,15 +717,15 @@ The architecture is extensible for new specialties and new backend services, but
 
 ## 20. Files Worth Reading First
 
-1. [backend/general_physician/main.py](backend/general_physician/main.py) — backend entrypoint, REST routes, registration, upload, report endpoints.
-2. [backend/general_physician/ws/router.py](backend/general_physician/ws/router.py) — WebSocket lifecycle, routing vs doctor handoff.
+1. [backend/main.py](backend/main.py) — backend entrypoint, REST routes, registration, upload, report endpoints.
+2. [backend/ws/router.py](backend/ws/router.py) — WebSocket lifecycle, routing vs doctor handoff.
 3. [backend/general_physician/graphs/routing_graph.py](backend/general_physician/graphs/routing_graph.py) — receptionist flow and booking state machine.
 4. [backend/general_physician/agent.py](backend/general_physician/agent.py) — doctor agent orchestration and consultation persistence.
-5. [backend/general_physician/db/pgvector_tracker.py](backend/general_physician/db/pgvector_tracker.py) — persistence model over Postgres.
+5. [backend/db/pgvector_tracker.py](backend/db/pgvector_tracker.py) — persistence model over Postgres.
 6. [backend/general_physician/rag/retriever.py](backend/general_physician/rag/retriever.py) — retrieval and RAG context assembly.
-7. [backend/general_physician/llm/nvidia_client.py](backend/general_physician/llm/nvidia_client.py) — LLM provider abstraction.
-8. [backend/general_physician/llm/embeddings.py](backend/general_physician/llm/embeddings.py) — embedding client.
-9. [backend/general_physician/services/local_store.py](backend/general_physician/services/local_store.py) — in-memory booking/demo data.
+7. [backend/llm/nvidia_client.py](backend/llm/nvidia_client.py) — LLM provider abstraction.
+8. [backend/llm/embeddings.py](backend/llm/embeddings.py) — embedding client.
+9. [backend/services/local_store.py](backend/services/local_store.py) — in-memory booking/demo data.
 10. [backend/specialties/dispatcher.py](backend/specialties/dispatcher.py) — specialty resolution.
 11. [backend/specialties/registry.py](backend/specialties/registry.py) — specialty registration.
 12. [backend/specialties/base.py](backend/specialties/base.py) — specialty contract.
@@ -733,7 +733,7 @@ The architecture is extensible for new specialties and new backend services, but
 14. [backend/models/intake.py](backend/models/intake.py) — consultation context model.
 15. [backend/models/notification.py](backend/models/notification.py) — notification model.
 16. [backend/models/timeline.py](backend/models/timeline.py) — longitudinal history model.
-17. [backend/general_physician/models/session_state.py](backend/general_physician/models/session_state.py) — typed WS event and graph state models.
+17. [backend/models/session_state.py](backend/models/session_state.py) — typed WS event and graph state models.
 18. [frontend/hooks/useChatSocket.ts](frontend/hooks/useChatSocket.ts) — client WebSocket runtime.
 19. [frontend/app/chat/page.tsx](frontend/app/chat/page.tsx) — chat shell and tab orchestration.
 20. [frontend/app/signup/page.tsx](frontend/app/signup/page.tsx) — registration UI.

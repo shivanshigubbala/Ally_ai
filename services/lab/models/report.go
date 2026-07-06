@@ -4,7 +4,7 @@ import "time"
 
 type Report struct {
 	ID                    int       `json:"id"`
-	UserID                int       `json:"user_id"`
+	UserID                string    `json:"user_id"`
 	AppointmentID         int       `json:"appointment_id"`
 	PDFName               string    `json:"pdf_name"`
 	PDFPath               string    `json:"pdf_path"`

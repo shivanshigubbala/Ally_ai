@@ -1,0 +1,165 @@
+Neurology General Knowledge — Clinical Overview
+
+NEUROLOGICAL EXAMINATION
+Mental status:
+- Consciousness: GCS (eye 1-4, verbal 1-5, motor 1-6)
+- Orientation, attention, memory (immediate, short, long-term)
+- Language: fluency, comprehension, repetition, naming
+- Visuospatial function, executive function
+- MMSE, MoCA for standardized assessment
+
+Cranial nerves:
+- CN I: smell (olfaction)
+- CN II: visual acuity, visual fields, pupil reaction, fundoscopy
+- CN III, IV, VI: extraocular movements, ptosis, pupil (PERRLA)
+- CN V: facial sensation, mastication (jaw clench)
+- CN VII: facial movements (forehead sparing in UMN lesion)
+- CN VIII: hearing (Weber, Rinne), vestibular function
+- CN IX, X: gag reflex, palate elevation, voice
+- CN XI: sternomastoid, trapezius strength
+- CN XII: tongue movements, fasciculations
+
+Motor:
+- Tone: spasticity (UMN), rigidity (basal ganglia), hypotonia (LMN, cerebellar)
+- Power: MRC grading 0-5
+- Reflexes: biceps (C5/6), brachioradialis (C6), triceps (C7), knee (L3/4), ankle (S1)
+- Plantar responses (Babinski sign — UMN lesion if extensor)
+- Clonus
+
+Coordination:
+- Finger-nose test, heel-shin test (cerebellar)
+- Rapid alternating movements
+- Gait: tandem, heel, toe walking
+- Romberg test (eyes open vs. closed balance)
+
+Sensory:
+- Light touch, pinprick (spinothalamic tract)
+- Vibration (128 Hz tuning fork), proprioception (posterior columns)
+- Temperature
+
+UPPER vs. LOWER MOTOR NEURON LESION
+
+Upper Motor Neuron (UMN) — brain and spinal cord:
+- Increased tone (spasticity)
+- Hyperreflexia
+- Extensor plantar (Babinski positive)
+- No or mild atrophy
+- Weakness in pattern (extensors in arm, flexors in leg)
+
+Lower Motor Neuron (LMN) — anterior horn, nerve root, peripheral nerve:
+- Decreased tone (flaccidity)
+- Hyporeflexia or areflexia
+- Flexor plantar
+- Muscle wasting, fasciculations
+- Weakness in distribution of nerve/root
+
+NEUROIMAGING INDICATIONS
+CT brain (non-contrast):
+- Acute stroke (exclude hemorrhage before thrombolysis)
+- Head trauma
+- Emergency setting
+- Contraindication to MRI
+
+MRI brain:
+- Superior soft tissue contrast
+- Demyelinating disease (FLAIR/T2)
+- Posterior fossa pathology
+- Epilepsy imaging protocol
+- Tumor assessment
+
+CT angiography / MR angiography:
+- Vascular disease, aneurysm, AVM, carotid stenosis
+
+KEY NEUROLOGICAL SYNDROMES
+
+Brown-Sequard syndrome (hemisection of spinal cord):
+- Ipsilateral: UMN weakness, loss of proprioception and vibration
+- Contralateral: pain and temperature loss (1-2 levels below)
+
+Central cord syndrome (most common incomplete SCI):
+- Greater upper limb than lower limb weakness
+- Bladder dysfunction
+- Variable sensory loss below lesion
+- Hyperextension injury in elderly with cervical spondylosis
+
+Cauda equina syndrome (compression below L1):
+- Lower motor neuron signs in legs
+- Saddle anesthesia (perineal numbness)
+- Urinary/bowel dysfunction (retention, incontinence)
+- SURGICAL EMERGENCY
+
+Horner's syndrome (sympathetic chain disruption):
+- Ptosis, miosis, anhidrosis, enophthalmos (pseudo-enophthalmos)
+- Central: hypothalamus to T1 (Wallenberg, MS, tumor)
+- Preganglionic: T1 root, superior cervical ganglion (Pancoast tumor, neck trauma)
+- Postganglionic: cavernous sinus, ICA dissection, cluster headache
+
+Internuclear ophthalmoplegia (MLF lesion):
+- Ipsilateral adduction palsy on lateral gaze
+- Contralateral nystagmus of abducting eye
+- Bilateral: MS classic; unilateral: brainstem stroke
+
+NEURO-OPHTHALMOLOGY
+Papilledema (bilateral disc swelling):
+- Raised ICP: brain tumor, IIH, hydrocephalus, venous sinus thrombosis
+- Asymmetric: usually indicates local pathology
+
+Visual field defects:
+- Monocular blindness: ipsilateral optic nerve
+- Bitemporal hemianopia: optic chiasm compression (pituitary tumor)
+- Homonymous hemianopia: optic tract or radiation
+- Quadrantanopia: partial radiation lesion (temporal = upper quadrant loss)
+- Macular sparing: occipital lobe (dual blood supply)
+
+Optic neuritis:
+- Painful vision loss, central scotoma, reduced color vision
+- Relative afferent pupillary defect (RAPD) on swinging flashlight test
+- Most common cause: MS
+
+CONSCIOUSNESS AND COMA
+Glasgow Coma Scale (GCS):
+- Eye opening: spontaneous (4), to voice (3), to pain (2), none (1)
+- Verbal: oriented (5), confused (4), words (3), sounds (2), none (1)
+- Motor: obeys commands (6), localizes (5), flexion/withdrawal (4), abnormal flexion (3), extension (2), none (1)
+- Maximum 15, minimum 3
+
+Brain death:
+- No brainstem reflexes, apnea test
+- Confirmatory tests: EEG (isoelectric), cerebral blood flow studies
+
+Herniation syndromes:
+- Uncal herniation: CN III palsy (dilated pupil), contralateral hemiplegia
+- Central herniation: bilateral pupil changes, decerebrate posturing
+- Tonsillar herniation: compression of foramen magnum, respiratory arrest
+
+COMMON NEUROLOGICAL INVESTIGATIONS
+
+Lumbar puncture (LP):
+- Opening pressure, glucose, protein, cells, culture, cytology
+- Oligoclonal bands (MS), xanthochromia (SAH after 12h)
+- Contraindications: papilledema (image first), coagulopathy, local infection
+
+Electroencephalography (EEG):
+- Seizures, encephalopathy, brain death
+- Epileptiform discharges, slowing, PLEDS
+
+Nerve conduction studies (NCS/EMG):
+- Characterize peripheral nerve and muscle disease
+- Axonal vs. demyelinating
+- Sensory vs. motor vs. mixed
+
+Neuropsychological testing:
+- Detailed cognitive assessment
+- Dementia workup, pre-surgical assessment
+
+LUMBAR SPINAL PATHOLOGY
+
+Disc herniation:
+- L4/5: L5 root: foot drop, numbness dorsum foot/1st toe
+- L5/S1: S1 root: ankle reflex loss, numbness lateral foot/sole, plantarflexion weakness
+
+Lumbar stenosis:
+- Neurogenic claudication: leg pain/weakness with walking, relieved by sitting/bending forward
+- Distinguished from vascular claudication by posture effect
+
+Spondylolisthesis: forward slippage of vertebra

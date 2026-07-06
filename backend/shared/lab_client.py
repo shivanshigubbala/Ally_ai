@@ -72,7 +72,7 @@ def create_lab_tests(
     payload = {
         "session_id": session_id or "",
         "appointment_id": _parse_int(appointment_id, 0) or 0,
-        "user_id": _parse_int(user_id, 0) or 0,
+        "user_id": str(_parse_int(user_id, 0) or 0),
         "doctor_id": _parse_int(doctor_id, 0) or 0,
         "department": department or "",
         "tests": tests or [],

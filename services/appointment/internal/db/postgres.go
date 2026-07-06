@@ -97,26 +97,6 @@ func ensureSchema(db *sql.DB) error {
 		}
 	}
 
-	for _, stmt := range []string{
-		`ALTER TABLE appointments DROP CONSTRAINT IF EXISTS appointments_user_id_fkey`,
-		`DO $$
-		BEGIN
-			IF NOT EXISTS (
-				SELECT 1
-				FROM pg_constraint
-				WHERE conrelid = 'public.appointments'::regclass
-				AND conname = 'appointments_user_id_fkey'
-			) THEN
-				ALTER TABLE appointments
-				ADD CONSTRAINT appointments_user_id_fkey
-				FOREIGN KEY (user_id) REFERENCES appointment_users(id) ON DELETE CASCADE;
-			END IF;
-		END $$`,
-	} {
-		if _, err := db.Exec(stmt); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

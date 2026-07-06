@@ -1,0 +1,201 @@
+General Physician — Common Conditions Clinical Reference
+
+OVERVIEW
+The general physician (GP) manages undifferentiated illness, chronic disease, preventive care, and coordinates specialist referrals. This knowledge base covers common presentations seen in general practice.
+
+FEVER AND INFECTIOUS ILLNESS
+
+Acute Febrile Illness:
+- Temperature >38°C (100.4°F) is fever
+- Common causes: viral URTI, influenza, UTI, pneumonia, gastroenteritis
+- Red flags: temperature >39.5°C, rigors, rash, altered consciousness, neck stiffness, severe headache, hypotension
+
+Influenza:
+- Abrupt onset fever, myalgias, headache, cough, fatigue
+- Treatment: supportive; antivirals (oseltamivir) within 48 hours for high-risk patients
+- High-risk: elderly, immunocompromised, pregnancy, chronic disease
+- Prevention: annual vaccination
+
+COVID-19:
+- Fever, cough, dyspnea, anosmia, myalgia, fatigue
+- Spectrum: mild illness to critical respiratory failure
+- High-risk groups: elderly, comorbidities (diabetes, CVD, obesity, immunocompromised)
+- Treatment: antivirals (nirmatrelvir/ritonavir, molnupiravir for high-risk mild-moderate), supportive care
+- Long COVID: ongoing symptoms >12 weeks post-infection
+
+Urinary Tract Infection (UTI):
+- Uncomplicated: dysuria, frequency, urgency; women
+- Complicated: male, pregnancy, structural abnormality, recurrent, pyelonephritis
+- Treatment: nitrofurantoin, trimethoprim (3 days for uncomplicated); cefalexin, amoxicillin-clavulanate
+- Pyelonephritis: ciprofloxacin or co-amoxiclav 7-14 days; IV antibiotics if severe
+
+Upper Respiratory Tract Infection (URTI):
+- Predominantly viral; antibiotics NOT indicated
+- Symptomatic: paracetamol, ibuprofen, decongestants, lozenges
+- Sinusitis: usually viral; bacterial sinusitis if >10 days, fever, purulent discharge (amoxicillin)
+- Strep throat: rapid test or culture; penicillin V if positive
+- Antibiotic stewardship: avoid unnecessary prescriptions
+
+Pneumonia:
+- Community-acquired: fever, cough, purulent sputum, pleuritic chest pain
+- CURB-65 scoring: confusion, urea, RR, BP, age >65 (score 0-1: home; 2: hospital; 3+: HDU)
+- Common pathogens: Streptococcus pneumoniae, atypical organisms (Mycoplasma, Legionella, Chlamydia)
+- Treatment: amoxicillin 500mg TDS 5 days for mild CAP; add clarithromycin for atypical
+
+RESPIRATORY CONDITIONS
+
+Asthma:
+- Reversible airflow obstruction, bronchospasm, airway hyperresponsiveness
+- Symptoms: wheeze, cough (often nocturnal), chest tightness, dyspnea
+- Triggers: allergens, infections, exercise, cold air, NSAIDs, beta-blockers
+- Investigations: spirometry (FEV1/FVC <0.7, >12% reversibility after bronchodilator)
+- SABA (salbutamol) for acute relief
+- ICS (inhaled corticosteroids): first-line preventer
+- LABA added if poor control
+- Severe/uncontrolled: monoclonal antibodies (omalizumab, mepolizumab, dupilumab)
+- Acute severe: prednisolone 40mg, nebulized salbutamol, ipratropium
+- Life-threatening: IV magnesium, HDU/ICU
+
+COPD:
+- Persistent, progressive airflow limitation; not fully reversible
+- Risk factors: smoking (90%), occupational exposures, alpha-1 antitrypsin deficiency
+- Symptoms: chronic cough, sputum, dyspnea, exercise limitation
+- Spirometry: post-bronchodilator FEV1/FVC <0.7
+- GOLD staging (I-IV) based on FEV1
+- Treatment: smoking cessation (most important), pulmonary rehabilitation
+- SABA/SAMA for mild; LABA/LAMA for moderate; ICS added for frequent exacerbations
+- Exacerbation: prednisolone 30-40mg for 5 days, antibiotics if purulent sputum
+- Oxygen: long-term if PaO2 <7.3 kPa
+
+CARDIOVASCULAR CONDITIONS
+
+Hypertension:
+- Target: <140/90 (most patients); <130/80 (high cardiovascular risk, diabetics)
+- First-line: ACE inhibitor or ARB (particularly if diabetes, CKD, heart failure)
+- Calcium channel blocker (CCB): good for all; especially African descent, elderly
+- Thiazide diuretic: effective, cheap, add-on
+- Beta-blocker: if heart failure, post-MI, rate control
+- Lifestyle: salt restriction, weight loss, alcohol reduction, exercise, DASH diet
+- Hypertensive urgency: DBP >120, end-organ damage — IV labetalol, hydralazine
+
+Atrial Fibrillation:
+- Most common sustained arrhythmia
+- Risk: stroke (CHA2DS2-VASc score) — anticoagulate if score ≥2 men, ≥3 women
+- Anticoagulants: DOACs preferred (apixaban, rivaroxaban, dabigatran, edoxaban); warfarin if valvular AF
+- Rate control: beta-blockers, diltiazem, digoxin
+- Rhythm control: cardioversion, antiarrhythmic drugs, ablation
+
+Heart Failure:
+- Reduced ejection fraction (HFrEF, EF <40%): ACE inhibitor/ARB/ARNI + beta-blocker + MRA + SGLT2 inhibitor (foundational four)
+- Preserved EF (HFpEF): diuretics for congestion, risk factor management, SGLT2 inhibitors
+- Symptoms: dyspnea, orthopnea, PND, ankle edema, fatigue
+- Investigations: BNP, echocardiogram, CXR
+- Diuretics: furosemide for fluid overload
+
+DIABETES MELLITUS
+
+Type 2 Diabetes:
+- Lifestyle first: diet, exercise, weight loss
+- First-line: Metformin (if eGFR >30, no contraindication)
+- With established CVD/CKD: add SGLT2 inhibitor (empagliflozin) or GLP-1 agonist (semaglutide)
+- HbA1c target: <48 mmol/mol (6.5%) general; <53 (7%) for elderly/complex
+- Sulfonylureas (glipizide, gliclazide): hypoglycemia risk
+- DPP4 inhibitors (sitagliptin): weight neutral, safe in renal disease
+- Insulin: when oral agents fail or type 1
+- Complications screening: annual eye check, annual foot exam, urine ACR, renal function, blood pressure
+- Type 1: insulin required (MDI or pump); carb counting; CGMS
+
+Hypoglycemia:
+- Glucose <4 mmol/L with symptoms
+- 15g fast-acting carbohydrate (glucose gel, juice)
+- Severe/unconscious: glucagon IM or IV dextrose
+- Review medication dosing, timing, food intake
+
+GASTROINTESTINAL CONDITIONS
+
+Gastroesophageal Reflux Disease (GERD):
+- Heartburn, regurgitation, acid taste
+- Lifestyle: weight loss, head of bed elevation, avoid triggers (fatty food, caffeine, alcohol, large meals, late eating)
+- PPI (omeprazole, lansoprazole): first-line; take 30-60 min before meals
+- H2 blockers (ranitidine, famotidine): less effective
+- Alarm symptoms requiring endoscopy: dysphagia, weight loss, bleeding, anaemia, vomiting
+
+Peptic Ulcer Disease:
+- Gastric or duodenal ulcer
+- Causes: H. pylori (80%), NSAIDs, stress
+- Symptoms: epigastric pain, worse/better with food, nausea
+- H. pylori testing: urea breath test, stool antigen, serology
+- Triple therapy: PPI + amoxicillin + clarithromycin for 7-14 days
+- NSAID ulcer: stop NSAID, add PPI
+
+Irritable Bowel Syndrome (IBS):
+- Chronic recurrent abdominal pain, bloating, altered bowel habit (no structural disease)
+- Rome IV criteria: pain ≥1 day/week, associated with defecation or stool change
+- Reassurance, dietary modification (low FODMAP diet), fiber
+- Antispasmodics: mebeverine, hyoscine
+- For diarrhea: loperamide, cholestyramine
+- For constipation: osmotic laxatives
+- Psychological therapies: CBT, hypnotherapy
+- Low-dose TCA or SSRI for pain modulation
+
+MUSCULOSKELETAL CONDITIONS
+
+Back Pain:
+- Mechanical (95%): muscle strain, disc disease, facet joints
+- Non-specific low back pain: no imaging needed acutely (<6 weeks)
+- Red flags (serious pathology): night pain, progressive neurological deficit, bowel/bladder dysfunction, fever, trauma, cancer history, age >50 new onset
+- Treatment: reassurance, stay active, avoid bed rest, paracetamol ± NSAIDs, physiotherapy
+- Chronic LBP: multimodal — exercise, CBT, manual therapy
+
+Osteoarthritis:
+- Degeneration of joint cartilage; hands, knees, hips most common
+- Pain with use, stiffness after rest, crepitus, joint deformity
+- X-ray: joint space narrowing, osteophytes, subchondral sclerosis
+- Treatment: weight loss, exercise (water exercise, physiotherapy), paracetamol, topical NSAIDs, oral NSAIDs short-term, intra-articular steroid injections, joint replacement for severe
+
+Rheumatoid Arthritis (RA):
+- Chronic inflammatory arthritis; synovial inflammation
+- Symmetrical small joint arthritis (MCP, PIP), morning stiffness >1 hour
+- Extra-articular: rheumatoid nodules, pulmonary fibrosis, vasculitis, scleritis
+- RF and anti-CCP antibodies (specific)
+- Treatment: DMARDs early (methotrexate first-line), hydroxychloroquine, sulfasalazine
+- Biological DMARDs: TNF inhibitors (adalimumab, etanercept), rituximab, tocilizumab
+- Low-dose prednisolone as bridge therapy
+
+MENTAL HEALTH (PRIMARY CARE)
+
+Depression:
+- Persistent low mood, anhedonia, fatigue, sleep disturbance, poor concentration, guilt, suicidal ideation
+- PHQ-9 for screening and severity
+- Mild: watchful waiting, lifestyle, self-help, CBT
+- Moderate-severe: SSRIs (sertraline, fluoxetine first-line), CBT
+- Refer if psychotic features, severe risk, treatment-resistant
+
+Anxiety Disorders:
+- GAD: excessive worry, physical symptoms, difficult to control
+- Panic disorder: discrete panic attacks
+- Social anxiety, specific phobias, OCD, PTSD
+- Screening: GAD-7
+- Treatment: CBT, SSRIs, SNRIs; avoid benzodiazepines long-term
+
+PREVENTIVE CARE
+
+Cancer Screening:
+- Breast: mammography 2-yearly from 50-74 years
+- Cervical: HPV-based testing or Pap smear (frequency varies by country)
+- Colorectal: FIT stool test from 50 years, colonoscopy if positive
+- Prostate: PSA testing discussion with patient (harms vs. benefits)
+- Lung: low-dose CT for heavy smokers 50-80 years
+
+Immunizations (adults):
+- Annual influenza
+- COVID-19 vaccination/boosters
+- Pneumococcal (PCV15/PCV20 for ≥65)
+- Shingles (Shingrix) for ≥50
+- Tdap (tetanus, diphtheria, pertussis)
+- Hepatitis B (if not previously vaccinated)
+
+Cardiovascular Risk Assessment:
+- 10-year CVD risk tools: Framingham, QRISK3, ACC/AHA pooled cohort equation
+- Statins for primary prevention if 10-year risk ≥10% (discuss with patient)
+- Aspirin: no longer routine for primary prevention (bleeding risk)

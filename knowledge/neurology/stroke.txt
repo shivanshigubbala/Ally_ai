@@ -1,0 +1,63 @@
+Stroke — Clinical Reference
+
+DEFINITION AND OVERVIEW
+A stroke occurs when blood supply to part of the brain is cut off, causing brain cells to die. There are two main types: ischemic stroke (87% of cases), caused by a blood clot blocking a vessel, and hemorrhagic stroke, caused by bleeding in or around the brain. A transient ischemic attack (TIA) is a temporary blockage that resolves within 24 hours but is a major warning sign.
+
+SYMPTOMS — FAST ACRONYM
+- Face drooping: One side of the face droops or is numb. Ask the person to smile.
+- Arm weakness: One arm is weak or numb. Ask to raise both arms — does one drift down?
+- Speech difficulty: Slurred speech, unable to speak, or strange speech.
+- Time to call emergency services immediately.
+
+Additional symptoms: sudden severe headache ("thunderclap"), vision loss in one or both eyes, sudden confusion, trouble walking, dizziness, loss of balance or coordination.
+
+RISK FACTORS
+- Hypertension (most important modifiable risk factor)
+- Atrial fibrillation (cardioembolic stroke)
+- Diabetes mellitus
+- Hyperlipidemia
+- Smoking
+- Obesity and physical inactivity
+- Prior stroke or TIA
+- Carotid artery disease
+- Sleep apnea
+
+ISCHEMIC STROKE SUBTYPES
+1. Cardioembolic: clot from heart (AF, valvular disease, cardiomyopathy)
+2. Large artery atherosclerosis: carotid or vertebrobasilar stenosis
+3. Small vessel (lacunar): hypertensive arteriolosclerosis, deep perforating arteries
+4. Cryptogenic: no cause found despite workup
+
+HEMORRHAGIC STROKE
+- Intracerebral hemorrhage (ICH): hypertensive, amyloid angiopathy, AVM, coagulopathy
+- Subarachnoid hemorrhage (SAH): ruptured aneurysm, sudden "worst headache of life"
+
+DIAGNOSTIC WORKUP
+- Urgent brain CT (non-contrast) to exclude hemorrhage
+- CT angiography or MR angiography for vessel imaging
+- MRI brain (DWI sequence most sensitive for acute ischemia)
+- ECG, cardiac monitoring for AF
+- Echocardiogram
+- Carotid doppler ultrasound
+- CBC, coagulation profile, lipid panel, glucose, HbA1c
+
+ACUTE MANAGEMENT
+- IV tPA (alteplase) within 4.5 hours of symptom onset for ischemic stroke (if no contraindications)
+- Mechanical thrombectomy for large vessel occlusion within 6-24 hours
+- Blood pressure management (permissive hypertension in ischemic stroke acutely; aggressive lowering in hemorrhagic)
+- Aspirin 325mg within 24-48 hours (after excluding hemorrhage and if no tPA given)
+- ICU monitoring for large strokes
+
+SECONDARY PREVENTION
+- Antiplatelet therapy (aspirin, clopidogrel) for non-cardioembolic stroke
+- Anticoagulation (warfarin, NOACs) for cardioembolic stroke/AF
+- Statin therapy for all ischemic stroke patients
+- Antihypertensives (target BP <130/80)
+- Carotid endarterectomy for >70% symptomatic stenosis
+- Lifestyle modification: smoking cessation, diet, exercise
+
+REHABILITATION
+- Multidisciplinary approach: physiotherapy, occupational therapy, speech therapy
+- Early mobilization improves outcomes
+- Post-stroke depression is common — screen and treat
+- Cognitive rehabilitation for post-stroke cognitive impairment

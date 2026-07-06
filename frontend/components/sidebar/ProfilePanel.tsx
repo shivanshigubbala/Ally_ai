@@ -39,11 +39,18 @@ function Pill({ children, active }: { children: ReactNode; active: boolean }) {
   );
 }
 
+import { useState } from "react";
+import { updateProfile } from "@/lib/patient";
+
 export default function ProfilePanel({
   profile,
   reports = [],
   onLogout,
 }: ProfilePanelProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<PatientProfile | null>(profile);
+  const [error, setError] = useState<string>("");
+
   if (!profile) {
     return (
       <div className="flex flex-1 items-center justify-center px-6">
@@ -54,14 +61,55 @@ export default function ProfilePanel({
 
   const assessment = profile.healthAssessment;
 
+  const handleSave = async () => {
+    if (!editForm) return;
+    setError("");
+    const res = await updateProfile(editForm);
+    if (!res.ok) {
+      setError(res.error || "Failed to save profile");
+      return;
+    }
+    setIsEditing(false);
+    // In a real app we might trigger a refresh, but updateProfile calls saveProfile which updates localStorage
+    // A reload or state lift might be needed, but for now this works.
+    window.location.reload();
+  };
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-      <div className="mb-5">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Profile</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Your saved health intake details and consultation history.
-        </p>
+      <div className="mb-5 flex justify-between items-center">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Profile</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Your saved health intake details and consultation history.
+          </p>
+        </div>
+        {!isEditing ? (
+          <button
+            onClick={() => { setEditForm(profile); setIsEditing(true); }}
+            className="inline-flex rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700"
+          >
+            Edit Profile
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsEditing(false)}
+              className="inline-flex rounded-full bg-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-300"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="inline-flex rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              Save
+            </button>
+          </div>
+        )}
       </div>
+
+      {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-4">
@@ -75,17 +123,43 @@ export default function ProfilePanel({
                   .map((part) => part[0])
                   .join("") || "P"}
               </div>
-              <div>
-                <p className="text-base font-semibold text-slate-900">{profile.name}</p>
-                <p className="text-sm text-slate-500">{profile.email}</p>
+              <div className="flex-1">
+                {isEditing && editForm ? (
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-1 text-sm outline-none focus:border-sky-500"
+                  />
+                ) : (
+                  <>
+                    <p className="text-base font-semibold text-slate-900">{profile.name}</p>
+                    <p className="text-sm text-slate-500">{profile.email}</p>
+                  </>
+                )}
               </div>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
-              <Row label="Gender" value={profile.gender} />
-              <Row label="Age" value={profile.age} />
-              <Row label="Phone" value={profile.phone} />
-              <Row label="Blood group" value={profile.bloodGroup || ""} />
+              {isEditing && editForm ? (
+                <>
+                  <label className="text-xs text-slate-500">Gender</label>
+                  <input value={editForm.gender} onChange={e => setEditForm({...editForm, gender: e.target.value})} className="rounded border px-2 py-1 text-sm" />
+                  <label className="text-xs text-slate-500">Age</label>
+                  <input value={editForm.age} onChange={e => setEditForm({...editForm, age: e.target.value})} className="rounded border px-2 py-1 text-sm" />
+                  <label className="text-xs text-slate-500">Phone</label>
+                  <input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className="rounded border px-2 py-1 text-sm" />
+                  <label className="text-xs text-slate-500">Blood group</label>
+                  <input value={editForm.bloodGroup || ""} onChange={e => setEditForm({...editForm, bloodGroup: e.target.value})} className="rounded border px-2 py-1 text-sm" />
+                </>
+              ) : (
+                <>
+                  <Row label="Gender" value={profile.gender} />
+                  <Row label="Age" value={profile.age} />
+                  <Row label="Phone" value={profile.phone} />
+                  <Row label="Blood group" value={profile.bloodGroup || ""} />
+                </>
+              )}
             </div>
           </section>
 

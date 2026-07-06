@@ -66,14 +66,7 @@ func GetUserReports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := strconv.Atoi(user)
-
-	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
-		return
-	}
-
-	reports, err := repository.GetReportsByUserID(userID)
+	reports, err := repository.GetReportsByUserID(user)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

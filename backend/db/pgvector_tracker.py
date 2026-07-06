@@ -154,17 +154,31 @@ def _ensure_schema_compatibility(conn) -> None:
 
     cur.execute("SELECT to_regclass('public.appointments')")
     appointments_exists = bool(cur.fetchone()[0])
-    if appointments_exists:
+    if not appointments_exists:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS appointments (
+                id SERIAL PRIMARY KEY,
+                user_id TEXT,
+                doctor_id INTEGER,
+                time_slot_id INTEGER,
+                department_id INTEGER,
+                reason TEXT,
+                status TEXT DEFAULT 'booked',
+                booked_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+    else:
         cur.execute("""
             SELECT data_type
             FROM information_schema.columns
             WHERE table_schema='public' AND table_name='appointments' AND column_name='user_id'
         """)
         row = cur.fetchone()
+        cur.execute("ALTER TABLE appointments DROP CONSTRAINT IF EXISTS appointments_user_id_fkey")
         if row and row[0].lower() != "text":
-            cur.execute("ALTER TABLE appointments DROP CONSTRAINT IF EXISTS appointments_user_id_fkey")
             cur.execute("ALTER TABLE appointments ALTER COLUMN user_id TYPE TEXT USING user_id::text")
-            cur.execute("ALTER TABLE appointments ADD CONSTRAINT appointments_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id)")
+        cur.execute("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS department_id INTEGER")
+        cur.execute("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS reason TEXT")
 
 
 def init_db():
@@ -651,7 +665,7 @@ def create_notification(notification: dict[str, Any] | Any) -> dict[str, Any] | 
                 "notification_type": normalized["notification_type"],
                 "title": normalized["title"],
                 "message": normalized["message"],
-                "metadata": json.dumps(normalized["metadata"] or {}),
+                "metadata": json.dumps(normalized["metadata"] or {}, default=str),
                 "status": normalized["status"],
                 "read_at": normalized["read_at"],
                 "version": normalized["version"],
@@ -1060,8 +1074,8 @@ def upsert_consultation_context(context: dict[str, Any]) -> dict[str, Any] | Non
             "consultation_status": context.get("consultation_status", "CREATED"),
             "selected_department": context.get("selected_department"),
             "selected_doctor": context.get("selected_doctor"),
-            "clinical_intake_record": json.dumps(context.get("clinical_intake_record") or {}),
-            "metadata": json.dumps(context.get("metadata") or {}),
+            "clinical_intake_record": json.dumps(context.get("clinical_intake_record") or {}, default=str),
+            "metadata": json.dumps(context.get("metadata") or {}, default=str),
             "version": context.get("version", 1),
         })
         row = cur.fetchone()
@@ -1174,6 +1188,7 @@ def search_knowledge(
     embedding: list[float],
     top_k: int = 5,
     min_similarity: float = 0.40,
+    patient_id: str | None = None,
 ) -> list[dict]:
     """Cosine similarity search over knowledge_chunks for a department.
 
@@ -1193,11 +1208,12 @@ def search_knowledge(
                    1 - (embedding <=> %s::vector) AS similarity
             FROM knowledge_chunks
             WHERE department = %s
+              AND (patient_id IS NULL OR patient_id = %s OR patient_id = '')
               AND 1 - (embedding <=> %s::vector) >= %s
             ORDER BY embedding <=> %s::vector
             LIMIT %s
             """,
-            (embedding, department, embedding, min_similarity, embedding, top_k),
+            (embedding, department, patient_id or '', embedding, min_similarity, embedding, top_k),
         )
         rows = cur.fetchall()
         if not rows and min_similarity > 0.30:
@@ -1208,11 +1224,12 @@ def search_knowledge(
                        1 - (embedding <=> %s::vector) AS similarity
                 FROM knowledge_chunks
                 WHERE department = %s
+                  AND (patient_id IS NULL OR patient_id = %s OR patient_id = '')
                   AND 1 - (embedding <=> %s::vector) >= %s
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
                 """,
-                (embedding, department, embedding, fallback_threshold, embedding, top_k),
+                (embedding, department, patient_id or '', embedding, fallback_threshold, embedding, top_k),
             )
             rows = cur.fetchall()
         cur.close()

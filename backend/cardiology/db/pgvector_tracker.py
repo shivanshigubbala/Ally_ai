@@ -301,6 +301,11 @@ def init_db():
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS consultation_contexts_appointment_idx ON consultation_contexts(appointment_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS consultation_contexts_patient_idx ON consultation_contexts(patient_id)")
+        try:
+            cur.execute("TRUNCATE TABLE appointments CASCADE")
+            cur.execute("UPDATE time_slots SET is_available = true")
+        except Exception:
+            pass
         cur.close()
 
 
@@ -480,6 +485,21 @@ def create_patient(
     The function generates a stable human-readable patient id and stores the
     provided profile information in the users table under `health_data`.
     """
+    if email:
+        existing = get_patient_by_email(email)
+        if existing and existing.get("id"):
+            patient_id = str(existing["id"])
+            merged_health = existing.get("health_data") if isinstance(existing.get("health_data"), dict) else {}
+            merged_health.update({
+                "phone": phone,
+                "email": email,
+                "city": city,
+                "emergency_contact": emergency_contact,
+                "consent": bool(consent),
+            })
+            upsert_user(patient_id, name, int(age) if age is not None else int(existing.get("age") or 0), merged_health)
+            return patient_id
+
     patient_id = _generate_patient_id()
     health = {
         "phone": phone,
@@ -492,6 +512,48 @@ def create_patient(
     age_val = int(age) if age is not None else None
     upsert_user(patient_id, name, age_val or 0, health)
     return patient_id
+
+
+def get_patient_by_email(email: str) -> dict | None:
+    if not HAS_PG:
+        return None
+    with _conn() as conn:
+        if conn is None:
+            return None
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM users WHERE health_data->>'email' = %s", (email,))
+        row = cur.fetchone()
+        cur.close()
+    if not row:
+        return None
+    payload = dict(row)
+    if payload.get("health_data") is not None and isinstance(payload["health_data"], str):
+        try:
+            payload["health_data"] = json.loads(payload["health_data"])
+        except Exception:
+            pass
+    return payload
+
+
+def get_patient_by_id(patient_id: str) -> dict | None:
+    if not HAS_PG:
+        return None
+    with _conn() as conn:
+        if conn is None:
+            return None
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM users WHERE id = %s", (patient_id,))
+        row = cur.fetchone()
+        cur.close()
+    if not row:
+        return None
+    payload = dict(row)
+    if payload.get("health_data") is not None and isinstance(payload["health_data"], str):
+        try:
+            payload["health_data"] = json.loads(payload["health_data"])
+        except Exception:
+            pass
+    return payload
 
 
 # Migration helpers intentionally removed to keep registration simple.
@@ -1039,7 +1101,75 @@ def upsert_consultation_context(context: dict[str, Any]) -> dict[str, Any] | Non
         })
         row = cur.fetchone()
         cur.close()
-    return dict(row) if row else None
+    if row:
+        ctx_dict = dict(row)
+        try:
+            _index_completed_consultation(context)
+        except Exception:
+            pass
+        return ctx_dict
+    return None
+
+
+def _index_completed_consultation(context: dict):
+    if context.get("consultation_status") != "COMPLETED":
+        return
+    
+    patient_id = context.get("patient_id")
+    department = context.get("selected_department") or "general"
+    metadata = context.get("metadata") or {}
+    history = metadata.get("conversation_history") or []
+    if not history or not patient_id:
+        return
+        
+    lines = []
+    doctor_name = metadata.get("doctor_name") or "Doctor"
+    lines.append(f"Clinical consultation history for patient {patient_id} with {doctor_name} in {department} department:")
+    
+    summary = metadata.get("consultation_summary") or {}
+    if summary:
+        assessment = summary.get("clinical_assessment") or summary.get("assessment") or ""
+        diagnosis = summary.get("possible_diagnosis") or summary.get("diagnosis") or ""
+        next_steps = summary.get("next_steps") or ""
+        if assessment:
+            lines.append(f"Clinical Assessment: {assessment}")
+        if diagnosis:
+            lines.append(f"Possible Diagnosis: {diagnosis}")
+        if next_steps:
+            lines.append(f"Next Steps: {next_steps}")
+            
+    lines.append("Dialogue:")
+    for msg in history:
+        role = msg.get("role", "")
+        content = msg.get("content", "")
+        if role == "user":
+            lines.append(f"Patient: {content}")
+        elif role == "assistant":
+            lines.append(f"Doctor: {content}")
+            
+    text = "\n".join(lines).strip()
+    if not text:
+        return
+        
+    try:
+        try:
+            from backend.llm.embeddings import embed_query
+        except ImportError:
+            from llm.embeddings import embed_query
+            
+        emb = embed_query(text)
+        insert_knowledge_chunks(
+            department=department,
+            source="consultation_history",
+            page=1,
+            contents=[text],
+            embeddings=[emb],
+            patient_id=patient_id
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Failed to index consultation history: %s", e)
+
 
 
 def load_consultation_context(appointment_id: str | None = None, internal_uuid: str | None = None) -> dict[str, Any] | None:

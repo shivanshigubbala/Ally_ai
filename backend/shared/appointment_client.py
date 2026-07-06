@@ -151,14 +151,14 @@ def create_user(name: str) -> int:
     return resp["id"]
 
 
-def book(doctor_id: str, go_user_id: int, time_slot_id: str) -> dict:
+def book(doctor_id: Any, go_user_id: int, time_slot_id: Any) -> dict:
     """
     Book an appointment for a user with a doctor at a specific time slot.
     
     Args:
-        doctor_id: Go service doctor ID
+        doctor_id: Go service doctor ID (int or string)
         go_user_id: Go service user ID (returned by create_user)
-        time_slot_id: Go service time slot ID
+        time_slot_id: Go service time slot ID (int or string)
     
     Returns:
         Appointment dict: {id, doctor_id, user_id, time_slot_id, status, booked_at}
@@ -168,13 +168,42 @@ def book(doctor_id: str, go_user_id: int, time_slot_id: str) -> dict:
         SlotAlreadyBooked: if slot is already booked (409)
         AppointmentServiceUnavailable: on connection/service errors
     """
+    # Map doctor ID: "d5"/1 -> 1, "d8"/2 -> 2, "d9"/3 -> 3
+    doc_str = str(doctor_id).lower()
+    if "d5" in doc_str or doc_str == "1":
+        go_doc_id = 1
+    elif "d8" in doc_str or doc_str == "2":
+        go_doc_id = 2
+    elif "d9" in doc_str or doc_str == "3":
+        go_doc_id = 3
+    else:
+        # fallback: extract digits
+        digits = "".join(c for c in doc_str if c.isdigit())
+        go_doc_id = int(digits) if digits else 1
+
+    # Map slot ID: s1-s12 to 1-12 directly
+    slot_str = str(time_slot_id).lower()
+    if slot_str == "s_gp":
+        go_slot_id = 1
+    elif slot_str == "s_cardio":
+        go_slot_id = 5
+    elif slot_str == "s_neuro":
+        go_slot_id = 9
+    elif slot_str.startswith("s"):
+        digits = "".join(c for c in slot_str if c.isdigit())
+        go_slot_id = int(digits) if digits else 1
+    else:
+        # fallback: extract digits
+        digits = "".join(c for c in slot_str if c.isdigit())
+        go_slot_id = int(digits) if digits else 1
+
     resp = _safe_request(
         "POST",
         "/appointments",
         json_data={
-            "doctor_id": doctor_id,
+            "doctor_id": go_doc_id,
             "user_id": go_user_id,
-            "time_slot_id": time_slot_id,
+            "time_slot_id": go_slot_id,
         }
     )
     return resp

@@ -151,8 +151,8 @@ func GetTestsByAppointmentID(appointmentID int) ([]models.LabTest, error) {
 			test_name,
 			reason,
 			status,
-			result,
-			remarks
+			COALESCE(result, '{}'),
+			COALESCE(remarks, '')
 		FROM lab_tests
 		WHERE appointment_id = $1
 		ORDER BY id
@@ -233,7 +233,7 @@ func GetReportByID(id int) (*models.Report, error) {
 	return &report, nil
 }
 
-func GetReportsByUserID(userID int) ([]models.Report, error) {
+func GetReportsByUserID(userID string) ([]models.Report, error) {
 
 	rows, err := database.DB.Query(
 		context.Background(),

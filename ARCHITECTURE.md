@@ -58,7 +58,7 @@ Agents are implemented as code graphs that run inside the backend process.
   - Data produced: slot proposals (`slot_select`), selected doctor events.
 
 - General Physician
-  - Location: `backend/graphs/general_physician_agent.py`.
+  - Location: `backend/general_physician/agent.py`.
   - Purpose: perform focused clinical questioning using retrieval-augmented
     grounding. The system prompt enforces that the agent must ground
     assertions in retrieved passages.
@@ -68,9 +68,9 @@ Agents are implemented as code graphs that run inside the backend process.
     persisted message records.
 
 - Cardiology
-  - Location: `backend/agents/cardiology_agent.py` (scaffolded).
-  - Status: agent scaffolding exists but specialist routing is not the
-    default; cardiology is not currently wired into receptionist routing.
+  - Location: `backend/cardiology/agent.py` (wired via specialties registry).
+  - Status: agent exists and is registered; runs cardiology consultation graph.
+
 
 How they communicate
 
@@ -244,13 +244,10 @@ Startup flow (what repository documents):
 
 ## Current Limitations (honest list)
 
-- No authentication or secure session management.
-- Specialist routing (cardiology, neurology) is scaffolded but not active.
-- Lab service integration is stubbed; generated PDF reports are illustrative.
-- The system is experimental and prompts/guardrails are not clinically
-  validated.
+- Basic authentication only (email lookup/registration with patient ID flow; no passwords, JWT tokens, or secure session cookies).
+- Lab service integration is stubbed; Go service is integrated for booking, but report generation relies on best-effort microservice webhooks and stubs.
+- The system is experimental and prompts/guardrails are not clinically validated.
 
 ---
 
-This file was created as part of Phase 0 documentation and reflects the
-current code and wiring only.
+This file reflects the current system architecture and has been updated to reflect active routing and persistence features.

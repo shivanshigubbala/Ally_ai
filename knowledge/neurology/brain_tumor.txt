@@ -1,0 +1,160 @@
+Brain Tumor — Clinical Reference
+
+DEFINITION
+Brain tumors are abnormal growths of cells in the brain or central nervous system. They may be primary (arising from brain tissue itself) or secondary (metastases from other cancers). Primary brain tumors may be benign or malignant. Brain tumors are the second most common cancer in children and cause significant morbidity and mortality in adults.
+
+EPIDEMIOLOGY
+- Incidence: ~300,000 new cases/year worldwide
+- Glioblastoma (GBM) most common and most deadly primary brain tumor in adults
+- Metastases are most common brain tumors overall (10x more common than primary)
+- Common metastasis sources: lung (most common), breast, colorectal, melanoma, renal cell
+
+WHO CLASSIFICATION (2021)
+Gliomas (astrocytic tumors):
+- Glioblastoma IDH-wildtype (WHO grade 4): most aggressive, GBM
+- Astrocytoma IDH-mutant (WHO grades 2-4)
+- Oligodendroglioma IDH-mutant, 1p/19q co-deleted (WHO grades 2-3)
+
+Other primary tumors:
+- Meningioma (most common benign primary, from meninges)
+- Pituitary adenoma
+- Schwannoma (acoustic neuroma — vestibular schwannoma)
+- Primary CNS lymphoma (PCNSL)
+- Medulloblastoma (children, posterior fossa)
+- Ependymoma
+- Craniopharyngioma
+
+CLINICAL PRESENTATION
+General symptoms (raised intracranial pressure):
+- Headache: typically worse in morning, with Valsalva, progressive
+- Nausea and vomiting (projectile)
+- Visual disturbances (papilledema)
+- Cognitive changes, personality changes
+- Seizures (up to 30% of brain tumor presentations)
+
+Focal neurological deficits (location-dependent):
+- Frontal lobe: personality changes, disinhibition, expressive aphasia, contralateral weakness
+- Parietal lobe: contralateral sensory loss, spatial neglect, apraxia, receptive aphasia (dominant)
+- Temporal lobe: memory impairment, auditory hallucinations, complex partial seizures, visual field defect
+- Occipital lobe: visual field defects, visual hallucinations
+- Cerebellum: ataxia, nystagmus, dysarthria, intention tremor
+- Brainstem: cranial nerve palsies, quadriplegia, respiratory changes
+- Pituitary: visual field defect (bitemporal hemianopia), hormonal changes
+
+HEADACHE CHARACTERISTICS (Red Flags)
+- Progressive, worsening headache over weeks to months
+- Early morning headache or waking from sleep
+- Headache worsened by coughing, bending, Valsalva
+- New headache in patient >50 years
+- Associated focal neurological deficits, seizures, papilledema
+- Headache in cancer patient
+
+DIAGNOSTIC WORKUP
+MRI brain (with and without gadolinium contrast):
+- Investigation of choice
+- T1 with Gd: enhancing lesions (breakdown of blood-brain barrier)
+- T2/FLAIR: surrounding edema, infiltration
+- Diffusion-weighted imaging: high-grade tumors, abscess
+- MR spectroscopy: metabolite ratios (choline:NAA elevation in tumors)
+- Perfusion MRI: vascularity, grading
+- MR tractography: eloquent area mapping
+
+CT brain:
+- Faster, widely available, good for calcifications, hemorrhage
+- Inferior to MRI for tumor characterization
+- CT with contrast if MRI unavailable
+
+Tissue diagnosis (biopsy/resection):
+- Essential for definitive diagnosis and molecular profiling
+- Stereotactic biopsy for inaccessible lesions
+- Intraoperative frozen section
+
+Molecular markers (now essential for WHO classification):
+- IDH1/2 mutation: better prognosis
+- MGMT promoter methylation: predicts temozolomide response in GBM
+- 1p/19q codeletion: oligodendroglioma diagnosis, better prognosis
+- TERT promoter mutation
+- EGFR amplification
+- H3K27M: diffuse midline glioma
+
+Additional:
+- Lumbar puncture (CSF cytology for leptomeningeal disease)
+- Staging CT chest/abdomen/pelvis (to exclude primary if metastases suspected)
+- PET scan: assess metabolic activity, distinguish recurrence vs. radiation necrosis
+
+GLIOBLASTOMA (GBM) MANAGEMENT
+Surgery:
+- Maximal safe resection — extent of resection correlates with survival
+- Fluorescence-guided surgery (5-ALA)
+- Eloquent area mapping (awake craniotomy)
+
+Radiation:
+- Conformal radiotherapy: 60Gy in 30 fractions to tumor bed
+- Concurrent with temozolomide (Stupp protocol)
+
+Chemotherapy:
+- Temozolomide (TMZ): oral alkylating agent, concurrent and adjuvant (6 cycles)
+- Bevacizumab: anti-VEGF, for recurrent GBM
+
+Tumor treating fields (TTFields):
+- Optune device: electric fields disrupt tumor cell division
+- Improves survival in newly diagnosed GBM
+
+Recurrence:
+- Bevacizumab, re-irradiation, temozolomide re-challenge, clinical trials
+
+Prognosis GBM:
+- Median survival: ~15 months with optimal treatment
+- 5-year survival: ~5%
+- MGMT methylation: median 21 months vs 12.7 months
+
+LOWER GRADE GLIOMAS
+- WHO grades 2-3 astrocytomas and oligodendrogliomas
+- Slower progression, better prognosis
+- IDH mutant: significantly better prognosis
+- Treatment: surgery, radiation, chemotherapy (PCV or temozolomide)
+- 10-year survival: 40-80% depending on grade and molecular markers
+
+BRAIN METASTASES
+- Most common intracranial tumor in adults
+- Multiple lesions at gray-white matter junction
+- Treatment depends on: number of metastases, KPS, primary disease control
+- Single/few: surgical resection + WBRT, or stereotactic radiosurgery (SRS)
+- Multiple: whole brain radiation therapy (WBRT)
+- Targeted therapy: effective for specific drivers (EGFR in NSCLC, BRAF in melanoma)
+
+MENINGIOMA
+- 95% benign (WHO grade 1)
+- Often incidental finding; slow-growing
+- Symptoms from mass effect, seizures, cranial nerve compression
+- Treatment: observation (small, asymptomatic), surgery, radiosurgery
+- Dural attachment, "dural tail" on MRI
+
+SUPPORTIVE MANAGEMENT
+Seizures:
+- Prophylactic AEDs NOT recommended for tumor patients without prior seizures
+- Levetiracetam preferred (minimal drug interactions)
+- Valproate: drug interactions with chemotherapy
+
+Cerebral edema/steroids:
+- Dexamethasone 4-16mg/day for vasogenic edema reduction
+- Taper as rapidly as possible (side effects: steroid myopathy, hyperglycemia, infections)
+
+Venous thromboembolism:
+- High risk in brain tumor patients (hypercoagulable state)
+- LMWH prophylaxis safe in brain tumor patients
+- Inferior vena cava filter if anticoagulation contraindicated
+
+Rehabilitation:
+- Physiotherapy, occupational therapy, speech therapy
+- Cognitive rehabilitation
+- Psychological support, palliative care
+
+PROGNOSIS FACTORS
+Better prognosis:
+- Lower grade, IDH mutant
+- Younger age (<45 years)
+- High Karnofsky performance score (KPS)
+- Maximal surgical resection
+- MGMT methylation (GBM)
+- 1p/19q codeletion (oligodendroglioma)

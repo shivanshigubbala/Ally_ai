@@ -1,12 +1,10 @@
-"""Split extracted page text into smaller overlapping chunks."""
+"""Split extracted page text into smaller overlapping chunks without external dependencies."""
 
 from __future__ import annotations
 
 import json
 import sys
 from pathlib import Path
-
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 def chunk_text(
@@ -15,30 +13,39 @@ def chunk_text(
     chunk_overlap: int = 100,
 ) -> list[str]:
     """
-    Split text into overlapping chunks.
-
-    Args:
-        text: Input document text.
-        chunk_size: Maximum characters per chunk.
-        chunk_overlap: Characters shared between chunks.
-
-    Returns:
-        List of text chunks.
+    Split text into overlapping chunks using a recursive character splitting logic in pure Python.
     """
-
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
-        separators=[
-            "\n\n",
-            "\n",
-            ". ",
-            " ",
-            ""
-        ],
-    )
-
-    return splitter.split_text(text)
+    if not text:
+        return []
+        
+    chunks = []
+    start = 0
+    text_len = len(text)
+    
+    while start < text_len:
+        end = start + chunk_size
+        if end >= text_len:
+            chunks.append(text[start:])
+            break
+            
+        # Look for separators backwards from end
+        best_boundary = end
+        for sep in ["\n\n", "\n", ". ", " "]:
+            pos = text.rfind(sep, start + chunk_overlap, end)
+            if pos != -1:
+                best_boundary = pos + len(sep)
+                break
+                
+        chunks.append(text[start:best_boundary])
+        
+        # Calculate next start
+        next_start = best_boundary - chunk_overlap
+        if next_start <= start or next_start >= text_len:
+            start = best_boundary
+        else:
+            start = next_start
+            
+    return [c.strip() for c in chunks if c.strip()]
 
 
 def chunk_pages(pages: list[dict], chunk_size: int = 1600,

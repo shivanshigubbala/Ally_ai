@@ -66,6 +66,44 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.post("/reset-db")
+def reset_db() -> dict:
+    try:
+        from backend.db.pgvector_tracker import _conn, init_db
+    except ImportError:
+        from db.pgvector_tracker import _conn, init_db # type: ignore
+    
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            tables = [
+                "appointments",
+                "messages",
+                "sessions",
+                "consultation_contexts",
+                "uploaded_files",
+                "notifications",
+                "patient_timelines",
+                "lab_work_items"
+            ]
+            for t in tables:
+                cur.execute(f"DROP TABLE IF EXISTS {t} CASCADE")
+        conn.commit()
+    
+    init_db()
+    
+    from pathlib import Path
+    import shutil
+    reports_root = Path(__file__).resolve().parent / "reports"
+    if reports_root.exists():
+        try:
+            shutil.rmtree(reports_root)
+            reports_root.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+            
+    return {"ok": True, "message": "Database flushed and re-seeded successfully"}
+
+
 def chunk_text(text: str, chunk_size: int = 800, chunk_overlap: int = 150) -> list[str]:
     chunks = []
     start = 0
@@ -330,6 +368,18 @@ async def internal_report_ready(payload: dict = Body(...)) -> dict:
 
         user = payload.get("user_id") or payload.get("patient_id")
         if user:
+            user_str = str(user)
+            if user_str.isdigit():
+                try:
+                    from backend.db.pgvector_tracker import _conn
+                    with _conn() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT id FROM users WHERE go_user_id = %s", (int(user_str),))
+                            row = cur.fetchone()
+                            if row:
+                                user = row[0]
+                except Exception:
+                    pass
             ev = WSEvent(type="report_ready", payload={
                 "report_id": payload.get("report_id"),
                 "report_url": payload.get("report_url"),
@@ -384,7 +434,11 @@ class RegistrationRequest(BaseModel):
     city: str | None = None
     emergency_contact: str | None = None
     consent: bool = False
-    # client-side migration helpers removed for simplicity
+    # Medical history - optional, stored in health_data JSONB
+    conditions: str | None = None
+    medications: str | None = None
+    allergies: str | None = None
+    health_assessment: dict | None = None
 
     @validator("phone")
     def phone_must_look_valid(cls, v: str) -> str:  # simple validation
@@ -433,5 +487,192 @@ def register(req: RegistrationRequest = Body(...)) -> dict:
         # non-fatal if DB unavailable
         pass
 
+    # Persist extra medical history into health_data (best-effort)
+    try:
+        from backend.db.pgvector_tracker import _conn, HAS_PG
+        import psycopg2.extras as _extras
+        import json as _json
+        if HAS_PG and any([req.conditions, req.medications, req.allergies, req.health_assessment]):
+            with _conn() as conn:
+                if conn is not None:
+                    _cur = conn.cursor(cursor_factory=_extras.RealDictCursor)
+                    _cur.execute("SELECT health_data FROM users WHERE id=%s", (patient_id,))
+                    _row = _cur.fetchone()
+                    if _row:
+                        _hd = _row["health_data"] if isinstance(_row["health_data"], dict) else {}
+                        if req.conditions: _hd["conditions"] = req.conditions
+                        if req.medications: _hd["medications"] = req.medications
+                        if req.allergies: _hd["allergies"] = req.allergies
+                        if req.health_assessment: _hd["healthAssessment"] = req.health_assessment
+                        _cur.execute("UPDATE users SET health_data=%s WHERE id=%s", (_json.dumps(_hd), patient_id))
+    except Exception:
+        pass
+
     return {"ok": True, "patient_id": patient_id, "session_id": session_id}
 
+
+class LoginRequest(BaseModel):
+    email: str
+
+
+@app.post("/login")
+def login(req: LoginRequest = Body(...)) -> dict:
+    """Look up an existing patient by email. Returns patient_id + profile."""
+    try:
+        from backend.db.pgvector_tracker import get_patient_by_email
+    except ImportError:
+        from db.pgvector_tracker import get_patient_by_email  # type: ignore
+
+    patient = get_patient_by_email(req.email.strip().lower())
+    if not patient:
+        raise HTTPException(status_code=404, detail="No account found with that email")
+
+    import uuid
+    session_id = f"sess-{uuid.uuid4()}"
+    patient_id = patient.get("id") or patient.get("patient_id", "")
+    return {
+        "ok": True,
+        "patient_id": patient_id,
+        "session_id": session_id,
+        "profile": {
+            "name": patient.get("name", ""),
+            "email": patient.get("email", req.email),
+            "gender": patient.get("gender", ""),
+            "age": patient.get("age"),
+            "phone": patient.get("phone", ""),
+        },
+    }
+
+
+@app.get("/patient/validate/{patient_id}")
+def validate_patient(patient_id: str) -> dict:
+    try:
+        from backend.db.pgvector_tracker import get_patient_by_id
+    except ImportError:
+        from db.pgvector_tracker import get_patient_by_id  # type: ignore
+
+    if not get_patient_by_id(patient_id):
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return {"ok": True, "patient_id": patient_id}
+
+
+class ProfileUpdateRequest(BaseModel):
+    patient_id: str
+    name: str
+    phone: str
+    city: str | None = None
+    emergency_contact: str | None = None
+    age: int | None = None
+    bloodGroup: str | None = None
+    # Medical history fields
+    conditions: str | None = None
+    medications: str | None = None
+    allergies: str | None = None
+    healthAssessment: dict | None = None
+
+
+@app.put("/profile")
+def update_profile(req: ProfileUpdateRequest = Body(...)) -> dict:
+    try:
+        from backend.db.pgvector_tracker import _conn, HAS_PG
+        import psycopg2.extras
+    except ImportError:
+        from db.pgvector_tracker import _conn, HAS_PG  # type: ignore
+        import psycopg2.extras
+
+    if not HAS_PG:
+        return {"ok": True, "note": "Profile stored client-side only (no DB)"}
+
+    import json
+
+    with _conn() as conn:
+        if conn is None:
+            return {"ok": True, "note": "Profile stored client-side only (no DB)"}
+
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT health_data FROM users WHERE id=%s", (req.patient_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Patient not found")
+
+        health_data: dict = row["health_data"] if isinstance(row["health_data"], dict) else {}
+
+        # Persist extra medical history fields
+        if req.conditions is not None:
+            health_data["conditions"] = req.conditions
+        if req.medications is not None:
+            health_data["medications"] = req.medications
+        if req.allergies is not None:
+            health_data["allergies"] = req.allergies
+        if req.healthAssessment is not None:
+            health_data["healthAssessment"] = req.healthAssessment
+        if req.bloodGroup:
+            health_data["bloodGroup"] = req.bloodGroup
+
+        cur.execute(
+            "UPDATE users SET name = %s, age = %s, health_data = %s WHERE id = %s",
+            (req.name, req.age or 0, json.dumps(health_data), req.patient_id),
+        )
+        cur.close()
+
+    return {"ok": True}
+
+
+@app.get("/notifications/{patient_id}")
+def get_patient_notifications(patient_id: str, status: str | None = None, limit: int = 50) -> dict:
+    """Fetch notifications for a patient from the DB."""
+    try:
+        from backend.db.pgvector_tracker import get_notifications
+    except ImportError:
+        from db.pgvector_tracker import get_notifications  # type: ignore
+    try:
+        items = get_notifications(patient_id=patient_id, status=status or None, limit=limit)
+        return {"ok": True, "notifications": items}
+    except Exception:
+        return {"ok": True, "notifications": []}
+
+
+@app.post("/notifications/{notification_id}/read")
+def mark_notification_read(notification_id: str) -> dict:
+    """Mark a notification as read in the DB."""
+    try:
+        from backend.db.pgvector_tracker import mark_read
+    except ImportError:
+        from db.pgvector_tracker import mark_read  # type: ignore
+    try:
+        result = mark_read(notification_id)
+        if result:
+            return {"ok": True, "notification": result}
+        return {"ok": False, "detail": "Notification not found"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/patient/{patient_id}/timeline")
+def get_timeline(patient_id: str) -> dict:
+    """Return the patient longitudinal consultation timeline."""
+    try:
+        from backend.db.pgvector_tracker import get_patient_timeline
+    except ImportError:
+        from db.pgvector_tracker import get_patient_timeline  # type: ignore
+    try:
+        timeline = get_patient_timeline(patient_id=patient_id)
+        if not timeline:
+            return {"ok": True, "timeline": {"history": []}}
+        return {"ok": True, "timeline": timeline}
+    except Exception:
+        return {"ok": True, "timeline": {"history": []}}
+
+
+@app.get("/patient/{patient_id}/history")
+def get_patient_history_endpoint(patient_id: str, limit: int = 20) -> dict:
+    """Return the patient message/session history."""
+    try:
+        from backend.db.pgvector_tracker import load_patient_history
+    except ImportError:
+        from db.pgvector_tracker import load_patient_history  # type: ignore
+    try:
+        history = load_patient_history(patient_id=patient_id, limit=limit)
+        return {"ok": True, "history": history}
+    except Exception:
+        return {"ok": True, "history": []}

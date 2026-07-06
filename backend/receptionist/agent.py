@@ -131,7 +131,8 @@ def run_step(user_id: str, message: str | None, pending_event: dict | None) -> T
                     department=state.selected_dept,
                 )
                 if status >= 200 and status < 300:
-                    state.appointment_id = body.get("id")
+                    _raw_id = body.get("id")
+                    state.appointment_id = str(_raw_id) if _raw_id is not None else None
                     doctor_name = next((d["name"] for d in store.list_doctors(state.selected_dept) if d["id"] == state.selected_doctor), "Doctor")
                     reply = _llm_reply(
                         RECEPTIONIST_PERSONA + f" The appointment is confirmed! Appointment ID: {state.appointment_id}. Congratulate the patient warmly and tell them {doctor_name} is ready to see them in the Appointments tab.",

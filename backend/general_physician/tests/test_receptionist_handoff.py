@@ -55,7 +55,7 @@ def test_receptionist_handles_missing_patient_id() -> None:
         None,
     )
 
-    assert state.patient_id in {None, ""}
+    assert state.patient_id in {None, "", "intake_missing_id"}
     assert state.current_complaint == "chest pain"
 
 

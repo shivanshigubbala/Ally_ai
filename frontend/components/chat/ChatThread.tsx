@@ -285,7 +285,7 @@ export default function ChatThread({
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const allMessages = [...messages, ...doctorMessages].sort(
+  const allMessages = [...messages].sort(
     (a, b) => (a.timestamp || 0) - (b.timestamp || 0)
   );
 
@@ -304,7 +304,7 @@ export default function ChatThread({
   const slotCards = cards.filter((card) => card.kind === "slot_select" && !card.resolved);
   const labCards = cards.filter((card) => card.kind === "lab_notification" && !card.resolved);
   const emptyState =
-    messages.length === 0 && doctorMessages.length === 0 && cards.filter(c => !c.resolved).length === 0 &&
+    messages.length === 0 && cards.filter(c => !c.resolved).length === 0 &&
     !thinking && !doctorThinking;
 
   return (

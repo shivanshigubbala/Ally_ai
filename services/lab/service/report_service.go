@@ -2,13 +2,16 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
+	"github.com/shivanshigubbala/Ally_ai/services/lab/database"
 	"github.com/shivanshigubbala/Ally_ai/services/lab/models"
 	"github.com/shivanshigubbala/Ally_ai/services/lab/pdf"
 	"github.com/shivanshigubbala/Ally_ai/services/lab/repository"
@@ -22,6 +25,41 @@ func (r *ReportService) GenerateReport(
 	report models.Report,
 	tests []models.LabTest,
 ) error {
+	// Query patient info
+	uID, _ := strconv.Atoi(report.UserID)
+	if uID > 0 {
+		var name string
+		var age int
+		var gender string
+		err := database.DB.QueryRow(
+			context.Background(),
+			`SELECT name, age, gender FROM users WHERE id = $1`,
+			uID,
+		).Scan(&name, &age, &gender)
+		if err == nil {
+			report.PatientName = name
+			report.Age = age
+			report.Gender = gender
+		}
+	}
+
+	// Query doctor and department
+	var docName string
+	var deptName string
+	err := database.DB.QueryRow(
+		context.Background(),
+		`SELECT doc.name, dept.name
+		 FROM appointments apt
+		 JOIN doctors doc ON apt.doctor_id = doc.id
+		 JOIN departments dept ON doc.department_id = dept.id
+		 WHERE apt.id = $1`,
+		report.AppointmentID,
+	).Scan(&docName, &deptName)
+	if err == nil {
+		report.Doctor = docName
+		report.Department = deptName
+	}
+
 	// -------------------------------------------------
 	// Step 1
 	// Generate random results for every assigned test

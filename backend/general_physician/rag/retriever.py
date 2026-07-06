@@ -56,7 +56,7 @@ def retrieve(
         return ""
 
     try:
-        hits = search_knowledge(department=department, embedding=vec, top_k=top_k)
+        hits = search_knowledge(department=department, embedding=vec, top_k=top_k, patient_id=patient_id)
     except Exception as exc:
         logger.warning("search_knowledge failed: %s", exc)
         return ""

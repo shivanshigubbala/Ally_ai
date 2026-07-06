@@ -70,7 +70,7 @@ func GenerateMockReportForCompletedWorkItem(
 	}
 
 	report := models.Report{
-		UserID:                0,
+		UserID:                "0",
 		AppointmentID:         appointmentID,
 		Status:                "COMPLETED",
 		CreatedAt:             time.Now(),

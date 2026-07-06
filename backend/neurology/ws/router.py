@@ -5,7 +5,7 @@ import json
 import logging
 from collections import defaultdict
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 try:
     from backend.neurology.graphs import routing_graph
@@ -30,12 +30,20 @@ except ImportError:
 def _resolve_doctor_step(appointment_id: str):
     """Resolve the appointment's specialty implementation through the shared dispatcher."""
     apt = store.get_appointment(appointment_id) or {}
-    department = apt.get("department") or "general"
+    department = str(apt.get("department") or "neurology").lower()
+    department = {
+        "1": "general",
+        "2": "cardiology",
+        "3": "neurology",
+        "general physician": "general",
+    }.get(department, department)
     consultation_context = {
         "selected_department": department,
         "department": department,
+        "patient_id": apt.get("patient_id"),
+        "appointment_id": appointment_id,
     }
-    specialty = resolve_specialty(consultation_context)
+    specialty = resolve_specialty(consultation_context, patient_id=apt.get("patient_id"))
     return specialty.run_consultation
 
 
@@ -64,6 +72,25 @@ async def notify_user_event(user_id: str, event: WSEvent) -> None:
         await _send(ws, event)
     except Exception:
         logger.exception("Failed to notify user %s", user_id)
+
+
+def _patient_exists(patient_id: str | None) -> bool:
+    if not patient_id:
+        return False
+    try:
+        from backend.neurology.db.pgvector_tracker import HAS_PG, get_patient_by_id
+    except Exception:
+        try:
+            from db.pgvector_tracker import HAS_PG, get_patient_by_id  # type: ignore
+        except Exception:
+            return True
+    if not HAS_PG:
+        return True
+    try:
+        return get_patient_by_id(patient_id) is not None
+    except Exception:
+        logger.warning("Patient validation skipped for %s", patient_id, exc_info=True)
+        return True
 
 
 async def _generate_and_send_chart_delayed(
@@ -199,6 +226,17 @@ async def _handle_start_consultation(ws: WebSocket, user_id: str,
             "content": "No appointment ID provided.",
         }))
         return
+    payload_patient_id = payload.get("patient_id")
+    if payload_patient_id and str(payload_patient_id) != str(user_id):
+        await _send(ws, WSEvent(type="text", payload={
+            "content": "This consultation does not match the active patient profile.",
+        }))
+        return
+    if not _patient_exists(user_id):
+        await _send(ws, WSEvent(type="text", payload={
+            "content": "I could not validate your patient profile. Please register or log in again.",
+        }))
+        return
 
     _doctor_sessions[user_id] = appointment_id
     logger.info("Start consultation requested: user=%s appointment=%s", user_id, appointment_id)
@@ -235,8 +273,19 @@ async def _handle_start_consultation(ws: WebSocket, user_id: str,
 
 
 @router.websocket("/ws/{user_id}")
-async def ws_endpoint(ws: WebSocket, user_id: str) -> None:
+async def ws_endpoint(ws: WebSocket, user_id: str, patient_id: str | None = Query(default=None)) -> None:
     await ws.accept()
+    if patient_id and not _patient_exists(patient_id):
+        await _send(ws, WSEvent(type="text", payload={
+            "content": "I could not validate your patient profile. Please register or log in again.",
+        }))
+        await ws.close(code=1008)
+        return
+
+    if patient_id:
+        logger.info("WebSocket patient context accepted: path_user=%s patient_id=%s", user_id, patient_id)
+        user_id = patient_id
+
     # register connection
     _connections[user_id] = ws
     if not routing_graph.has_in_progress_booking(user_id):
@@ -270,6 +319,12 @@ async def ws_endpoint(ws: WebSocket, user_id: str) -> None:
 
                 # Route text/select messages based on context
                 msg_context = evt.payload.get("context", "receptionist")
+                payload_patient_id = evt.payload.get("patient_id")
+                if payload_patient_id and str(payload_patient_id) != str(user_id):
+                    await _send(ws, WSEvent(type="text", payload={
+                        "content": "That action does not match the active patient profile.",
+                    }))
+                    continue
                 if msg_context == "doctor":
                     # If we already have an active doctor session for this user, drive it.
                     if user_id in _doctor_sessions:

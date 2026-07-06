@@ -70,6 +70,15 @@ def _extract_patient_id(text: str) -> str | None:
     return None
 
 
+def _looks_like_registered_patient_id(value: str | None) -> bool:
+    if not value:
+        return False
+    return bool(
+        re.match(r"^PAT-\d{4}-\d{6}$", value, re.IGNORECASE)
+        or re.match(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", value, re.IGNORECASE)
+    )
+
+
 def _extract_current_complaint(text: str) -> str:
     # Try to capture the primary complaint; stop at common conjunctions to avoid greediness
     match = re.search(r"(?:have|having|feel|feeling|need help with|suffering from|complain(?:ing)? of)\s+(.+)$", text, re.IGNORECASE)
@@ -93,10 +102,9 @@ def _update_patient_intake(state: RoutingState, text: str | None) -> None:
         name = _extract_patient_name(text)
         if name:
             state.patient_name = name
-    if not state.patient_id:
-        patient_id = _extract_patient_id(text)
-        if patient_id:
-            state.patient_id = patient_id
+    patient_id = _extract_patient_id(text)
+    if patient_id and (not state.patient_id or (state.patient_id == state.user_id and not _looks_like_registered_patient_id(state.user_id))):
+        state.patient_id = patient_id
     if any(phrase in lowered for phrase in ["returning patient", "existing patient", "returning", "already a patient"]):
         state.returning_patient = True
     if not state.current_complaint:
@@ -329,10 +337,16 @@ def greeting_node(state: RoutingState, emit: Emitter) -> RoutingState:
         state.current_node = "INTENT_CLASSIFICATION"
         return state
     patient_name = state.patient_name or (state.user_id or "there").replace("_", " ").title()
-    reply = (
-        f"Hi {patient_name}! I'm Ally, here at Ally Hospital. "
-        "How are you feeling today, and what brings you in?"
-    )
+    if state.returning_patient:
+        reply = (
+            f"Welcome back, {patient_name}! I'm Ally, here at Ally Hospital. "
+            "How can I help you today, and are you having any new symptoms?"
+        )
+    else:
+        reply = (
+            f"Hi {patient_name}! I'm Ally, here at Ally Hospital. "
+            "How are you feeling today, and what brings you in?"
+        )
     emit(WSEvent(type="text", payload={"content": reply}))
     state.message_history.append({"role": "assistant", "content": reply})
     state.current_node = "INTENT_CLASSIFICATION"
@@ -633,6 +647,8 @@ def slot_node(state: RoutingState, emit: Emitter) -> RoutingState:
 
     if pending.get("type") == "select" and pending.get("payload", {}).get("target") == "slot":
         state.selected_slot = pending["payload"].get("id")
+        state.current_node = "BOOKING_CONFIRMATION"
+        return state
     elif message := _last_user_message(state):
         if _is_confirmation_message(message) and state.selected_slot:
             slots = store.list_slots(state.selected_doctor or GP_DOCTOR_ID)
@@ -785,27 +801,9 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
                 except Exception:
                     go_user_id = None
 
-            # Map doctor ID: "d5" -> 1, "d8" -> 2, "d9" -> 3
-            go_doctor_id = 1
-            if state.selected_doctor == "d5":
-                go_doctor_id = 1
-            elif state.selected_doctor == "d8":
-                go_doctor_id = 2
-            elif state.selected_doctor == "d9":
-                go_doctor_id = 3
-
-            # Map slot ID: "s_gp" -> 1, "s_cardio" -> 2, "s_neuro" -> 3
-            go_slot_id = 1
-            if state.selected_slot == "s_gp":
-                go_slot_id = 1
-            elif state.selected_slot == "s_cardio":
-                go_slot_id = 2
-            elif state.selected_slot == "s_neuro":
-                go_slot_id = 3
-
             # Call appointment service
             try:
-                resp = appointment_client.book(go_doctor_id, go_user_id or 0, go_slot_id)
+                resp = appointment_client.book(state.selected_doctor or GP_DOCTOR_ID, go_user_id or 0, state.selected_slot or "")
                 # normalize response to status/body similar to local_store
                 if isinstance(resp, dict) and resp.get("id"):
                     status = 200
@@ -866,7 +864,8 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
         }))
         return state
 
-    state.appointment_id = body.get("id") if isinstance(body, dict) else None
+    _raw_apt_id = body.get("id") if isinstance(body, dict) else None
+    state.appointment_id = str(_raw_apt_id) if _raw_apt_id is not None else None
     # Find the chosen doctor across all departments
     all_doctors = store.list_doctors(None)
     chosen = next((d for d in all_doctors if d["id"] == state.selected_doctor), None)
@@ -963,7 +962,7 @@ _graph = build_graph().compile(checkpointer=_checkpointer)
 def reset_state(user_id: str) -> None:
     """Reset the graph state for this user so a fresh session starts on next call."""
     cfg = {"configurable": {"thread_id": user_id}}
-    _graph.update_state(cfg, RoutingState(user_id=user_id).model_dump())
+    _graph.update_state(cfg, RoutingState(user_id=user_id, patient_id=user_id).model_dump())
 
 
 def has_in_progress_booking(user_id: str) -> bool:
@@ -1004,7 +1003,10 @@ def run_step(user_id: str, message: str | None, pending_event: dict | None) -> t
     if snapshot and snapshot.values and (snapshot.values.get("current_node") not in (None, "DONE")):
         state = RoutingState(**snapshot.values)
     else:
-        state = RoutingState(user_id=user_id)
+        state = RoutingState(user_id=user_id, patient_id=user_id)
+
+    if not state.patient_id:
+        state.patient_id = user_id
 
     # Prefer a real patient name already captured from intake or the appointment flow.
     if not state.patient_name or state.patient_name.startswith("PAT-") or state.patient_name == state.user_id.replace("_", " ").title():
@@ -1032,6 +1034,29 @@ def run_step(user_id: str, message: str | None, pending_event: dict | None) -> t
                         if patient_name:
                             state.patient_name = str(patient_name).strip()
                             break
+        except Exception:
+            pass
+
+    if not state.returning_patient:
+        try:
+            try:
+                from backend.db.pgvector_tracker import get_patient_timeline, HAS_PG
+            except ImportError:
+                from db.pgvector_tracker import get_patient_timeline, HAS_PG  # type: ignore
+            if HAS_PG:
+                tl = get_patient_timeline(patient_id=user_id)
+                if tl and tl.get("history"):
+                    state.returning_patient = True
+        except Exception:
+            pass
+
+    if not state.returning_patient:
+        try:
+            from backend.shared import appointment_client
+            if appointment_client is not None:
+                appts = appointment_client.get_appointments()
+                if any(str(apt.get("patient_id") or apt.get("user_id") or "") == str(user_id) for apt in appts):
+                    state.returning_patient = True
         except Exception:
             pass
 

@@ -1,0 +1,129 @@
+Vertigo and Dizziness — Clinical Reference
+
+DEFINITION
+Dizziness is a broad term encompassing vertigo, presyncope, disequilibrium, and non-specific dizziness. Vertigo is the specific illusion of motion — the sensation that self or environment is moving or rotating when there is none. It reflects a mismatch between vestibular, visual, and proprioceptive inputs.
+
+CLASSIFICATION OF DIZZINESS
+1. Vertigo: illusion of rotation/movement — usually vestibular cause
+2. Presyncope: feeling of near faint — cardiac or vasovagal cause
+3. Disequilibrium: imbalance, mainly when walking — central or peripheral
+4. Non-specific dizziness: light-headedness, "floating" — anxiety, hyperventilation
+
+PERIPHERAL vs CENTRAL VERTIGO
+
+Peripheral vertigo:
+- Origin: inner ear or vestibular nerve
+- Causes: BPPV, vestibular neuritis, Meniere's disease
+- Character: intense, episodic, positional, no neurological features
+- Nystagmus: horizontal or torsional, fatigable, suppressed by fixation
+- Hearing: often affected (loss, tinnitus)
+
+Central vertigo:
+- Origin: brainstem or cerebellum
+- Causes: stroke, TIA, MS, tumor, migraine
+- Character: may be mild but constant; can be positional
+- Nystagmus: vertical, direction-changing, not suppressed by fixation
+- Gait: severe ataxia
+- Neurological signs: diplopia, dysphagia, facial numbness, weakness
+
+RED FLAGS (central cause must be excluded)
+- Sudden onset severe vertigo with headache ("thunderclap")
+- New vertigo with neurological symptoms: diplopia, dysphagia, dysarthria, weakness, numbness
+- Vertical or direction-changing nystagmus
+- Inability to walk (severe gait ataxia)
+- Risk factors: elderly, hypertension, atrial fibrillation, known vascular disease
+- Headache, neck pain associated
+
+BENIGN PAROXYSMAL POSITIONAL VERTIGO (BPPV)
+- Most common cause of vertigo (up to 50%)
+- Pathophysiology: otoconia (calcium carbonate crystals) displaced into semicircular canals
+- Most common canal: posterior semicircular canal (PC-BPPV)
+
+Clinical features:
+- Brief (<1 min) episodic vertigo triggered by specific head movements
+- Lying down, rolling over in bed, looking up ("top shelf"), bending forward
+- No hearing loss or tinnitus
+
+Diagnosis:
+- Dix-Hallpike test (posterior canal): provokes upbeat-torsional nystagmus, fatigable
+- Supine roll test (horizontal canal): horizontal nystagmus
+
+Treatment:
+- Particle repositioning maneuvers
+- Epley maneuver (posterior canal BPPV): >80% effective
+- Barbecue roll / Lempert maneuver (horizontal canal BPPV)
+- Brandt-Daroff exercises (if maneuvers unsuccessful)
+- Semont maneuver (alternative for posterior canal)
+
+VESTIBULAR NEURITIS (NEURONITIS)
+- Inflammation of vestibular nerve (often post-viral)
+- Acute onset severe vertigo, nausea, vomiting lasting days to weeks
+- No hearing loss (distinguishes from labyrinthitis where hearing is also affected)
+- Labyrinthitis: same but WITH hearing loss (cochlear involvement)
+
+Treatment:
+- Acute phase: vestibular suppressants (meclizine, dimenhydrinate, prochlorperazine) — short-term only
+- Antiemetics for vomiting
+- Corticosteroids (prednisolone) may speed recovery
+- Vestibular rehabilitation therapy (VRT) — key to long-term recovery
+
+MENIERE'S DISEASE
+Classic triad:
+- Episodic vertigo attacks lasting 20 min to 12 hours
+- Sensorineural hearing loss (fluctuating, low-frequency initially)
+- Tinnitus and aural fullness
+
+Pathophysiology: endolymphatic hydrops (excess endolymph in inner ear)
+
+Treatment:
+- Low-salt diet (<1500mg/day), avoid caffeine and alcohol
+- Diuretics: hydrochlorothiazide, acetazolamide
+- Betahistine (reduces endolymph pressure)
+- Acute attacks: vestibular suppressants
+- Intratympanic gentamicin (ablates vestibular function — unilateral)
+- Intratympanic dexamethasone
+- Endolymphatic sac surgery (rarely)
+
+VESTIBULAR MIGRAINE
+- Most common central cause of episodic vertigo
+- Vertigo (often without headache) meeting migraine criteria
+- Duration: 5 min to 72 hours
+- Associated: photophobia, phonophobia, visual aura
+- Treatment: migraine prophylaxis; triptans for acute attacks
+- Diagnosis requires >5 episodes
+
+STROKE/TIA (CENTRAL VERTIGO)
+- PICA (posterior inferior cerebellar artery) infarct: Wallenberg syndrome
+  - Ipsilateral face numbness, Horner's syndrome, ataxia
+  - Contralateral body numbness, dysphagia, hiccups
+- AICA (anterior inferior cerebellar artery): hearing loss + vertigo (labyrinthine artery)
+- Important: isolated vertigo can rarely be the only stroke symptom
+- HINTS exam: Head Impulse, Nystagmus, Test of Skew
+  - Normal head impulse + direction-changing nystagmus + skew deviation = CENTRAL (stroke)
+
+VESTIBULAR INVESTIGATIONS
+- Audiometry (hearing assessment)
+- Videonystagmography (VNG): electronically records nystagmus
+- Caloric testing: irrigate ear with warm/cool water; assesses individual canal function
+- Video Head Impulse Test (vHIT): measures VOR gain
+- Rotational chair testing
+- MRI brain (gadolinium): posterior fossa assessment
+- VEMP (vestibular evoked myogenic potentials): otolith function
+
+VESTIBULAR REHABILITATION
+- Exercise-based therapy to promote central compensation
+- Gaze stabilization exercises
+- Balance training, habituation exercises
+- Most beneficial for unilateral vestibular hypofunction
+- Cawthorne-Cooksey exercises
+
+TREATMENT PRINCIPLES
+Vestibular suppressants (short-term only, max 3 days):
+- Meclizine (antihistamine), dimenhydrinate
+- Avoid long-term: delay central compensation
+
+Antiemetics:
+- Ondansetron, prochlorperazine, metoclopramide
+
+Benzodiazepines (short-term acute):
+- Lorazepam, diazepam

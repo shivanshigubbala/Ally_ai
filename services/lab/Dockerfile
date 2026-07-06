@@ -14,6 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
+RUN go get github.com/jung-kurt/gofpdf
 RUN CGO_ENABLED=0 GOOS=linux go build -o lab .
 
 # ---------- Runtime Stage ----------

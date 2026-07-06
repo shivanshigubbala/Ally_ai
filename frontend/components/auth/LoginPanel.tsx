@@ -16,7 +16,7 @@ export default function LoginPanel() {
     if (prefill) setEmail(prefill);
   }, [searchParams]);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -25,15 +25,19 @@ export default function LoginPanel() {
       return;
     }
 
-    const existing = findProfileByEmail(email);
+    try {
+      const { loginProfile } = await import("@/lib/patient");
+      const res = await loginProfile(email);
 
-    if (!existing) {
-      setError("No account found for that email. Please register first.");
-      return;
+      if (!res.ok) {
+        setError(res.error || "Login failed");
+        return;
+      }
+
+      router.push("/chat");
+    } catch (err: any) {
+      setError(String(err));
     }
-
-    saveProfile(existing);
-    router.push("/chat");
   };
 
   return (

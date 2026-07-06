@@ -1,0 +1,160 @@
+Neuropathy and Peripheral Nerve Disorders — Clinical Reference
+
+DEFINITION
+Peripheral neuropathy refers to damage or dysfunction of the peripheral nervous system — the nerves outside the brain and spinal cord. This includes motor, sensory, and autonomic nerves. Neuropathies can be classified by distribution (mononeuropathy, polyneuropathy, mononeuritis multiplex), nerve type affected, and pathology (axonal vs. demyelinating).
+
+CLASSIFICATION
+By distribution:
+- Mononeuropathy: single nerve affected (e.g., carpal tunnel, peroneal palsy)
+- Mononeuritis multiplex: multiple individual nerves at different sites
+- Polyneuropathy: diffuse, symmetric, usually distal first ("glove-and-stocking")
+- Radiculopathy: nerve root
+
+By pathology:
+- Axonal: Wallerian degeneration, slow recovery, common in metabolic/toxic causes
+- Demyelinating: myelin sheath, faster recovery, typical of inflammatory neuropathies (GBS, CIDP)
+
+CLINICAL FEATURES
+Sensory symptoms (most common first complaint):
+- Numbness, tingling, paresthesias
+- Burning, electric shock pain (neuropathic)
+- Loss of proprioception (unsteady gait, pseudoataxia)
+- Loss of vibration, temperature sensation
+
+Motor features:
+- Distal weakness (foot drop, wrist drop)
+- Wasting of intrinsic hand/foot muscles
+- Absent deep tendon reflexes (especially ankle jerks)
+
+Autonomic features:
+- Orthostatic hypotension
+- Gastroparesis, constipation/diarrhea
+- Urinary retention or incontinence
+- Erectile dysfunction
+- Anhidrosis or hyperhidrosis
+
+COMMON CAUSES — DIABETIC NEUROPATHY
+- Most common cause of peripheral neuropathy worldwide
+- Distal symmetric sensorimotor polyneuropathy (DSPN): commonest
+- Length-dependent: starts in feet, progresses proximally
+- Burning feet, numbness, loss of vibration/proprioception
+- Diabetic autonomic neuropathy: postural hypotension, gastroparesis, cardiac autonomic neuropathy
+- Painful diabetic neuropathy: severe neuropathic pain
+
+Treatment:
+- Optimal glycemic control (HbA1c <7%)
+- Neuropathic pain: pregabalin, gabapentin, duloxetine, amitriptyline; topical capsaicin
+- Foot care: regular inspection, podiatry, pressure-relieving footwear
+
+GUILLAIN-BARRE SYNDROME (GBS)
+- Acute inflammatory demyelinating polyneuropathy
+- Usually post-infectious (Campylobacter jejuni, EBV, CMV, Zika)
+- Ascending weakness and sensory loss over days to weeks
+- Areflexia
+- Back/leg pain common early
+- Respiratory failure: 25% need mechanical ventilation
+- Autonomic instability: arrhythmias, BP fluctuations
+
+CSF: Albuminocytologic dissociation (elevated protein, normal cells)
+NCS/EMG: Demyelinating pattern (prolonged F waves, conduction block)
+
+Variants:
+- Miller Fisher Syndrome: ophthalmoplegia, ataxia, areflexia (anti-GQ1b antibodies)
+- AMAN/AMSAN: axonal variants, Campylobacter-associated
+
+Treatment:
+- IVIG 2g/kg over 5 days OR plasmapheresis (5 sessions)
+- Supportive: respiratory monitoring, DVT prophylaxis, pain management
+- Corticosteroids NOT effective
+
+Recovery: 85% regain walking by 6 months
+
+CHRONIC INFLAMMATORY DEMYELINATING POLYNEUROPATHY (CIDP)
+- Immune-mediated, >2 months duration
+- Proximal and distal weakness, sensory loss, areflexia
+- More symmetric than GBS
+- Responds to treatment
+
+Treatment:
+- IVIG (first-line): 2g/kg then maintenance every 3-6 weeks
+- Corticosteroids: prednisolone, effective but metabolic side effects
+- Plasma exchange
+- Steroid-sparing: azathioprine, mycophenolate, rituximab
+
+COMMON MONONEUROPATHIES
+Carpal tunnel syndrome (median nerve):
+- Most common entrapment neuropathy
+- Nocturnal hand tingling/numbness (first 3.5 fingers)
+- Tinel's sign, Phalen's test
+- Treatment: wrist splint, corticosteroid injection, surgical decompression
+
+Ulnar neuropathy (elbow):
+- "Claw hand" (4th/5th finger), hypothenar wasting
+- Numbness of little finger and ring finger ulnar half
+- Treatment: elbow padding, avoid pressure, surgical transposition
+
+Peroneal neuropathy (fibular head):
+- Foot drop (weak dorsiflexion)
+- Numbness over dorsum of foot
+- Crossing legs, squatting, cast pressure
+
+Radial neuropathy (spiral groove/Saturday night palsy):
+- Wrist drop, finger extension weakness
+- Arm compression during sleep or anesthesia
+- Usually recovers spontaneously
+
+Bell's palsy (facial nerve):
+- Unilateral facial weakness (upper and lower face affected — distinguishes from stroke)
+- Hyperacusis, taste disturbance, eye closure weakness
+- Idiopathic (herpes simplex reactivation likely)
+- Treatment: prednisolone (within 72h), antivirals (acyclovir/valacyclovir), eye protection
+
+HEREDITARY NEUROPATHIES
+Charcot-Marie-Tooth disease (CMT):
+- Most common inherited neuropathy
+- CMT1A: PMP22 gene duplication, demyelinating
+- CMT2: axonal, various genes
+- Pes cavus (high arch), hammer toes, distal weakness/wasting
+- Very slowly progressive
+- No disease-modifying therapy; supportive (orthotics, physiotherapy)
+
+Hereditary neuropathy with liability to pressure palsies (HNPP): PMP22 deletion
+
+INVESTIGATIONS FOR NEUROPATHY
+Blood tests:
+- FBC, ESR, CRP, LFTs, TFTs, renal function
+- Fasting glucose, HbA1c
+- Vitamin B12, folate
+- Protein electrophoresis (MGUS)
+- ANCA, ANA, anti-dsDNA (vasculitis, connective tissue disease)
+- Anti-Ro, anti-La (Sjogren's)
+- HIV, hepatitis B/C
+- Heavy metals if toxic exposure
+
+Nerve conduction studies (NCS) and EMG:
+- Key investigation to characterize neuropathy
+- Axonal vs. demyelinating
+- Sensory vs. motor vs. mixed
+- Distribution
+
+Lumbar puncture (CSF):
+- Useful for GBS, CIDP, infiltrative causes
+
+Nerve biopsy:
+- Sural nerve — for vasculitic neuropathy, amyloid, specific diagnosis when uncertain
+
+NEUROPATHIC PAIN MANAGEMENT
+First-line:
+- Pregabalin (also for anxiety)
+- Gabapentin
+- Duloxetine (SNRI, also for depression)
+- Amitriptyline (low dose, good for sleep)
+
+Second-line:
+- Tramadol (weak opioid with serotonergic properties)
+- Topical: lidocaine patches, capsaicin cream/patch (8%)
+- Tapentadol
+
+Third-line:
+- Strong opioids (use cautiously)
+- Ketamine infusion (refractory cases)

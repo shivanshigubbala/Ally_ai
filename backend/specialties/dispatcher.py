@@ -13,7 +13,9 @@ class SpecialtyDispatcher:
     def __init__(self, registry: SpecialtyRegistry | None = None) -> None:
         self._registry = registry or get_specialty_registry()
 
-    def dispatch(self, consultation_context: Any) -> BaseSpecialty:
+    def dispatch(self, consultation_context: Any, patient_id: str | None = None) -> BaseSpecialty:
+        if patient_id and isinstance(consultation_context, dict):
+            consultation_context = {**consultation_context, "patient_id": patient_id}
         department = self._extract_department(consultation_context)
         if not department:
             raise KeyError("Consultation context does not include a department")
@@ -52,5 +54,9 @@ class SpecialtyDispatcher:
         return None
 
 
-def resolve_specialty(consultation_context: Any, registry: SpecialtyRegistry | None = None) -> BaseSpecialty:
-    return SpecialtyDispatcher(registry=registry).dispatch(consultation_context)
+def resolve_specialty(
+    consultation_context: Any,
+    patient_id: str | None = None,
+    registry: SpecialtyRegistry | None = None,
+) -> BaseSpecialty:
+    return SpecialtyDispatcher(registry=registry).dispatch(consultation_context, patient_id=patient_id)
