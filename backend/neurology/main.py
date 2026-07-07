@@ -229,12 +229,26 @@ async def upload_document(
 
 @app.get("/reports/{report_id}")
 def download_report(report_id: str) -> FileResponse:
-    # backend/main.py -> parents[0] is backend/. Both cardiology_agent.py and
-    # general_physician_agent.py write PDFs to backend/reports/ (their own
-    # parents[1] is also backend/), so this route must look in the same place.
-    report_path = Path(__file__).resolve().parents[0] / "reports" / f"{report_id}.pdf"
+    # Ensure local reports directory exists
+    reports_dir = Path(__file__).resolve().parents[0] / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    
+    report_path = reports_dir / f"{report_id}.pdf"
+    if not report_path.exists():
+        # Try fetching from the lab microservice
+        import httpx
+        try:
+            lab_url = f"http://lab:8082/reports/download?id={report_id}"
+            resp = httpx.get(lab_url)
+            if resp.status_code == 200:
+                # Save binary content locally
+                report_path.write_bytes(resp.content)
+        except Exception:
+            pass
+
     if not report_path.exists():
         raise HTTPException(status_code=404, detail="Report not found")
+
     return FileResponse(
         str(report_path),
         filename=f"{report_id}.pdf",
@@ -321,6 +335,8 @@ async def internal_report_ready(payload: dict = Body(...)) -> dict:
                     pass
             ev = WSEvent(type="report_ready", payload={
                 "report_id": payload.get("report_id"),
+                "appointment_id": payload.get("appointment_id"),
+                "session_id": payload.get("appointment_id"),
                 "report_url": payload.get("report_url"),
                 "download_url": payload.get("download_url"),
                 "tests": payload.get("tests"),

@@ -489,7 +489,7 @@ def lab_notification(state: DoctorState, emit: Emitter) -> DoctorState:
     pending = getattr(state, "pending_event", None) or {}
     decision = "pending"
 
-    if pending.get("type") == "select":
+    if pending.get("type") in ("select", "lab_decision"):
         decision = pending.get("payload", {}).get("decision", "pending")
     else:
         for m in reversed(state.conversation_history):

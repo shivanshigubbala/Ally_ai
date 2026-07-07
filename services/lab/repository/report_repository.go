@@ -322,3 +322,34 @@ func ReportExists(appointmentID int) (bool, error) {
 
 	return count > 0, nil
 }
+
+type AppointmentMetadata struct {
+	PatientName string
+	Age         int
+	Gender      string
+	DoctorName  string
+	Department  string
+}
+
+func GetAppointmentMetadata(appointmentID int) (AppointmentMetadata, error) {
+	var meta AppointmentMetadata
+	err := database.DB.QueryRow(
+		context.Background(),
+		`
+		SELECT 
+			COALESCE(u2.name, u.name, 'Patient #' || a.user_id),
+			COALESCE(u2.age, u.age, 0),
+			COALESCE(u2.gender, u.gender, 'Not specified'),
+			COALESCE(d.name, 'Dr. Shankar Dada'),
+			COALESCE(dept.name, 'General Physician')
+		FROM appointments a
+		LEFT JOIN appointment_users u ON a.user_id = u.id
+		LEFT JOIN users u2 ON a.user_id::text = u2.id OR u2.go_user_id = a.user_id
+		LEFT JOIN doctors d ON a.doctor_id = d.id
+		LEFT JOIN departments dept ON d.department_id = dept.id
+		WHERE a.id = $1
+		`,
+		appointmentID,
+	).Scan(&meta.PatientName, &meta.Age, &meta.Gender, &meta.DoctorName, &meta.Department)
+	return meta, err
+}

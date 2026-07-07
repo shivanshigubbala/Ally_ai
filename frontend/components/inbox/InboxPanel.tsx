@@ -132,7 +132,7 @@ export default function InboxPanel({
                   )}
 
                   {n.kind === "report_ready" && (
-                    <div className="mt-4">
+                    <div className="mt-4 flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -143,6 +143,17 @@ export default function InboxPanel({
                       >
                         Go to lab reports
                       </button>
+                      {n.reportUrl && (
+                        <a
+                          href={n.reportUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-blue-200 transition hover:-translate-y-0.5"
+                        >
+                          {n.title.toLowerCase().includes("prescription") ? "Download Prescription" : "Download PDF"}
+                        </a>
+                      )}
                     </div>
                   )}
                   {n.kind === "appointment_booked" && (

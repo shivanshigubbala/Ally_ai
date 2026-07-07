@@ -162,15 +162,27 @@ async def _generate_and_send_chart_delayed(
             if role_label and content:
                 history_str += f"{role_label}: {content}\n"
 
+        dept_name = "General Physician"
+        if dept.lower() in ("1", "general", "general_physician"):
+            dept_name = "General Physician"
+        elif dept.lower() in ("2", "cardiology"):
+            dept_name = "Cardiology"
+        elif dept.lower() in ("3", "neurology"):
+            dept_name = "Neurology"
+
+        slot_label = f"Slot {slot_id}" if str(slot_id).isdigit() else slot_id
+
         prompt = (
             "You are an intake coordinator. Summarize the patient's intake interview. "
             "Extract the following details into a concise, professional medical consultation chart:\n"
-            "- Patient Name\n"
-            "- Chief Complaint\n"
-            "- Suggested Department\n"
-            "- Confirmed Doctor\n"
-            "- Selected Time Slot\n"
-            "- Key Symptoms and Answers to Health Questions (such as fever, duration, pain location)\n\n"
+            f"- Patient Name: {patient_name or 'Not recorded'}\n"
+            f"- Chief Complaint: {current_complaint or 'Not recorded'}\n"
+            f"- Suggested Department: {dept_name}\n"
+            f"- Confirmed Doctor: {doctor_name}\n"
+            f"- Selected Time Slot: {slot_label}\n"
+            "- Key Symptoms and Answers to Health Questions (such as fever, duration, pain location) extracted from the interview history.\n\n"
+            "Use the exact Confirmed Doctor, Suggested Department, and Selected Time Slot provided above. "
+            "Do NOT use placeholders like '[Insert Doctor's Name]' or generic placeholder values. "
             "Format the chart as clean Markdown with clear headings and bullet points. "
             "Be professional and direct, with no conversational filler."
         )
@@ -195,9 +207,9 @@ async def _generate_and_send_chart_delayed(
                 f"### Intake Consultation Chart\n\n"
                 f"- **Patient Name:** {patient_name or user_id}\n"
                 f"- **Chief Complaint:** {current_complaint or 'Intake evaluation'}\n"
-                f"- **Department:** {dept.title() if dept else 'General Physician'}\n"
+                f"- **Department:** {dept_name}\n"
                 f"- **Doctor:** {doctor_name}\n"
-                f"- **Slot:** {slot_id}\n"
+                f"- **Slot:** {slot_label}\n"
                 f"- **Status:** Confirmed"
             )
 
@@ -206,6 +218,26 @@ async def _generate_and_send_chart_delayed(
             "chart_content": chart_content,
         })
         await _send(ws, event)
+        
+        # Save to database under the consultation context's metadata so the doctor agent can load it
+        try:
+            from backend.db.pgvector_tracker import load_consultation_context, upsert_consultation_context
+        except ImportError:
+            try:
+                from db.pgvector_tracker import load_consultation_context, upsert_consultation_context
+            except Exception:
+                load_consultation_context, upsert_consultation_context = None, None
+
+        if load_consultation_context and upsert_consultation_context:
+            try:
+                ctx = load_consultation_context(appointment_id=appointment_id)
+                if ctx:
+                    meta = ctx.get("metadata") or {}
+                    meta["consultation_chart"] = chart_content
+                    ctx["metadata"] = meta
+                    upsert_consultation_context(ctx)
+            except Exception as e:
+                logger.warning("Failed to save consultation chart to database: %s", e)
     except Exception as e:
         logger.exception("Background chart generation failed")
 
@@ -395,11 +427,10 @@ async def ws_endpoint(ws: WebSocket, user_id: str, patient_id: str | None = Quer
                             if apt:
                                 appointment_id = apt
                 elif _user_state.get(user_id) == "DONE":
-                    routing_graph.reset_state(user_id)
-                    _user_state[user_id] = "ROUTING"
-                    apt = await _drive_routing(ws, user_id, None, None)
-                    if apt:
-                        appointment_id = apt
+                    await _send(ws, WSEvent(type="text", payload={
+                        "content": "Your appointment is already booked and confirmed. Please start your consultation with the doctor."
+                    }))
+                    continue
                 else:
                     apt = await _drive_routing(ws, user_id, evt.payload.get("content"),
                                                evt.model_dump())

@@ -75,6 +75,12 @@ def reset_db() -> dict:
     
     with _conn() as conn:
         with conn.cursor() as cur:
+            # Delete entries from Go tables first so they are re-seeded cleanly
+            cur.execute("DELETE FROM lab_reports CASCADE")
+            cur.execute("DELETE FROM time_slots CASCADE")
+            cur.execute("DELETE FROM doctors CASCADE")
+            cur.execute("DELETE FROM departments CASCADE")
+
             tables = [
                 "appointments",
                 "messages",
@@ -102,6 +108,72 @@ def reset_db() -> dict:
             pass
             
     return {"ok": True, "message": "Database flushed and re-seeded successfully"}
+
+
+@app.post("/delete-patient")
+def delete_patient(patient_id: str = Body(..., embed=True)) -> dict:
+    try:
+        from backend.db.pgvector_tracker import _conn
+    except ImportError:
+        from db.pgvector_tracker import _conn
+
+    if not _conn:
+        raise HTTPException(status_code=500, detail="Database connection not available")
+
+    # Get the go_user_id first
+    go_user_id = None
+    try:
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT go_user_id FROM users WHERE id = %s", (patient_id,))
+                row = cur.fetchone()
+                if row:
+                    go_user_id = row[0]
+
+                # 1. Delete lab reports
+                if go_user_id is not None:
+                    cur.execute(
+                        "DELETE FROM lab_reports WHERE appointment_id IN (SELECT id FROM appointments WHERE user_id = %s)",
+                        (str(go_user_id),)
+                    )
+
+                # 2. Delete from Python tables
+                cur.execute("DELETE FROM appointments WHERE patient_id = %s OR user_id = %s", (patient_id, str(go_user_id) if go_user_id else ""))
+                cur.execute("DELETE FROM messages WHERE user_id = %s", (patient_id,))
+                cur.execute("DELETE FROM sessions WHERE patient_id = %s", (patient_id,))
+                cur.execute("DELETE FROM consultation_contexts WHERE patient_id = %s", (patient_id,))
+                cur.execute("DELETE FROM uploaded_files WHERE user_id = %s", (patient_id,))
+                cur.execute("DELETE FROM notifications WHERE patient_id = %s", (patient_id,))
+                cur.execute("DELETE FROM patient_timelines WHERE patient_id = %s", (patient_id,))
+                cur.execute("DELETE FROM lab_work_items WHERE patient_id = %s", (patient_id,))
+                cur.execute("DELETE FROM users WHERE id = %s", (patient_id,))
+
+                # 3. Delete from Go table
+                if go_user_id is not None:
+                    cur.execute("DELETE FROM appointment_users WHERE id = %s", (go_user_id,))
+            conn.commit()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database deletion failed: {e}")
+
+    # Delete generated report files for this patient
+    from pathlib import Path
+    reports_root = Path(__file__).resolve().parent / "reports"
+    if reports_root.exists():
+        for dept_dir in reports_root.glob("*"):
+            if dept_dir.is_dir():
+                for f in dept_dir.glob(f"*_{patient_id}.pdf"):
+                    try:
+                        f.unlink()
+                    except Exception:
+                        pass
+                if go_user_id:
+                    for f in dept_dir.glob(f"*_{go_user_id}.pdf"):
+                        try:
+                            f.unlink()
+                        except Exception:
+                            pass
+
+    return {"ok": True, "message": f"Successfully deleted patient {patient_id} and all associated records."}
 
 
 def chunk_text(text: str, chunk_size: int = 800, chunk_overlap: int = 150) -> list[str]:
@@ -290,12 +362,26 @@ def get_report(department: str, filename: str):
 
 @app.get("/reports/{report_id}")
 def download_report(report_id: str) -> FileResponse:
-    # backend/main.py -> parents[0] is backend/. Both cardiology_agent.py and
-    # general_physician_agent.py write PDFs to backend/reports/ (their own
-    # parents[1] is also backend/), so this route must look in the same place.
-    report_path = Path(__file__).resolve().parents[0] / "reports" / f"{report_id}.pdf"
+    # Ensure local reports directory exists
+    reports_dir = Path(__file__).resolve().parents[0] / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    
+    report_path = reports_dir / f"{report_id}.pdf"
+    if not report_path.exists():
+        # Try fetching from the lab microservice
+        import httpx
+        try:
+            lab_url = f"http://lab:8082/reports/download?id={report_id}"
+            resp = httpx.get(lab_url)
+            if resp.status_code == 200:
+                # Save binary content locally
+                report_path.write_bytes(resp.content)
+        except Exception:
+            pass
+
     if not report_path.exists():
         raise HTTPException(status_code=404, detail="Report not found")
+
     return FileResponse(
         str(report_path),
         filename=f"{report_id}.pdf",
@@ -382,12 +468,33 @@ async def internal_report_ready(payload: dict = Body(...)) -> dict:
                     pass
             ev = WSEvent(type="report_ready", payload={
                 "report_id": payload.get("report_id"),
+                "appointment_id": payload.get("appointment_id"),
+                "session_id": payload.get("appointment_id"),
                 "report_url": payload.get("report_url"),
                 "download_url": payload.get("download_url"),
                 "tests": payload.get("tests"),
                 "doctor": payload.get("doctor"),
             })
             asyncio.create_task(notify_user_event(str(user), ev))
+
+            # Trigger generating the consolidated Prescription PDF now that lab reports are ready
+            try:
+                from backend.shared.prescription_pdf import generate_prescription_pdf, save_prescription_notification_and_emit
+            except ImportError:
+                from shared.prescription_pdf import generate_prescription_pdf, save_prescription_notification_and_emit
+
+            try:
+                prescription_meta = generate_prescription_pdf(payload.get("appointment_id"))
+                if prescription_meta:
+                    save_prescription_notification_and_emit(
+                        appointment_id=payload.get("appointment_id"),
+                        pdf_path=prescription_meta.get("pdf_path"),
+                        doctor_name=prescription_meta.get("doctor_name"),
+                        patient_id=prescription_meta.get("patient_id"),
+                        department=prescription_meta.get("department")
+                    )
+            except Exception as e:
+                print("Failed to generate prescription PDF in internal_report_ready callback:", e)
     except Exception:
         pass
     return {"ok": True}
@@ -476,6 +583,7 @@ def register(req: RegistrationRequest = Body(...)) -> dict:
         city=req.city,
         emergency_contact=req.emergency_contact,
         consent=req.consent,
+        gender=req.gender,
     )
 
     # Create a distinct session for this patient (session != patient id)

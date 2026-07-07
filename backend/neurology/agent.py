@@ -104,8 +104,11 @@ def build_patient_context(state: DoctorState | Any) -> str:
     current_complaint = getattr(state, "current_complaint", "") or getattr(state, "chief_complaint", "") or ""
     documents = getattr(state, "uploaded_documents", None) or []
     conversation_summary = getattr(state, "conversation_summary", "") or ""
+    consultation_chart = getattr(state, "consultation_chart", "") or ""
 
     sections = []
+    if consultation_chart:
+        sections.append("Receptionist Intake Consultation Chart\n" + consultation_chart)
     if patient_summary:
         sections.append("Patient Summary\n- " + patient_summary)
     else:
@@ -310,6 +313,7 @@ def _persist_consultation_output(state: DoctorState) -> None:
                 "lab_request_status": getattr(state, "lab_request_status", "NOT_REQUESTED"),
                 "lab_request_created_at": getattr(state, "lab_request_created_at", None),
                 "lab_request_payload": getattr(state, "lab_request_payload", {}),
+                "consultation_chart": getattr(state, "consultation_chart", ""),
             },
             "version": 1,
         }
@@ -350,6 +354,8 @@ def _hydrate_consultation_context(state: DoctorState) -> None:
             state.consultation_summary = metadata.get("consultation_summary")
         if metadata.get("consultation_recommendations"):
             state.consultation_recommendations = metadata.get("consultation_recommendations")
+        if metadata.get("consultation_chart"):
+            state.consultation_chart = metadata.get("consultation_chart")
         if state.patient_id or state.user_id:
             patient_key = state.patient_id or state.user_id
             if not state.health_data:
@@ -800,10 +806,39 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
             f"{summary}. "
             "Then I’ll ask a couple of focused questions so I can understand your concern and next steps."
         )
+        emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
+    elif getattr(state, "consultation_chart", ""):
+        system_instruction = (
+            f"You are {doc_name}, a warm and experienced {dept_name} doctor at Ally Hospital.\n"
+            f"The receptionist has forwarded the patient's Intake Consultation Chart to you:\n"
+            f"```\n{state.consultation_chart}\n```\n\n"
+            f"Greet the patient warmly by name ({patient_name}), state that you have received and reviewed their intake consultation chart from the receptionist, "
+            f"briefly mention your understanding of their chief complaint from the chart, "
+            f"and ask a single relevant, focused clinical follow-up question to start diagnosing them.\n"
+            f"CRITICAL RULES:\n"
+            f"1. Do NOT ask any repeated questions that the receptionist has already asked (such as temperature, chest pain, body pain, injuries, or the chief complaint details mentioned in the chart).\n"
+            f"2. Ask other relevant, deeper clinical questions to help with the diagnosis.\n"
+            f"3. Speak in plain, warm, professional sentences. No markdown formatting, bullet points, or list elements.\n"
+            f"4. Keep it under 60 words."
+        )
+        messages = [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": "Introduce yourself, acknowledge the chart, and ask your first follow-up question."}
+        ]
+        try:
+            reply = _stream_into_emit(messages, emit, sender=DOCTOR_ID)
+        except Exception:
+            logger.exception("Failed to stream initial doctor message, falling back to static/non-stream")
+            try:
+                reply = _call_llm(messages)
+                emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
+            except Exception:
+                reply = _build_initial_doctor_message(state.chief_complaint, patient_name, doc_name, dept_name)
+                emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
     else:
         reply = _build_initial_doctor_message(state.chief_complaint, patient_name, doc_name, dept_name)
+        emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
 
-    emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
     state.conversation_history.append({"role": "assistant", "content": reply})
     state.current_node = "QUESTIONING"
     state.questions_asked = 0
@@ -992,6 +1027,27 @@ def evaluation(state: DoctorState, emit: Emitter) -> DoctorState:
     )
     state.consultation_summary = consultation_summary
     state.consultation_recommendations = consultation_summary.get("lab_recommendations", []) or state.tests_list
+    
+    p_name = state.patient_name or state.user_id.replace("_", " ").title()
+    if not getattr(state, "consultation_chart", ""):
+        state.consultation_chart = (
+            f"### Intake Consultation Chart\n\n"
+            f"- **Patient Name:** {p_name}\n"
+            f"- **Chief Complaint:** {state.chief_complaint or 'Intake evaluation'}\n"
+            f"- **Department:** {state.department.title()}\n"
+            f"- **Doctor:** {state.doctor_name or DOCTOR_NAME}\n"
+            f"- **Status:** Confirmed"
+        )
+
+    if "### DOCTOR CONSULTATION DISCOVERIES" not in state.consultation_chart:
+        test_names = ", ".join(t.get("name", "?") for t in state.tests_list) if state.tests_list else "None suggested"
+        discoveries = (
+            f"\n\n### DOCTOR CONSULTATION DISCOVERIES\n\n"
+            f"- **Clinical Assessment / Patient Condition Summary**: {consultation_summary.get('clinical_assessment', '')}\n"
+            f"- **Diagnosis**: {consultation_summary.get('possible_diagnosis', '')}\n"
+            f"- **Suggested Lab Tests**: {test_names}\n"
+        )
+        state.consultation_chart += discoveries
 
     patient_name = state.patient_name or state.user_id.replace("_", " ").title()
     if state.lab_tests_recommended and state.tests_list:
@@ -1035,7 +1091,7 @@ def lab_notification(state: DoctorState, emit: Emitter) -> DoctorState:
     pending = getattr(state, "pending_event", None) or {}
     decision = "pending"
 
-    if pending.get("type") == "select":
+    if pending.get("type") in ("select", "lab_decision"):
         decision = pending.get("payload", {}).get("decision", "pending")
     else:
         for m in reversed(state.conversation_history):
@@ -1191,6 +1247,80 @@ def session_complete(state: DoctorState, emit: Emitter) -> DoctorState:
     if not state.consultation_recommendations:
         state.consultation_recommendations = state.consultation_summary.get("lab_recommendations", []) or state.tests_list
     _persist_consultation_output(state)
+
+    if getattr(state, "consultation_chart", ""):
+        try:
+            from backend.shared.chart_pdf import generate_chart_pdf
+        except ImportError:
+            from shared.chart_pdf import generate_chart_pdf
+        
+        patient_name = state.patient_name or state.user_id.replace("_", " ").title()
+        pdf_path = generate_chart_pdf(
+            appointment_id=state.appointment_id,
+            department=state.department,
+            doctor_name=state.doctor_name or DOCTOR_NAME,
+            patient_name=patient_name,
+            chart_content=state.consultation_chart,
+        )
+        if pdf_path:
+            msg = f"Your final Consultation Chart has been generated! You can download it here: [Download Chart PDF]({pdf_path})"
+            emit(WSEvent(type="text", payload={"content": msg, "from": state.doctor_id}))
+            
+            try:
+                create_notification({
+                    "notification_id": f"chart_notif:{state.appointment_id}",
+                    "patient_id": state.patient_id or state.user_id,
+                    "appointment_id": state.appointment_id,
+                    "consultation_context_id": state.consultation_context_id,
+                    "department": state.department,
+                    "doctor": state.doctor_name or DOCTOR_NAME,
+                    "notification_type": "REPORT_READY",
+                    "title": "Consultation Chart Ready",
+                    "message": f"Your consultation chart and recommendations from {state.doctor_name or DOCTOR_NAME} are ready.",
+                    "metadata": {
+                        "report_id": f"consultation_chart_{state.appointment_id}",
+                        "report_url": pdf_path,
+                        "source": "doctor_agent",
+                        "status": "COMPLETED",
+                    },
+                    "status": "PENDING",
+                })
+            except Exception:
+                logger.exception("Failed to create database notification for consultation chart PDF")
+                
+            try:
+                emit(WSEvent(type="report_ready", payload={
+                    "report_id": f"consultation_chart_{state.appointment_id}",
+                    "doctor": state.doctor_name or DOCTOR_NAME,
+                    "report_url": pdf_path,
+                    "tests": state.tests_list or [],
+                    "appointment_id": state.appointment_id,
+                }))
+            except Exception:
+                logger.exception("Failed to emit report_ready WSEvent for consultation chart PDF")
+
+    # Generate consolidated Prescription PDF if tests are declined or none recommended
+    tests_declined_or_none = (not state.tests_list) or (state.user_lab_decision == "reject")
+    if tests_declined_or_none:
+        try:
+            from backend.shared.prescription_pdf import generate_prescription_pdf, save_prescription_notification_and_emit
+        except ImportError:
+            from shared.prescription_pdf import generate_prescription_pdf, save_prescription_notification_and_emit
+
+        try:
+            pres_meta = generate_prescription_pdf(state.appointment_id)
+            if pres_meta:
+                save_prescription_notification_and_emit(
+                    appointment_id=state.appointment_id,
+                    pdf_path=pres_meta.get("pdf_path"),
+                    doctor_name=pres_meta.get("doctor_name"),
+                    patient_id=pres_meta.get("patient_id"),
+                    department=pres_meta.get("department"),
+                    emit=emit
+                )
+        except Exception as e:
+            logger.exception("Failed to generate prescription PDF in session_complete: %s", e)
+
     return state
 
 

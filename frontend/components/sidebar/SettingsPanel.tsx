@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getBackendBase } from "@/lib/backend";
+import { getProfile, getUserId } from "@/lib/patient";
 
 export default function SettingsPanel() {
   const [loading, setLoading] = useState(false);
@@ -53,6 +54,77 @@ export default function SettingsPanel() {
     }
   };
 
+  const handleDeletePatient = async () => {
+    const profile = getProfile();
+    const patientId = profile?.patientId || getUserId();
+    if (!patientId) {
+      setError("No active patient profile found to delete.");
+      return;
+    }
+    if (!confirm(`Are you sure you want to delete patient "${profile?.name || patientId}" and all their records? This cannot be undone.`)) {
+      return;
+    }
+    setLoading(true);
+    setMessage("");
+    setError("");
+
+    try {
+      const backendBase = getBackendBase();
+      const target = backendBase ? `${backendBase.replace(/\/+$/, "")}/delete-patient` : "/api/delete-patient";
+
+      const resp = await fetch(target, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patient_id: patientId }),
+      });
+
+      const text = await resp.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {}
+
+      if (resp.ok) {
+        setMessage(`Patient profile "${profile?.name || patientId}" and all associated data deleted successfully.`);
+        
+        // Remove patient from local storage registry
+        if (typeof window !== "undefined") {
+          const STORAGE_KEY = "ally_patient_profile";
+          const REGISTRY_KEY = "ally_patient_registry";
+          
+          window.localStorage.removeItem(STORAGE_KEY);
+          
+          try {
+            const registryRaw = window.localStorage.getItem(REGISTRY_KEY);
+            if (registryRaw) {
+              const registry = JSON.parse(registryRaw);
+              if (profile?.email) {
+                delete registry[profile.email.trim().toLowerCase()];
+                window.localStorage.setItem(REGISTRY_KEY, JSON.stringify(registry));
+              }
+            }
+          } catch {}
+          
+          window.sessionStorage.removeItem("ally_session_id");
+          window.sessionStorage.removeItem("ally_session_patient_id");
+        }
+        
+        setTimeout(() => {
+          window.location.href = "/signup";
+        }, 3000);
+      } else {
+        const errorMsg = data?.detail
+          ? (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail))
+          : text || "Failed to delete patient profile.";
+        setError(errorMsg);
+      }
+    } catch (err: any) {
+      setError(err.message || String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
       <div className="mb-6">
@@ -83,6 +155,24 @@ export default function SettingsPanel() {
                 className={`inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-100 transition hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none`}
               >
                 {loading ? "Flushing..." : "Flush & Reset DB"}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-slate-100 pt-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Delete Current Patient Profile</p>
+                <p className="mt-1 text-xs text-slate-500 max-w-md">
+                  Deletes only this active patient's profile and records from the database and registry. Leaves other profiles and doctor databases completely intact.
+                </p>
+              </div>
+              <button
+                onClick={handleDeletePatient}
+                disabled={loading}
+                className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-100 transition hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {loading ? "Deleting..." : "Delete Current Patient"}
               </button>
             </div>
           </div>

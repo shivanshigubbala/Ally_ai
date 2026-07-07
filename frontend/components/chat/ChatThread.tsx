@@ -89,7 +89,14 @@ function DoctorCard({
       <div className="grid gap-2 sm:grid-cols-2">
         {(card.doctors || []).map((doctor) => {
           const available = doctor.available !== false;
-          const recommended = card.recommendedDepartment && doctor.department_id === card.recommendedDepartment;
+          const getNormalizedDept = (id: string | number) => {
+            const s = String(id || "").toLowerCase();
+            if (s === "1" || s === "general" || s === "general_physician") return "general";
+            if (s === "2" || s === "cardiology") return "cardiology";
+            if (s === "3" || s === "neurology") return "neurology";
+            return s;
+          };
+          const recommended = card.recommendedDepartment && getNormalizedDept(doctor.department_id) === getNormalizedDept(card.recommendedDepartment);
           return (
             <button
               key={doctor.id}
@@ -108,7 +115,13 @@ function DoctorCard({
                 {recommended && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">Suggested</span>}
               </div>
               <div className="mt-0.5 text-xs text-slate-500">
-                {doctor.department_id || "Cardiology"}
+                {(() => {
+                  const idStr = String(doctor.department_id || "").toLowerCase();
+                  if (idStr === "1" || idStr === "general") return "General Physician";
+                  if (idStr === "2" || idStr === "cardiology") return "Cardiology";
+                  if (idStr === "3" || idStr === "neurology") return "Neurology";
+                  return "General Physician";
+                })()}
                 {!available ? " - unavailable" : " - available"}
               </div>
             </button>

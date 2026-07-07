@@ -312,15 +312,22 @@ def init_db():
 def upsert_user(user_id: str, name: str, age: int = 30, health_data: dict | None = None):
     if not HAS_PG:
         return
+    gender = None
+    if health_data:
+        gender = health_data.get("gender")
     with _conn() as conn:
         if conn is None:
             return
         cur = conn.cursor()
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT")
+        except Exception:
+            pass
         cur.execute("""
-            INSERT INTO users (id, name, age, health_data)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, age=EXCLUDED.age, health_data=EXCLUDED.health_data
-        """, (user_id, name, age, json.dumps(health_data or {})))
+            INSERT INTO users (id, name, age, gender, health_data)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, age=EXCLUDED.age, gender=EXCLUDED.gender, health_data=EXCLUDED.health_data
+        """, (user_id, name, age, gender, json.dumps(health_data or {})))
         cur.close()
 
 
@@ -479,6 +486,7 @@ def create_patient(
     city: str | None = None,
     emergency_contact: str | None = None,
     consent: bool = False,
+    gender: str | None = None,
 ):
     """Create a persisted patient record and return the generated patient_id.
 
@@ -496,6 +504,7 @@ def create_patient(
                 "city": city,
                 "emergency_contact": emergency_contact,
                 "consent": bool(consent),
+                "gender": gender or merged_health.get("gender"),
             })
             upsert_user(patient_id, name, int(age) if age is not None else int(existing.get("age") or 0), merged_health)
             return patient_id
@@ -507,6 +516,7 @@ def create_patient(
         "city": city,
         "emergency_contact": emergency_contact,
         "consent": bool(consent),
+        "gender": gender,
     }
     # age may be None; ensure an integer fallback
     age_val = int(age) if age is not None else None

@@ -43,9 +43,26 @@ func (a *AppointmentReportService) ProcessAppointment(
 		return err
 	}
 
+	// Fetch metadata to show patient name and info on report
+	meta, err := repository.GetAppointmentMetadata(appointmentID)
+	if err != nil {
+		meta = repository.AppointmentMetadata{
+			PatientName: "Patient #" + userID,
+			Age:         0,
+			Gender:      "Not specified",
+			DoctorName:  "Dr. Shankar Dada",
+			Department:  "General Physician",
+		}
+	}
+
 	report := models.Report{
 		UserID:        userID,
 		AppointmentID: appointmentID,
+		PatientName:   meta.PatientName,
+		Age:           meta.Age,
+		Gender:        meta.Gender,
+		Doctor:        meta.DoctorName,
+		Department:    meta.Department,
 	}
 
 	reportService := ReportService{}

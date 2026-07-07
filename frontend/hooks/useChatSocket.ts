@@ -118,15 +118,27 @@ export function useChatSocket(userId: string | null, patientId?: string | null):
         if (!data?.notifications?.length) return;
         setInbox((prev) => {
           const existingIds = new Set(prev.map((n) => n.id));
-          const loaded: InboxNotification[] = (data.notifications as any[]).map((n: any) => ({
-            id: n.notification_id || n.id || Math.random().toString(36).slice(2),
-            kind: (n.notification_type || "lab_notification").toLowerCase() as InboxNotification["kind"],
-            title: n.title || "Notification",
-            body: n.message || "",
-            createdAt: n.created_at ? new Date(n.created_at).getTime() : Date.now(),
-            read: n.status === "READ",
-            decision: (n.status === "READ" ? "accepted" : "pending") as InboxNotification["decision"],
-          }));
+          const loaded: InboxNotification[] = (data.notifications as any[]).map((n: any) => {
+            let rUrl = n.metadata?.report_url || n.metadata?.download_url || "";
+            if (rUrl) {
+              rUrl = rUrl
+                .replace("://backend:8000", "://localhost:8000")
+                .replace("://lab:8082", "://localhost:8082");
+              if (rUrl.startsWith("/")) {
+                rUrl = `${HTTP_BASE}${rUrl}`;
+              }
+            }
+            return {
+              id: n.notification_id || n.id || Math.random().toString(36).slice(2),
+              kind: (n.notification_type || "lab_notification").toLowerCase() as InboxNotification["kind"],
+              title: n.title || "Notification",
+              body: n.message || "",
+              createdAt: n.created_at ? new Date(n.created_at).getTime() : Date.now(),
+              read: n.status === "READ",
+              decision: (n.status === "READ" ? "accepted" : "pending") as InboxNotification["decision"],
+              reportUrl: rUrl,
+            };
+          });
           const fresh = loaded.filter((n) => !existingIds.has(n.id));
           return [...prev, ...fresh].sort((a, b) => b.createdAt - a.createdAt);
         });
@@ -458,6 +470,8 @@ export function useChatSocket(userId: string | null, patientId?: string | null):
               (r) =>
                 r.id !== `pending-${aptId}` &&
                 r.id !== `pending-${reportId}` &&
+                r.id !== `pending-${sessionId}` &&
+                !r.id.endsWith(`-${aptId}`) &&
                 r.id !== reportId
             );
             return [
@@ -476,6 +490,7 @@ export function useChatSocket(userId: string | null, patientId?: string | null):
             title: "Lab report ready",
             body: `Your results from ${doctor} are ready to view.`,
             reportId,
+            reportUrl: normalizedReportUrl,
           });
           break;
         }
@@ -534,7 +549,7 @@ export function useChatSocket(userId: string | null, patientId?: string | null):
         consultationActiveRef.current = false;
       }
       setConsultationChart(saved.consultationChart || "");
-      setReports(Array.isArray(saved.reports) ? saved.reports : []);
+      setReports(Array.isArray(saved.reports) ? saved.reports.filter((r: any) => r.status !== "generating") : []);
       setInbox(Array.isArray(saved.inbox) ? saved.inbox : []);
       isLoadedRef.current = true;
     } catch {
@@ -553,7 +568,7 @@ export function useChatSocket(userId: string | null, patientId?: string | null):
           doctorReady,
           consultationActive,
           consultationChart,
-          reports,
+          reports: reports.filter((r) => r.status !== "generating"),
           inbox,
         })
       );

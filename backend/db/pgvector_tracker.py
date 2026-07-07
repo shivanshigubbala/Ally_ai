@@ -348,15 +348,37 @@ def init_db():
 def upsert_user(user_id: str, name: str, age: int = 30, health_data: dict | None = None):
     if not HAS_PG:
         return
+    gender = None
+    if health_data:
+        gender = health_data.get("gender")
     with _conn() as conn:
         if conn is None:
             return
         cur = conn.cursor()
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT")
+        except Exception:
+            pass
         cur.execute("""
-            INSERT INTO users (id, name, age, health_data)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, age=EXCLUDED.age, health_data=EXCLUDED.health_data
-        """, (user_id, name, age, json.dumps(health_data or {})))
+            INSERT INTO users (id, name, age, gender, health_data)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, age=EXCLUDED.age, gender=EXCLUDED.gender, health_data=EXCLUDED.health_data
+        """, (user_id, name, age, gender, json.dumps(health_data or {})))
+        
+        # Keep appointment_users table synchronized with users profile
+        try:
+            cur.execute("SELECT go_user_id FROM users WHERE id = %s", (user_id,))
+            row = cur.fetchone()
+            if row and row[0] is not None:
+                go_user_id = row[0]
+                cur.execute("""
+                    UPDATE appointment_users 
+                    SET name = %s, age = %s, gender = %s
+                    WHERE id = %s
+                """, (name, age, gender, go_user_id))
+        except Exception:
+            pass
+            
         cur.close()
 
 
@@ -389,9 +411,9 @@ def sync_go_user_id(user_id: str) -> int:
         with conn.cursor() as cur:
             # Acquire row lock to prevent concurrent sync attempts
             cur.execute(_Query("""
-                SELECT go_user_id, name FROM users WHERE id=%s FOR UPDATE
+                SELECT go_user_id, name, age, gender FROM users WHERE id=%s FOR UPDATE
             """, visible="""
-                SELECT go_user_id, name FROM users WHERE id=%s FOR UPDATE
+                SELECT go_user_id, name, age, gender FROM users WHERE id=%s FOR UPDATE
             """), (user_id,))
 
             row = cur.fetchone()
@@ -399,9 +421,12 @@ def sync_go_user_id(user_id: str) -> int:
                 raise ValueError(f"User {user_id} not found in database")
 
             if isinstance(row, tuple):
-                go_user_id, name = row
+                go_user_id, name, age, gender = row[0], row[1], row[2], row[3] if len(row) > 3 else None
             else:
-                go_user_id, name = row[0], row[1] if len(row) > 1 else ""
+                go_user_id = row[0]
+                name = row[1] if len(row) > 1 else ""
+                age = row[2] if len(row) > 2 else 0
+                gender = row[3] if len(row) > 3 else None
 
             # If already synced, return cached value
             if go_user_id is not None:
@@ -418,6 +443,16 @@ def sync_go_user_id(user_id: str) -> int:
             """, visible="""
                 UPDATE users SET go_user_id=%s WHERE id=%s
             """), (new_go_user_id, user_id))
+
+            # Sync name, age, and gender columns into appointment_users table
+            try:
+                cur.execute("""
+                    UPDATE appointment_users 
+                    SET age = %s, gender = %s
+                    WHERE id = %s
+                """, (age, gender, new_go_user_id))
+            except Exception:
+                pass
 
             return new_go_user_id
 
@@ -515,6 +550,7 @@ def create_patient(
     city: str | None = None,
     emergency_contact: str | None = None,
     consent: bool = False,
+    gender: str | None = None,
 ):
     """Create a persisted patient record and return the generated patient_id.
 
@@ -528,6 +564,7 @@ def create_patient(
         "city": city,
         "emergency_contact": emergency_contact,
         "consent": bool(consent),
+        "gender": gender,
     }
     # age may be None; ensure an integer fallback
     age_val = int(age) if age is not None else None

@@ -93,6 +93,8 @@ export interface InboxNotification {
   sessionId?: string;
   tests?: LabTest[];
   urgent?: boolean;
+  reportUrl?: string;
+  downloadUrl?: string;
 }
 
 export interface LabReport {

@@ -108,10 +108,52 @@ func GenerateReportPDF(
 	pdf.Text(115, 68, fmt.Sprintf("Department:        %s", strings.Title(department)))
 	pdf.Text(115, 73, fmt.Sprintf("Report Date:        %s", time.Now().Format("Jan 02, 2026 15:04")))
 
-	pdf.Ln(42)
+	pdf.SetY(85)
+
+	// Filter tests based on the report's department and eliminate duplicates
+	var filteredTests []models.LabTest
+	deptLower := strings.ToLower(report.Department)
+	for _, test := range tests {
+		testNameLower := strings.ToLower(test.TestName)
+		isAllowed := false
+
+		if strings.Contains(deptLower, "neurology") {
+			// Neurology allows only MRI Brain and Blood Test Panel
+			if strings.Contains(testNameLower, "mri") || strings.Contains(testNameLower, "blood test panel") || strings.Contains(testNameLower, "blood panel") {
+				isAllowed = true
+			}
+		} else if strings.Contains(deptLower, "cardiology") {
+			// Cardiology allows only Lipid Profile, Troponin, ECG, Cardiac CT
+			if strings.Contains(testNameLower, "lipid") || strings.Contains(testNameLower, "troponin") || strings.Contains(testNameLower, "ecg") || strings.Contains(testNameLower, "electrocardiogram") || strings.Contains(testNameLower, "cardiac") {
+				isAllowed = true
+			}
+		} else {
+			// General Physician allows CBC, BMP, Blood Sugar, Kidney, Liver
+			if strings.Contains(testNameLower, "cbc") || strings.Contains(testNameLower, "complete blood count") ||
+				strings.Contains(testNameLower, "bmp") || strings.Contains(testNameLower, "basic metabolic") ||
+				strings.Contains(testNameLower, "sugar") || strings.Contains(testNameLower, "glucose") ||
+				strings.Contains(testNameLower, "kidney") || strings.Contains(testNameLower, "renal") ||
+				strings.Contains(testNameLower, "liver") || strings.Contains(testNameLower, "hepatic") {
+				isAllowed = true
+			}
+		}
+
+		if isAllowed {
+			alreadyExists := false
+			for _, ft := range filteredTests {
+				if strings.ToLower(ft.TestName) == testNameLower {
+					alreadyExists = true
+					break
+				}
+			}
+			if !alreadyExists {
+				filteredTests = append(filteredTests, test)
+			}
+		}
+	}
 
 	// 3. Test Results Table
-	for _, test := range tests {
+	for _, test := range filteredTests {
 		pdf.Ln(10)
 		pdf.SetFont("Arial", "B", 12)
 		pdf.SetTextColor(navy[0], navy[1], navy[2])

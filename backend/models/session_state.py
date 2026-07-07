@@ -170,4 +170,5 @@ class DoctorState(BaseModel):
     consultation_summary: dict[str, Any] = Field(default_factory=dict)
     consultation_recommendations: list[dict[str, str]] = Field(default_factory=list)
     follow_up_allowed: bool = False
+    consultation_chart: str = ""
 

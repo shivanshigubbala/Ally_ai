@@ -107,10 +107,19 @@ def _update_patient_intake(state: RoutingState, text: str | None) -> None:
         state.patient_id = patient_id
     if any(phrase in lowered for phrase in ["returning patient", "existing patient", "returning", "already a patient"]):
         state.returning_patient = True
-    if not state.current_complaint:
-        complaint = _extract_current_complaint(text)
-        if complaint:
+    complaint = _extract_current_complaint(text)
+    if complaint:
+        lowered_complaint = complaint.lower().strip()
+        is_greeting = lowered_complaint in ("hi", "hello", "hey", "hola", "greetings", "yes", "ys", "no", "nope", "ok", "okay", "sure", "yes so much")
+        if not state.current_complaint:
             state.current_complaint = complaint
+        else:
+            old_lowered = state.current_complaint.lower().strip()
+            old_is_junk = old_lowered in ("hi", "hello", "hey", "hola", "greetings", "yes", "ys", "no", "nope", "ok", "okay", "sure", "yes so much", "not recorded")
+            new_has_medical = any(k in lowered_complaint for k in _CARDIAC_KEYWORDS + _NEURO_KEYWORDS)
+            old_has_medical = any(k in old_lowered for k in _CARDIAC_KEYWORDS + _NEURO_KEYWORDS)
+            if old_is_junk or (new_has_medical and not old_has_medical):
+                state.current_complaint = complaint
     if not state.patient_name:
         state.patient_name = (state.user_id or "there").replace("_", " ").title()
     elif state.patient_name == (state.user_id or "there").replace("_", " ").title():
@@ -187,11 +196,61 @@ def _format_intake_summary(state: RoutingState) -> dict[str, str]:
     return summary
 
 
+def _llm_recommend_department(intake_summary_text: str) -> tuple[str, float]:
+    try:
+        from backend.llm.nvidia_client import chat as nv_chat, ROUTING_MODEL
+    except ImportError:
+        try:
+            from llm.nvidia_client import chat as nv_chat, ROUTING_MODEL  # type: ignore
+        except Exception:
+            return "general", 0.70
+
+    prompt = (
+        "You are a medical triage assistant. Analyze the patient's symptoms and classify them into exactly one of these departments:\n"
+        "- cardiology (for chest pain, palpitations, heart pressure, arrhythmia, high blood pressure, leg swelling, shortness of breath, etc.)\n"
+        "- neurology (for headache, migraine, seizure, stroke, numbness, tingling, vertigo, brain bleeding, slurred speech, tremors, etc.)\n"
+        "- general (for fever, cough, stomach ache, general weakness, checkups, or anything else)\n\n"
+        "Respond in strict JSON format with keys:\n"
+        "{\n"
+        '  "department": "cardiology" | "neurology" | "general",\n'
+        '  "confidence": 0.0 to 1.0\n'
+        "}\n"
+        "Return ONLY the raw JSON block, nothing else."
+    )
+    try:
+        reply = nv_chat(
+            [
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": f"Patient Intake Summary and Symptoms:\n{intake_summary_text}"}
+            ],
+            model=ROUTING_MODEL
+        )
+        import json
+        clean_reply = reply.strip()
+        if "{" in clean_reply:
+            clean_reply = clean_reply[clean_reply.find("{"):clean_reply.rfind("}")+1]
+        data = json.loads(clean_reply)
+        dept = str(data.get("department", "general")).lower().strip()
+        conf = float(data.get("confidence", 0.8))
+        if dept in ("cardiology", "neurology", "general"):
+            return dept, conf
+    except Exception:
+        pass
+
+    return "general", 0.70
+
+
 def _recommend_department(summary: dict[str, str], fallback: str) -> tuple[str, float]:
     text = " ".join(summary.values()).lower()
-    if any(keyword in text for keyword in ["chest", "heart", "palpitations", "arrhythmia", "cardiac", "blood pressure"]):
+    
+    # Analyze symptoms using LLM first for intelligent classification
+    llm_dept, llm_conf = _llm_recommend_department(text)
+    if llm_dept != "general":
+        return llm_dept, llm_conf
+
+    if any(keyword in text for keyword in _CARDIAC_KEYWORDS):
         return "cardiology", 0.88
-    if any(keyword in text for keyword in ["headache", "migraine", "seizure", "stroke", "numbness", "tingling"]):
+    if any(keyword in text for keyword in _NEURO_KEYWORDS):
         return "neurology", 0.84
     return fallback, 0.72
 
@@ -680,13 +739,7 @@ def slot_node(state: RoutingState, emit: Emitter) -> RoutingState:
     except Exception:
         nice_time = chosen["start_time"]
 
-    reply = _llm_reply(
-        RECEPTIONIST_PERSONA + (
-            f"The patient selected {nice_time} with {doc_name}. "
-            "Ask them to confirm the booking in one short, warm sentence."
-        ),
-        f"Confirming slot {chosen['id']} at {nice_time}.",
-    )
+    reply = f"Do you want to confirm the appointment for {doc_name} at {nice_time}?"
     emit(WSEvent(type="text", payload={"content": reply}))
     state.message_history.append({"role": "assistant", "content": reply})
     state.current_node = "BOOKING_CONFIRMATION"
@@ -873,16 +926,9 @@ def booking_node(state: RoutingState, emit: Emitter) -> RoutingState:
         chosen = next((d for d in all_doctors if d["id"] == state.selected_doctor), None)
     doctor_name = chosen["name"] if chosen else GP_DOCTOR_NAME
 
-    reply = _llm_reply(
-        RECEPTIONIST_PERSONA + (
-            f" The appointment is confirmed! Appointment ID: {state.appointment_id}. "
-            f"Congratulate the patient warmly and tell them {doctor_name} is ready "
-            "to see them in the Appointments tab. No bullet points, no lists."
-        ),
-        f"Appointment {state.appointment_id} confirmed.",
-    )
+    reply = f"Appointment confirmed! Please start the consultation with your doctor."
     emit(WSEvent(type="text", payload={"content": reply}))
-    state.message_history.append({"role": "assistant", "content": f"Appointment {state.appointment_id} confirmed."})
+    state.message_history.append({"role": "assistant", "content": reply})
 
     _persist_consultation_context(
         state,
