@@ -68,7 +68,7 @@ class TestSyncGoUserId(unittest.TestCase):
         # Verify UPDATE was executed to write go_user_id
         sql_calls = [call_args[0][0] if call_args and call_args[0] else "" for call_args in mock_cursor.execute.call_args_list]
         update_calls = [sql for sql in sql_calls if str(sql).strip().upper().startswith("UPDATE")]
-        self.assertEqual(len(update_calls), 1)
+        self.assertEqual(len(update_calls), 2)
 
     @patch('backend.db.pgvector_tracker._conn')
     @patch('backend.db.pgvector_tracker.create_user')

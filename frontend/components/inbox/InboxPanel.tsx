@@ -158,16 +158,20 @@ export default function InboxPanel({
                   )}
                   {n.kind === "appointment_booked" && (
                     <div className="mt-4">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onViewAppointments();
-                        }}
-                        className="inline-flex rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-emerald-200 transition hover:-translate-y-0.5"
-                      >
-                        Start Consultation
-                      </button>
+                      {n.decision === "accepted" ? (
+                        <span className="text-xs font-semibold text-slate-500">Consultation completed</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewAppointments();
+                          }}
+                          className="inline-flex rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-emerald-200 transition hover:-translate-y-0.5"
+                        >
+                          Start Consultation
+                        </button>
+                      )}
                     </div>
                   )}
                   {n.kind === "lab_suggested" && (

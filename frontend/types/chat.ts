@@ -103,4 +103,5 @@ export interface LabReport {
   tests: LabTest[];
   createdAt: number;
   url?: string;
+  status?: string;
 }

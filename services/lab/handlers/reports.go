@@ -103,10 +103,22 @@ func GetUserReports(w http.ResponseWriter, r *http.Request) {
 
 func DownloadReport(w http.ResponseWriter, r *http.Request) {
 
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	// Set CORS headers for all responses
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 
 	id := r.URL.Query().Get("id")
 
@@ -134,7 +146,7 @@ func DownloadReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Disposition", "attachment; filename="+report.PDFName)
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+report.PDFName+"\"")
 	w.Header().Set("Content-Type", "application/pdf")
 
 	http.ServeFile(w, r, report.PDFPath)

@@ -39,8 +39,8 @@ function Pill({ children, active }: { children: ReactNode; active: boolean }) {
   );
 }
 
-import { useState } from "react";
-import { updateProfile } from "@/lib/patient";
+import { useState, useEffect } from "react";
+import { updateProfile, getClinicalProfile } from "@/lib/patient";
 
 export default function ProfilePanel({
   profile,
@@ -50,6 +50,19 @@ export default function ProfilePanel({
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<PatientProfile | null>(profile);
   const [error, setError] = useState<string>("");
+  const [clinicalProfile, setClinicalProfile] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (!profile) return;
+    const patientId = profile.patientId || (profile.name ? profile.name.toLowerCase().replace(/[^a-z0-9]+/g, "_") : "");
+    if (!patientId) return;
+
+    getClinicalProfile(patientId).then((res) => {
+      if (res.ok && res.profile) {
+        setClinicalProfile(res.profile);
+      }
+    });
+  }, [profile]);
 
   if (!profile) {
     return (
@@ -177,6 +190,86 @@ export default function ProfilePanel({
               <Row label="Known allergies" value={profile.allergies} />
             </div>
           </section>
+
+          {clinicalProfile && (
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm bg-gradient-to-br from-white to-sky-50/20">
+              <div className="mb-4">
+                <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                  <span className="flex h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
+                  AI Longitudinal Memory
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Extracted dynamically from your clinical visits and lab reports.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Chronic Conditions */}
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Chronic Conditions</h3>
+                  {clinicalProfile.chronic_conditions && clinicalProfile.chronic_conditions.length > 0 ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {clinicalProfile.chronic_conditions.map((cond: string, i: number) => (
+                        <span key={i} className="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-700/10">
+                          {cond}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-500 italic">None recorded</p>
+                  )}
+                </div>
+
+                {/* Allergies */}
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Allergies</h3>
+                  {clinicalProfile.allergies && clinicalProfile.allergies.length > 0 ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {clinicalProfile.allergies.map((alg: string, i: number) => (
+                        <span key={i} className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-700/10">
+                          {alg}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-500 italic">None recorded</p>
+                  )}
+                </div>
+
+                {/* Current Medications */}
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Current Medications</h3>
+                  {clinicalProfile.current_medications && clinicalProfile.current_medications.length > 0 ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {clinicalProfile.current_medications.map((med: string, i: number) => (
+                        <span key={i} className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-700/10">
+                          {med}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-500 italic">None recorded</p>
+                  )}
+                </div>
+
+                {/* Risk Factors */}
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Risk Factors</h3>
+                  {clinicalProfile.risk_factors && clinicalProfile.risk_factors.length > 0 ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {clinicalProfile.risk_factors.map((risk: string, i: number) => (
+                        <span key={i} className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-700/10">
+                          {risk}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-500 italic">None recorded</p>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4">

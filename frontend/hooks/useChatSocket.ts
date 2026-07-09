@@ -45,6 +45,7 @@ interface UseChatSocketResult {
     decision: "accept" | "reject"
   ) => void;
   markInboxRead: (id: string) => void;
+  markAllInboxRead: () => void;
   startConsultation: () => void;
   sendDoctorMessage: (content: string) => void;
   unreadCount: number;
@@ -451,8 +452,10 @@ export function useChatSocket(userId: string | null, patientId?: string | null):
             "your doctor";
           const tests = (evt.payload.tests as { name: string; reason: string }[]) || [];
 
-          // Accept either explicit URLs or the older /reports/download?id= style.
-          let reportUrl = (evt.payload.report_url as string) || (evt.payload.download_url as string) || "";
+          // Prefer download_url (direct lab service) over report_url (backend proxy).
+          // The PDF physically lives in the lab container's filesystem so the lab
+          // service's /reports/download endpoint is the only reliable source.
+          let reportUrl = (evt.payload.download_url as string) || (evt.payload.report_url as string) || "";
           if (!reportUrl) {
             // fallback: prefer path-style, but also accept numeric/opaque ids
             reportUrl = `${HTTP_BASE}/reports/${encodeURIComponent(reportId)}`;
@@ -464,15 +467,19 @@ export function useChatSocket(userId: string | null, patientId?: string | null):
           }
           const normalizedReportUrl = reportUrl.startsWith("/") ? `${HTTP_BASE}${reportUrl}` : reportUrl;
 
-          const aptId = (evt.payload.appointment_id as string) || (evt.payload.session_id as string) || "";
+          const aptId = (evt.payload.appointment_id as string) || "";
+          const sessionId = (evt.payload.session_id as string) || "";
           setReports((prev) => {
             const filtered = prev.filter(
               (r) =>
-                r.id !== `pending-${aptId}` &&
-                r.id !== `pending-${reportId}` &&
-                r.id !== `pending-${sessionId}` &&
-                !r.id.endsWith(`-${aptId}`) &&
-                r.id !== reportId
+                // Remove the matching pending card by appointment/session ID
+                String(r.id) !== `pending-${aptId}` &&
+                String(r.id) !== `pending-${reportId}` &&
+                String(r.id) !== `pending-${sessionId}` &&
+                !String(r.id).endsWith(`-${aptId}`) &&
+                String(r.id) !== String(reportId) &&
+                // Also sweep out any stale "generating" cards from previous sessions
+                r.status !== "generating"
             );
             return [
               {
@@ -485,13 +492,29 @@ export function useChatSocket(userId: string | null, patientId?: string | null):
               ...filtered,
             ];
           });
+          const isPrescription = reportId.toLowerCase().includes("prescription") || normalizedReportUrl.toLowerCase().includes("prescription");
+          const title = isPrescription ? "Medical Prescription Ready" : "Lab report ready";
+          const body = isPrescription 
+            ? `Your medical prescription and consultation summary from ${doctor} are ready.`
+            : `Your results from ${doctor} are ready to view.`;
+
           pushInbox({
             kind: "report_ready",
-            title: "Lab report ready",
-            body: `Your results from ${doctor} are ready to view.`,
+            title,
+            body,
             reportId,
             reportUrl: normalizedReportUrl,
           });
+
+          if (aptId) {
+            setInbox((prev) =>
+              prev.map((n) =>
+                n.kind === "appointment_booked" && String(n.appointmentId) === String(aptId)
+                  ? { ...n, read: true, decision: "accepted" }
+                  : n
+              )
+            );
+          }
           break;
         }
 
@@ -814,6 +837,23 @@ export function useChatSocket(userId: string | null, patientId?: string | null):
     []
   );
 
+  const markAllInboxRead = useCallback(() => {
+    setInbox((prev) => {
+      if (!prev.some((n) => !n.read)) return prev;
+      const updated = prev.map((n) => (n.read ? n : { ...n, read: true }));
+      if (HTTP_BASE) {
+        prev.forEach((n) => {
+          if (!n.read) {
+            fetch(`${HTTP_BASE}/notifications/${encodeURIComponent(n.id)}/read`, {
+              method: "POST",
+            }).catch(() => {});
+          }
+        });
+      }
+      return updated;
+    });
+  }, []);
+
   const addSampleReport = useCallback(() => {
     const id = `sample-${Math.random().toString(36).slice(2, 8)}`;
     const doc = doctorNameRef.current || "Dr. Shankar";
@@ -856,6 +896,7 @@ export function useChatSocket(userId: string | null, patientId?: string | null):
     resolveSlot,
     resolveLabDecision,
     markInboxRead,
+    markAllInboxRead,
     startConsultation,
     sendDoctorMessage,
     unreadCount,

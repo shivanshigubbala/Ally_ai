@@ -125,6 +125,12 @@ def _update_patient_intake(state: RoutingState, text: str | None) -> None:
     elif state.patient_name == (state.user_id or "there").replace("_", " ").title():
         state.patient_name = state.patient_name
 
+    # Update selected department dynamically if a cardiology/neurology symptom is detected.
+    if not state.selected_dept or state.selected_dept == "general":
+        detected = _detect_department(text)
+        if detected != "general" or not state.selected_dept:
+            state.selected_dept = detected
+
 CARDIOLOGY_DOCTOR_ID = "d8"
 CARDIOLOGY_DOCTOR_NAME = "Dr. Arjun Reddy"
 NEUROLOGY_DOCTOR_ID = "d9"
@@ -343,6 +349,9 @@ def _set_intake_contract(state: RoutingState) -> dict[str, Any] | None:
             except (TypeError, ValueError):
                 pass
 
+    if state.recommended_department in ("cardiology", "neurology"):
+        state.selected_dept = state.recommended_department
+
     state.canonical_intake = CanonicalIntake(
         patient_id=state.patient_id,
         session_id=f"routing:{state.user_id}",
@@ -423,8 +432,10 @@ def intent_node(state: RoutingState, emit: Emitter) -> RoutingState:
 
     # Only lock in the department on the first symptom message so later
     # follow-up answers (which may mention unrelated words) don't flip it.
-    if not state.selected_dept:
-        state.selected_dept = _detect_department(last_user)
+    if not state.selected_dept or state.selected_dept == "general":
+        detected = _detect_department(last_user)
+        if detected != "general" or not state.selected_dept:
+            state.selected_dept = detected
     if state.symptom_round == 0:
         dept_name = "General Physician"
         if state.selected_dept == "cardiology":
@@ -595,6 +606,8 @@ def health_status_questions_node(state: RoutingState, emit: Emitter) -> RoutingS
         emit(WSEvent(type="text", payload={"content": reply}))
         state.message_history.append({"role": "assistant", "content": reply})
         state.health_question_round = 3
+
+        _set_intake_contract(state)
 
         # Offer all doctors, ordering selected department first
         doctors = store.list_doctors(None)

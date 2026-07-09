@@ -1409,3 +1409,33 @@ def count_knowledge_chunks_dev(
         cur.close()
 
     return int(n)
+
+
+def get_patient_by_email(email: str) -> dict | None:
+    if not HAS_PG:
+        return None
+    import json
+    import psycopg2.extras
+    with _conn() as conn:
+        if conn is None:
+            return None
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "SELECT id, name, age, health_data FROM users WHERE LOWER(health_data->>'email') = %s LIMIT 1",
+            (email.strip().lower(),),
+        )
+        row = cur.fetchone()
+        cur.close()
+    if row:
+        res = dict(row)
+        hd = res.get("health_data") or {}
+        if isinstance(hd, str):
+            try:
+                hd = json.loads(hd)
+            except Exception:
+                hd = {}
+        for k, v in hd.items():
+            if k not in res:
+                res[k] = v
+        return res
+    return None

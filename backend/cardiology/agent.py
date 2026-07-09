@@ -29,6 +29,8 @@ try:
         load_patient_profile,
         save_message,
         upsert_consultation_context,
+        get_clinical_profile,
+        upsert_clinical_profile,
     )
     from backend.cardiology.department_config import get_department_config
     from backend.llm.nvidia_client import (
@@ -58,6 +60,8 @@ except ImportError:
         load_patient_profile,
         save_message,
         upsert_consultation_context,
+        get_clinical_profile,
+        upsert_clinical_profile,
     )
     from department_config import get_department_config
     from llm.nvidia_client import (
@@ -918,6 +922,23 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
 
     state.symptom_summary = _update_symptom_summary(state, last_user_msg, "")
 
+    profile = get_clinical_profile(state.patient_id or state.user_id)
+    dept_label = _resolve_department(state)
+    dept_history = (profile.get("last_visit_per_department", {}) or {}).get(dept_label)
+    def _fmt_list(items): return ", ".join(items) if items else "None recorded"
+    def _fmt_dept_history(h):
+        if not h:
+            return "No prior visit with this department."
+        tests = ", ".join(t.get("name", "") for t in h.get("recommended_tests", [])) or "None"
+        result = h.get("lab_result_summary") or "not yet available"
+        return (
+            f"Date: {h.get('visit_date','unknown')} with {h.get('doctor_name','a doctor here')}\n"
+            f"Chief complaint then: {h.get('chief_complaint','unknown')}\n"
+            f"Assessment: {h.get('assessment','unknown')}\n"
+            f"Tests recommended: {tests} (status: {h.get('test_status','NOT_REQUESTED')})\n"
+            f"Result: {result}"
+        )
+
     department_context = _get_department_context(state)
     system = department_context.get("system_prompt", DOCTOR_SYSTEM_PROMPT).format(
         rag_context=rag_context or "(no clinical reference retrieved)",
@@ -929,6 +950,12 @@ def questioning(state: DoctorState, emit: Emitter) -> DoctorState:
         q_count=state.questions_asked,
         chief_complaint=state.chief_complaint or "(not yet stated)",
         symptom_summary=state.symptom_summary or "(no symptoms discussed yet)",
+        chronic_conditions=_fmt_list(profile.get("chronic_conditions", [])),
+        allergies=_fmt_list(profile.get("allergies", [])),
+        current_medications=_fmt_list(profile.get("current_medications", [])),
+        risk_factors=_fmt_list(profile.get("risk_factors", [])),
+        department_label=dept_label,
+        same_department_history=_fmt_dept_history(dept_history),
     )
 
     messages = [
@@ -1236,6 +1263,58 @@ def report_pending(state: DoctorState, emit: Emitter) -> DoctorState:
     return state
 
 
+EXTRACTION_PROMPT = """\
+You are a clinical data extraction assistant. Read the consultation below and
+extract ONLY facts that should persist across future visits with this patient —
+not transient symptoms from today alone.
+
+Consultation transcript:
+{conversation}
+
+Clinical assessment: {assessment}
+Possible diagnosis: {diagnosis}
+Recommended tests: {tests}
+
+Return ONLY a JSON object with these keys:
+- "chronic_conditions": list of ongoing/chronic diagnoses mentioned or confirmed
+  today (e.g. "Type 2 Diabetes"). Do NOT include today's acute complaint unless
+  the doctor explicitly diagnosed it as chronic/ongoing.
+- "allergies": list of any drug/food allergies the patient mentioned.
+- "current_medications": list of medications the patient says they are currently
+  taking (not ones the doctor prescribed today, since this doctor doesn't prescribe).
+- "risk_factors": list of persistent risk factors (smoking, family history, obesity,
+  hypertension) explicitly mentioned.
+
+If a category has nothing new, return an empty list for it. Do not invent facts
+not present in the transcript.
+
+JSON:
+"""
+
+
+def _extract_clinical_facts(state: DoctorState) -> dict[str, Any]:
+    prompt = EXTRACTION_PROMPT.format(
+        conversation=_format_messages(state.conversation_history),
+        assessment=state.consultation_summary.get("clinical_assessment", ""),
+        diagnosis=state.consultation_summary.get("possible_diagnosis", ""),
+        tests=json.dumps(state.tests_list),
+    )
+    raw = _call_llm([{"role": "user", "content": prompt}], model=ROUTING_MODEL)
+    parsed = _extract_json(raw) or {}
+    parsed["department"] = getattr(state, "department", None) or DOCTOR_DEPT
+    parsed["visit_entry"] = {
+        "appointment_id": state.appointment_id,
+        "doctor_name": state.doctor_name or DOCTOR_NAME,
+        "visit_date": datetime.utcnow().isoformat(),
+        "chief_complaint": state.chief_complaint,
+        "assessment": state.consultation_summary.get("clinical_assessment", ""),
+        "recommended_tests": state.tests_list,
+        "test_status": state.lab_request_status,
+        "lab_result_summary": None,
+    }
+    return parsed
+
+
 def session_complete(state: DoctorState, emit: Emitter) -> DoctorState:
     if not state.consultation_summary:
         state.consultation_summary = _build_consultation_summary(
@@ -1320,6 +1399,12 @@ def session_complete(state: DoctorState, emit: Emitter) -> DoctorState:
                 )
         except Exception as e:
             logger.exception("Failed to generate prescription PDF in session_complete: %s", e)
+
+    try:
+        facts = _extract_clinical_facts(state)
+        upsert_clinical_profile(state.patient_id or state.user_id, facts)
+    except Exception:
+        logger.exception("Clinical fact extraction failed for appointment=%s", state.appointment_id)
 
     return state
 

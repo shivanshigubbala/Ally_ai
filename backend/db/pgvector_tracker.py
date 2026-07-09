@@ -314,6 +314,23 @@ def init_db():
             )
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS consultation_contexts_appointment_idx ON consultation_contexts(appointment_id)")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS patient_clinical_profile (
+                id SERIAL PRIMARY KEY,
+                patient_id TEXT NOT NULL UNIQUE,
+                chronic_conditions JSONB DEFAULT '[]',
+                allergies JSONB DEFAULT '[]',
+                current_medications JSONB DEFAULT '[]',
+                risk_factors JSONB DEFAULT '[]',
+                last_visit_per_department JSONB DEFAULT '{}',
+                profile_version INTEGER NOT NULL DEFAULT 1,
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS patient_clinical_profile_patient_idx
+                ON patient_clinical_profile(patient_id)
+        """)
         # Seed Go departments, doctors, and slots
         try:
             cur.execute("SELECT COUNT(*) FROM departments")
@@ -420,13 +437,10 @@ def sync_go_user_id(user_id: str) -> int:
             if not row:
                 raise ValueError(f"User {user_id} not found in database")
 
-            if isinstance(row, tuple):
-                go_user_id, name, age, gender = row[0], row[1], row[2], row[3] if len(row) > 3 else None
-            else:
-                go_user_id = row[0]
-                name = row[1] if len(row) > 1 else ""
-                age = row[2] if len(row) > 2 else 0
-                gender = row[3] if len(row) > 3 else None
+            go_user_id = row[0]
+            name = row[1] if len(row) > 1 else ""
+            age = row[2] if len(row) > 2 else 0
+            gender = row[3] if len(row) > 3 else None
 
             # If already synced, return cached value
             if go_user_id is not None:
@@ -1350,3 +1364,133 @@ def count_knowledge_chunks_dev(
         cur.close()
 
     return int(n)
+
+
+def get_clinical_profile(patient_id: str) -> dict[str, Any]:
+    """Load the distilled, structured patient profile. Cheap, single-row lookup."""
+    if not HAS_PG:
+        return {}
+    try:
+        with _conn() as conn:
+            if conn is None:
+                return {}
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT chronic_conditions, allergies, current_medications, "
+                    "risk_factors, last_visit_per_department FROM patient_clinical_profile "
+                    "WHERE patient_id=%s", (patient_id,)
+                )
+                row = cur.fetchone()
+                if not row:
+                    return {}
+                return {
+                    "chronic_conditions": row[0] or [],
+                    "allergies": row[1] or [],
+                    "current_medications": row[2] or [],
+                    "risk_factors": row[3] or [],
+                    "last_visit_per_department": row[4] or {},
+                }
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning("Error fetching clinical profile, table might be missing: %s", e)
+        return {}
+
+
+def upsert_clinical_profile(patient_id: str, updates: dict[str, Any]) -> None:
+    """Merge new facts into the patient's profile. Called once per completed visit."""
+    if not HAS_PG:
+        return
+    try:
+        existing = get_clinical_profile(patient_id)
+        def _merge_list(key: str, cap: int | None = None) -> list:
+            current = list(existing.get(key, []) or [])
+            if key in updates:
+                new_items = updates[key] or []
+                merged = []
+                seen = set()
+                for item in current:
+                    if item not in seen:
+                        seen.add(item)
+                        merged.append(item)
+                for item in new_items:
+                    if item in seen:
+                        merged.remove(item)
+                    else:
+                        seen.add(item)
+                    merged.append(item)
+                if cap is not None and len(merged) > cap:
+                    merged = merged[-cap:]
+                return merged
+            else:
+                return current
+
+        merged_conditions = _merge_list("chronic_conditions", cap=15)
+        merged_allergies = _merge_list("allergies")
+        merged_meds = _merge_list("current_medications")
+        merged_risks = _merge_list("risk_factors", cap=15)
+        
+        last_visits = existing.get("last_visit_per_department", {}) or {}
+        dept = updates.get("department")
+        if dept and updates.get("visit_entry"):
+            last_visits[dept] = updates["visit_entry"]
+        elif "last_visit_per_department" in updates:
+            last_visits.update(updates["last_visit_per_department"])
+
+        with _conn() as conn:
+            if conn is None:
+                return
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO patient_clinical_profile
+                        (patient_id, chronic_conditions, allergies, current_medications,
+                         risk_factors, last_visit_per_department, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                    ON CONFLICT (patient_id) DO UPDATE SET
+                        chronic_conditions = EXCLUDED.chronic_conditions,
+                        allergies = EXCLUDED.allergies,
+                        current_medications = EXCLUDED.current_medications,
+                        risk_factors = EXCLUDED.risk_factors,
+                        last_visit_per_department = EXCLUDED.last_visit_per_department,
+                        profile_version = patient_clinical_profile.profile_version + 1,
+                        updated_at = NOW()
+                    """,
+                    (patient_id, json.dumps(merged_conditions), json.dumps(merged_allergies),
+                     json.dumps(merged_meds), json.dumps(merged_risks), json.dumps(last_visits)),
+                )
+            conn.commit()
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning("Error upserting clinical profile, table might be missing: %s", e)
+
+
+def get_patient_by_email(email: str) -> dict | None:
+    if not HAS_PG:
+        return None
+    import json
+    import psycopg2.extras
+    with _conn() as conn:
+        if conn is None:
+            return None
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "SELECT id, name, age, health_data FROM users WHERE LOWER(health_data->>'email') = %s LIMIT 1",
+            (email.strip().lower(),),
+        )
+        row = cur.fetchone()
+        cur.close()
+    if row:
+        res = dict(row)
+        hd = res.get("health_data") or {}
+        if isinstance(hd, str):
+            try:
+                hd = json.loads(hd)
+            except Exception:
+                hd = {}
+        for k, v in hd.items():
+            if k not in res:
+                res[k] = v
+        return res
+    return None

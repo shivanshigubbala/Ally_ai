@@ -292,3 +292,33 @@ export async function updateProfile(
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
+
+export async function getClinicalProfile(
+  patientId: string
+): Promise<{ ok: boolean; profile?: any; error?: string }> {
+  try {
+    const backendBase = getBackendBase();
+    const target = backendBase ? `${backendBase.replace(/\/+$/, "")}/patient/${encodeURIComponent(patientId)}/clinical-profile` : `/api/patient/${encodeURIComponent(patientId)}/clinical-profile`;
+
+    const resp = await fetch(target, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    let data;
+    const text = await resp.text();
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      return { ok: false, error: text || `Clinical profile response was not valid JSON (status ${resp.status})` };
+    }
+
+    if (!resp.ok || !data || !data.ok)
+      return { ok: false, error: formatErrorDetail(data?.detail || data?.error, "Failed to fetch clinical profile") };
+
+    return { ok: true, profile: data.profile };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+

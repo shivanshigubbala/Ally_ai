@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Ally AI Backend", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -89,7 +89,8 @@ def reset_db() -> dict:
                 "uploaded_files",
                 "notifications",
                 "patient_timelines",
-                "lab_work_items"
+                "lab_work_items",
+                "patient_clinical_profile"
             ]
             for t in tables:
                 cur.execute(f"DROP TABLE IF EXISTS {t} CASCADE")
@@ -349,7 +350,8 @@ def get_report(department: str, filename: str):
     try:
         from fastapi import HTTPException
         from pathlib import Path
-        path = Path(__file__).resolve().parents[1] / "reports" / department / filename
+        # __file__ is backend/main.py. parents[0] is backend/. We want backend/reports/
+        path = Path(__file__).resolve().parents[0] / "reports" / department / filename
         if not path.exists() or not path.is_file():
             raise HTTPException(status_code=404, detail="Report not found")
         return FileResponse(path)
@@ -452,7 +454,7 @@ async def internal_report_ready(payload: dict = Body(...)) -> dict:
             from ws.router import notify_user_event  # type: ignore
             from models.session_state import WSEvent  # type: ignore
 
-        user = payload.get("user_id") or payload.get("patient_id")
+        user = payload.get("patient_id") or payload.get("user_id")
         if user:
             user_str = str(user)
             if user_str.isdigit():
@@ -495,6 +497,53 @@ async def internal_report_ready(payload: dict = Body(...)) -> dict:
                     )
             except Exception as e:
                 print("Failed to generate prescription PDF in internal_report_ready callback:", e)
+
+            # Link lab result back to the clinical profile
+            patient_id = user or payload.get("user_id") or payload.get("patient_id")
+            if patient_id:
+                try:
+                    from backend.db.pgvector_tracker import get_clinical_profile, upsert_clinical_profile, load_consultation_context
+                    
+                    department = payload.get("department")
+                    if not department:
+                        ctx = load_consultation_context(appointment_id=str(payload.get("appointment_id") or ""))
+                        if ctx:
+                            department = ctx.get("selected_department")
+                    
+                    if department:
+                        department = department.lower().strip()
+                        if department == "general physician":
+                            department = "general"
+                    else:
+                        department = "general"
+                    
+                    result_summary = payload.get("result_summary")
+                    if not result_summary:
+                        # lab_reports table has: id, appointment_id, user_id, pdf_name, pdf_path, status
+                        # No test_name/test_values columns — use pdf_name as summary
+                        from backend.db.pgvector_tracker import _conn
+                        with _conn() as conn:
+                            with conn.cursor() as cur:
+                                cur.execute(
+                                    "SELECT pdf_name FROM lab_reports WHERE appointment_id = %s",
+                                    (int(payload.get("appointment_id") or 0),)
+                                )
+                                rows = cur.fetchall()
+                                if rows:
+                                    result_summary = "; ".join(r[0] for r in rows if r[0])
+                                else:
+                                    result_summary = "Report available; see PDF."
+
+                    profile = get_clinical_profile(patient_id)
+                    last_visits = profile.get("last_visit_per_department") or {}
+                    if department in last_visits:
+                        last_visits[department]["test_status"] = "COMPLETED"
+                        last_visits[department]["lab_result_summary"] = result_summary
+                        upsert_clinical_profile(patient_id, {
+                            "last_visit_per_department": last_visits
+                        })
+                except Exception as e:
+                    print("Failed to link lab result to clinical profile:", e)
     except Exception:
         pass
     return {"ok": True}
@@ -784,3 +833,18 @@ def get_patient_history_endpoint(patient_id: str, limit: int = 20) -> dict:
         return {"ok": True, "history": history}
     except Exception:
         return {"ok": True, "history": []}
+
+
+@app.get("/patient/{patient_id}/clinical-profile")
+def get_patient_clinical_profile_endpoint(patient_id: str) -> dict:
+    """Return the patient dynamic longitudinal clinical profile."""
+    try:
+        from backend.db.pgvector_tracker import get_clinical_profile
+    except ImportError:
+        from db.pgvector_tracker import get_clinical_profile  # type: ignore
+    try:
+        profile = get_clinical_profile(patient_id=patient_id)
+        return {"ok": True, "profile": profile}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "profile": {}}
+

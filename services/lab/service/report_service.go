@@ -25,7 +25,8 @@ func (r *ReportService) GenerateReport(
 	report models.Report,
 	tests []models.LabTest,
 ) error {
-	// Query patient info
+	// Query patient info using go_user_id (integer), since report.UserID holds
+	// the integer go_user_id — NOT the UUID text id column.
 	uID, _ := strconv.Atoi(report.UserID)
 	if uID > 0 {
 		var name string
@@ -33,7 +34,7 @@ func (r *ReportService) GenerateReport(
 		var gender string
 		err := database.DB.QueryRow(
 			context.Background(),
-			`SELECT name, age, gender FROM users WHERE id = $1`,
+			`SELECT name, COALESCE(age, 0), COALESCE(gender, '') FROM users WHERE go_user_id = $1`,
 			uID,
 		).Scan(&name, &age, &gender)
 		if err == nil {
@@ -111,10 +112,25 @@ func (r *ReportService) GenerateReport(
 		labBase = "http://lab:8082"
 	}
 
+	// Lookup the python patient UUID from the users table using go_user_id
+	patientID := ""
+	var goUserID int
+	errQuery := database.DB.QueryRow(
+		context.Background(),
+		`SELECT id, go_user_id FROM users WHERE go_user_id = $1 OR id = $2`,
+		uID,
+		report.UserID,
+	).Scan(&patientID, &goUserID)
+	if errQuery != nil {
+		patientID = report.UserID
+	}
+
 	payload := map[string]any{
 		"report_id":      insertedID,
 		"appointment_id": report.AppointmentID,
 		"user_id":        report.UserID,
+		"patient_id":     patientID,
+		"pdf_name":       report.PDFName,
 		"report_url":     gpBase + "/reports/" + fmt.Sprintf("%d", insertedID),
 		"download_url":   labBase + "/reports/download?id=" + fmt.Sprintf("%d", insertedID),
 		"tests":          []map[string]string{{"name": report.TestName, "reason": ""}},

@@ -64,8 +64,6 @@ func GenerateReportPDF(
 	// 2. Patient / Doctor Info Block
 	pdf.SetTextColor(navy[0], navy[1], navy[2])
 	pdf.SetFont("Arial", "B", 11)
-	pdf.Text(15, 55, "PATIENT INFORMATION")
-	pdf.Text(115, 55, "ORDER INFORMATION")
 
 	// Slate lines
 	pdf.SetDrawColor(slate[0], slate[1], slate[2])
@@ -90,8 +88,16 @@ func GenerateReportPDF(
 		ageStr = fmt.Sprintf("%d years", report.Age)
 	}
 
+	userIDDisplay := report.UserID
+	if len(userIDDisplay) > 6 {
+		userIDDisplay = userIDDisplay[:6]
+	}
+	padding := 6 - len(userIDDisplay)
+	if padding < 0 {
+		padding = 0
+	}
 	pdf.Text(15, 63, fmt.Sprintf("Name:      %s", patientName))
-	pdf.Text(15, 68, fmt.Sprintf("ID:          PAT-2026-%s", strings.Repeat("0", 6-len(report.UserID))+report.UserID))
+	pdf.Text(15, 68, fmt.Sprintf("ID:          PAT-2026-%s", strings.Repeat("0", padding)+userIDDisplay))
 	pdf.Text(15, 73, fmt.Sprintf("Age/Sex: %s / %s", ageStr, strings.Title(gender)))
 
 	// Order Details

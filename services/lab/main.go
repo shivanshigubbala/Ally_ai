@@ -25,26 +25,45 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// corsMiddleware adds CORS headers to all responses so the browser
+// (running on a different port) can call the lab service directly.
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	database.Connect()
 	defer database.DB.Close()
 
-	// Routes
-	http.HandleFunc("/health", healthHandler)
-	http.HandleFunc("/lab-tests", handlers.CreateLabTest)
-	http.HandleFunc("/lab-test", handlers.GetLabTest)
-	http.HandleFunc("/lab-test/update", handlers.UpdateLabTest)
-	http.HandleFunc("/lab-history", handlers.GetUserLabHistory)
-	http.HandleFunc("/user-tests", handlers.GetUserTests)
-	http.HandleFunc("/users/history", handlers.GetUserLabHistory)
-	http.HandleFunc("/users/tests", handlers.GetUserTests)
+	mux := http.NewServeMux()
 
-	http.HandleFunc("/report", handlers.GetReport)
-	http.HandleFunc("/reports/user", handlers.GetUserReports)
-	http.HandleFunc("/reports/download", handlers.DownloadReport)
-	http.HandleFunc("/inbox", handlers.GetInbox)
+	// Routes
+	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/lab-tests", handlers.CreateLabTest)
+	mux.HandleFunc("/lab-test", handlers.GetLabTest)
+	mux.HandleFunc("/lab-test/update", handlers.UpdateLabTest)
+	mux.HandleFunc("/lab-history", handlers.GetUserLabHistory)
+	mux.HandleFunc("/user-tests", handlers.GetUserTests)
+	mux.HandleFunc("/users/history", handlers.GetUserLabHistory)
+	mux.HandleFunc("/users/tests", handlers.GetUserTests)
+
+	mux.HandleFunc("/report", handlers.GetReport)
+	mux.HandleFunc("/reports/user", handlers.GetUserReports)
+	mux.HandleFunc("/reports/download", handlers.DownloadReport)
+	mux.HandleFunc("/inbox", handlers.GetInbox)
+
 	server := &http.Server{
-		Addr: ":8082",
+		Addr:    ":8082",
+		Handler: corsMiddleware(mux),
 	}
 
 	go func() {

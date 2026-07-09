@@ -106,6 +106,9 @@ _doctor_sessions: dict[str, str] = {}
 _doc_store: dict[str, list[dict]] = {}
 # Active WebSocket connections by user_id
 _connections: dict[str, WebSocket] = {}
+# Track users who have already been greeted this server session to prevent
+# duplicate welcome messages on WebSocket reconnect / React strict-mode double-mount.
+_greeted: set[str] = set()
 
 
 async def _send(ws: WebSocket, event: WSEvent) -> None:
@@ -371,7 +374,15 @@ async def ws_endpoint(ws: WebSocket, user_id: str, patient_id: str | None = Quer
     if not routing_graph.has_in_progress_booking(user_id):
         routing_graph.reset_state(user_id)
         _user_state[user_id] = "ROUTING"
-        appointment_id = await _drive_routing(ws, user_id, None, None)
+        # Only send the opening greeting if this user hasn't been greeted yet
+        # in the current server session. Reconnects (e.g. React strict-mode
+        # double-mount, page refresh) must NOT repeat the greeting or the user
+        # sees two welcome messages.
+        if user_id not in _greeted:
+            _greeted.add(user_id)
+            appointment_id = await _drive_routing(ws, user_id, None, None)
+        else:
+            appointment_id = ""
     else:
         _user_state[user_id] = "ROUTING"
         appointment_id = ""
@@ -460,4 +471,7 @@ async def ws_endpoint(ws: WebSocket, user_id: str, patient_id: str | None = Quer
             del _doctor_sessions[user_id]
         if user_id in _connections:
             del _connections[user_id]
+        # Remove from greeted set so a full page-refresh (new browser session)
+        # gets a proper welcome message again.
+        _greeted.discard(user_id)
         return

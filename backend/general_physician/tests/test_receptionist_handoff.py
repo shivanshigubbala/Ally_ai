@@ -84,9 +84,19 @@ def test_receptionist_emits_canonical_intake_contract() -> None:
 
 def test_receptionist_full_booking_flow() -> None:
     """Simulate the full receptionist flow and verify DONE state + appointment_id."""
+    # Reset slot availability to avoid test sequence interference
+    try:
+        from backend.db.pgvector_tracker import _conn
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE time_slots SET is_available = true WHERE id = 1")
+            conn.commit()
+    except Exception:
+        pass
+
     routing_graph.reset_state("handoff_test")
 
-    # Step 1 — greet and gather a few human-style details before booking
+    # Step 1 â€” greet and gather a few human-style details before booking
     state, events = routing_graph.run_step("handoff_test", "I have a headache", None)
     assert state.current_node == "HEALTH_STATUS_QUESTIONS"
     assert any(e.type == "text" for e in events)
@@ -101,7 +111,7 @@ def test_receptionist_full_booking_flow() -> None:
     assert state.current_node == "DOCTOR_SELECTION"
     assert any(e.type == "doctor_select" for e in events)
 
-    # Step 2 — select Dr. Shankar ? auto-advance to slot selection
+    # Step 2 â€” select Dr. Shankar ? auto-advance to slot selection
     state, events = routing_graph.run_step(
         "handoff_test",
         None,
@@ -156,6 +166,16 @@ async def test_router_emits_doctor_ready_instead_of_auto_switch() -> None:
     """Verify the WS router sends doctor_ready when routing completes,
     rather than auto-launching the doctor graph."""
     from backend.ws.router import _drive_routing
+
+    # Reset slot availability to avoid test sequence interference
+    try:
+        from backend.db.pgvector_tracker import _conn
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE time_slots SET is_available = true WHERE id = 1")
+            conn.commit()
+    except Exception:
+        pass
 
     mock_ws = MagicMock()
     mock_ws.send_text = AsyncMock()

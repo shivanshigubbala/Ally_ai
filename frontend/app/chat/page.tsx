@@ -51,6 +51,7 @@ export default function ChatPage() {
     resolveSlot,
     resolveLabDecision,
     markInboxRead,
+    markAllInboxRead,
     startConsultation,
     sendDoctorMessage,
     unreadCount,
@@ -63,6 +64,12 @@ export default function ChatPage() {
     setTab("appointments");
     startConsultation();
   };
+
+  useEffect(() => {
+    if (activeTab === "inbox") {
+      markAllInboxRead();
+    }
+  }, [activeTab, markAllInboxRead]);
 
   useEffect(() => {
     if (doctorReady) {

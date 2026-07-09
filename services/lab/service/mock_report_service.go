@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/shivanshigubbala/Ally_ai/services/lab/database"
 	"github.com/shivanshigubbala/Ally_ai/services/lab/models"
 	"github.com/shivanshigubbala/Ally_ai/services/lab/pdf"
 	"github.com/shivanshigubbala/Ally_ai/services/lab/repository"
@@ -69,8 +71,19 @@ func GenerateMockReportForCompletedWorkItem(
 		obs = "No abnormal findings."
 	}
 
+	goUserIDStr := "0"
+	var goUserID int
+	errQuery := database.DB.QueryRow(
+		context.Background(),
+		`SELECT COALESCE(go_user_id, 0) FROM users WHERE id = $1`,
+		patientID,
+	).Scan(&goUserID)
+	if errQuery == nil && goUserID > 0 {
+		goUserIDStr = fmt.Sprintf("%d", goUserID)
+	}
+
 	report := models.Report{
-		UserID:                "0",
+		UserID:                goUserIDStr,
 		AppointmentID:         appointmentID,
 		Status:                "COMPLETED",
 		CreatedAt:             time.Now(),
@@ -122,6 +135,8 @@ func GenerateMockReportForCompletedWorkItem(
 		"report_id":      insertedID,
 		"appointment_id": report.AppointmentID,
 		"user_id":        report.UserID,
+		"patient_id":     patientID,
+		"pdf_name":       report.PDFName,
 		"report_url":     gpBase + "/reports/" + fmt.Sprintf("%d", insertedID),
 		"download_url":   labBase + "/reports/download?id=" + fmt.Sprintf("%d", insertedID),
 		"tests":          []map[string]string{{"name": report.TestName, "reason": ""}},

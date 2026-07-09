@@ -29,6 +29,24 @@ def test_receptionist_emits_single_follow_up_per_user_turn():
     assert state.current_node in {"HEALTH_STATUS_QUESTIONS", "INTENT_CLASSIFICATION"}
 
 
+def test_receptionist_symptom_routing():
+    # Test case 1: user says greeting first, then mentions chest pain
+    routing_graph.reset_state("routing_test_user_cardiology")
+    state, events = routing_graph.run_step("routing_test_user_cardiology", "Hello, I want to book an appointment", None)
+    assert state.selected_dept == "general"
+    
+    state, events = routing_graph.run_step("routing_test_user_cardiology", "I am having chest pain", None)
+    assert state.selected_dept == "cardiology"
+
+    # Test case 2: user says greeting first, then mentions headache
+    routing_graph.reset_state("routing_test_user_neurology")
+    state, events = routing_graph.run_step("routing_test_user_neurology", "Hi there", None)
+    assert state.selected_dept == "general"
+    
+    state, events = routing_graph.run_step("routing_test_user_neurology", "I have a severe headache", None)
+    assert state.selected_dept == "neurology"
+
+
 def test_build_patient_context_includes_profile_and_recent_history():
     state = DoctorState(
         user_id="ctx_user",
