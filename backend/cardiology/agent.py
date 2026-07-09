@@ -802,15 +802,37 @@ def session_init(state: DoctorState, emit: Emitter) -> DoctorState:
     greeting_prefix = f"Hi {patient_name}, I’m {doc_name}, your {dept_name} doctor. "
 
     if state.uploaded_documents:
-        summary = "I see you uploaded the following document(s): " + ", ".join(
-            doc.get("filename", "a document") for doc in state.uploaded_documents[:3]
+        patient_context = build_patient_context(state)
+        system_instruction = (
+            f"You are {doc_name}, a warm and experienced {dept_name} doctor at Ally Hospital.\n"
+            f"Here is the patient's context, including their receptionist intake chart and the full text of their uploaded document(s):\n"
+            f"```\n{patient_context}\n```\n\n"
+            f"Greet the patient warmly by name ({patient_name}), state that you have received and reviewed their uploaded document(s) and their intake chart.\n"
+            f"Briefly summarize your key understanding or analysis of the findings from their uploaded document(s) (e.g. key lab values, prescription details, imaging results).\n"
+            f"Ask a single relevant, focused clinical follow-up question based on the document's findings to start the consultation.\n"
+            f"CRITICAL RULES:\n"
+            f"1. Do NOT ask any repeated questions that the receptionist has already asked.\n"
+            f"2. Focus your remarks and questions purely on the findings from their uploaded documents.\n"
+            f"3. Speak in plain, warm, professional sentences. No markdown formatting, bullet points, or list elements.\n"
+            f"4. Keep it under 80 words."
         )
-        reply = (
-            f"{greeting_prefix}I’m reviewing your uploaded document(s) first. "
-            f"{summary}. "
-            "Then I’ll ask a couple of focused questions so I can understand your concern and next steps."
-        )
-        emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
+        messages = [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": "Introduce yourself, summarize the uploaded document findings, and ask your first follow-up question."}
+        ]
+        try:
+            reply = _stream_into_emit(messages, emit, sender=DOCTOR_ID)
+        except Exception:
+            logger.exception("Failed to stream initial Cardiology doctor message with documents, falling back to static/non-stream")
+            summary = "I see you uploaded the following document(s): " + ", ".join(
+                doc.get("filename", "a document") for doc in state.uploaded_documents[:3]
+            )
+            reply = (
+                f"{greeting_prefix}I’m reviewing your uploaded document(s) first. "
+                f"{summary}. "
+                "Then I’ll ask a couple of focused questions so I can understand your concern and next steps."
+            )
+            emit(WSEvent(type="text", payload={"content": reply, "from": DOCTOR_ID}))
     elif getattr(state, "consultation_chart", ""):
         system_instruction = (
             f"You are {doc_name}, a warm and experienced {dept_name} doctor at Ally Hospital.\n"
